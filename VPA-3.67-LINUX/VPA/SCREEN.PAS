@@ -10,12 +10,13 @@
 
 {$I switches.inc}
 Unit    Screen;
-{$C MOVEABLE PRELOAD PERMANENT}
+{$V-}
+
 {$A-}
 
 Interface
 
-uses Graph,AuxF,StrF,Mouse,VPAData,Ini,VPA2;
+uses ptcgraph,AuxF,StrF,Mouse,VPAData,Ini,VPA2;
 
 const
         cPInfo  : byte  = LightGreen;   { the order is used in CONFIG }
@@ -228,10 +229,16 @@ procedure DisplayHullfuncs(const qr:THullFuncQueryResult; build:boolean; highpl,
 
 Implementation
 
-uses    Keyboard,VHLP,SVGA,dos
+uses    Keyboard,VHLP,dos
 {$IFDEF VPACC},
         Hullfunc
 {$ENDIF};
+
+{ MaxAvail/MemAvail no existen en FPC/Linux. En Linux la memoria es amplia:
+  devolvemos un valor grande para que las comprobaciones de memoria pasen. }
+function MaxAvail: longint; begin MaxAvail := $7FFFFFFF; end;
+function MemAvail: longint; begin MemAvail := $7FFFFFFF; end;
+
 
 Type
         Font16 = Array [char,0..15] of byte;
@@ -255,8 +262,7 @@ const
 var
         ti0     : long;
 
-procedure EGAVGADriverProc; external;
-{$L egavga.obj}
+procedure EGAVGADriverProc; begin end;   { stub: ptcgraph no usa drivers .bgi }
 
 {.Procedure rusfont; External;}
 {.$L rusfont}
@@ -266,8 +272,7 @@ procedure EGAVGADriverProc; external;
 const
         ourFont : ^Font16 = @StandardFont;
 
-procedure SmallFontProc; external;
-{$L litt_vpa.obj}
+procedure SmallFontProc; begin end;      { stub: fuente bitmap via ourFont }
 
 procedure CloseGraphics;
   begin
@@ -278,194 +283,68 @@ procedure CloseGraphics;
     if GrMode then
     begin
           CloseGraph;
-      if mem[Seg0040:$49]<>GrMode0 then
-      asm
-        xor     ax,ax
-        mov     al,GrMode0
-        int     10h
-      end;
+      { la restauracion del modo de video la gestiona CloseGraph en Linux }
       GrMode:=No;
     end;
   end;
 
-procedure WaitRetrace; assembler;
-  asm
-        mov     dx,3DAh
-        mov     ah,8
-@@2:    in      al,dx
-        test    al,ah
-        jnz     @@2
-@@3:    in      al,dx
-        test    al,ah
-        jz      @@3
+procedure WaitRetrace;
+  begin
+    { ptcgraph gestiona la sincronia; no-op en Linux }
   end;
 
-procedure WriteChar (x,y:byte; attr:integer; c:char); assembler;
-asm
-        mov     ah, 2
-        mov     bh, 0
-        mov     dh, y
-        mov     dl, x
-        int     10h
-
-        mov     ah, 9
-        mov     al, c
-        mov     bx, attr
-        mov     cx, 1
-        int     10h
-end;
+procedure WriteChar (x,y:byte; attr:integer; c:char);
+  var s:string;
+  begin s := c; SetColor(attr and $0F); OutTextXY(x*8, y*8, s); end;
 
 procedure WriteXY (x,y:byte; s:string);
-var
-        ls      : byte absolute s;
-        curchar,currow: byte;
-        row,rowmask     : byte;
-        sx,sy: word;
-begin
-  if useSVGA then
+  var curchar, currow, row, bit : byte;  sx, sy : word;
   begin
-        sx := x * 8;
-        sy := y * 16;
-        setFillStyle(SolidFill,black);
-        bar(sx,sy,sx+length(s) * 8,sy+15);
-        for curchar:=1 to length(s) do
-        begin
-                if s[curchar] <= ' ' then
-                begin
-                        inc(sx,8);
-                        continue;
-                end
-                else
-                begin
-                   for currow:=0 to 15 do
-                   begin
-                           row := ourFont^[s[curchar]][currow];
-                           if row<>0 then
-                           begin
-                                   asm
-                                                mov  cx,8
-                         @GoThruRow:
-                                                rcl  row,1
-                                                jnc  @Emptybit
-                                                push cx
-                                                push sx {pass params}
-                                                push sy {pass params}
-                                                push textAttr {pass params}
-                                                call putPixel
-                                                pop  cx
-                         @Emptybit: inc  sx
-                                                loop @GoThruRow
-                                                sub  sx,8
-                                   end;
-                           end;
-                           inc(sy);
-                   end;
-                   dec(sy,16);
-                   inc(sx,8);
-                end; { symbol processing }
-        end; { string processing }
-  end
-  else
-    for curchar:=1 to Length(s) do begin
-      WriteChar(x,y,TextAttr,s[curchar]);
-      Inc(x);
-    end;
-{ asm
-  push  bp
-  mov   ax,1300h
-  mov   bx,TextAttr
-  mov   dl,x
-  mov   dh,y
-  xor   cx,cx
-  mov   cl,ls
-  push  ss
-  pop   es
-  lea   bp,s[1]
-  int   10h
-  pop   bp
-  end; }
-end;
+    sx := x * 8;  sy := y * 16;
+    SetFillStyle(SolidFill, black);
+    Bar(sx, sy, sx + Length(s)*8, sy+15);
+    for curchar := 1 to Length(s) do
+      if s[curchar] <= ' ' then inc(sx, 8)
+      else begin
+        for currow := 0 to 15 do begin
+          row := ourFont^[s[curchar]][currow];
+          if row <> 0 then begin
+            for bit := 0 to 7 do begin
+              if (row and $80) <> 0 then PutPixel(sx, sy, TextAttr);
+              inc(sx);  row := byte(row shl 1);
+            end;
+            dec(sx, 8);
+          end;
+          inc(sy);
+        end;
+        dec(sy, 16);  inc(sx, 8);
+      end;
+  end;
 
 procedure WriteXYAttr (x,y:byte; var s:string);
-          { s: char,attr,char,attr,... }
-var
-        curchar,currow: byte;
-        row,rowmask     : byte;
-        sx,sy,color: word;
-begin
-  if useSVGA then
+  var curchar, currow, row, bit : byte;  sx, sy, color : word;
   begin
-        sx := x * 8;
-        sy := y * 16;
-        setFillStyle(SolidFill,black);
-        bar(sx,sy,sx+length(s) shr 1 * 8,sy+15);
-        for curchar:=1 to length(s) do
-        begin
-                if s[curchar] <= ' ' then
-                begin
-                        inc(sx,8);
-                        inc(curchar);
-                        continue;
-                end
-                else
-                begin
-                   color := ord(s[curchar+1]);
-                   for currow:=0 to 15 do
-                   begin
-                           row := ourFont^[s[curchar]][currow];
-                           if row<>0 then
-                           begin
-                                   asm
-                                                mov  cx,8
-                         @GoThruRow:
-                                                rcl  row,1
-                                                jnc  @Emptybit
-                                                push cx
-                                                push sx {pass params}
-                                                push sy {pass params}
-                                                push color {pass params}
-                                                call putPixel
-                                                pop  cx
-                         @Emptybit: inc  sx
-                                                loop @GoThruRow
-                                                sub  sx,8
-                                   end;
-                           end;
-                           inc(sy);
-                   end;
-                   dec(sy,16);
-                   inc(sx,8);
-                   inc(curchar);
-                end; { symbol processing }
-        end; { string processing }
-  end
-  else
-  asm
-        push    ds
-        xor     bh,bh
-        mov     dl,x
-        mov     dh,y
-        lds     si,s
-        cld
-        lodsb
-        or      al,al
-        jz      @@9
-        shr     al,1
-        cbw
-        mov     di,ax
-        mov     cx,1
-@@1:    mov     ah,2
-        int     10h
-        inc     dl
-        mov     bl,9
-        lodsw
-        xchg    ah,bl
-        int     10h
-        dec     di
-        jnz     @@1
-@@9:    pop     ds
+    sx := x * 8;  sy := y * 16;
+    SetFillStyle(SolidFill, black);
+    Bar(sx, sy, sx + (Length(s) shr 1)*8, sy+15);
+    curchar := 1;
+    while curchar <= Length(s) do begin
+      if s[curchar] <= ' ' then begin inc(sx, 8); inc(curchar, 2); Continue; end;
+      color := ord(s[curchar+1]);
+      for currow := 0 to 15 do begin
+        row := ourFont^[s[curchar]][currow];
+        if row <> 0 then begin
+          for bit := 0 to 7 do begin
+            if (row and $80) <> 0 then PutPixel(sx, sy, color);
+            inc(sx);  row := byte(row shl 1);
+          end;
+          dec(sx, 8);
+        end;
+        inc(sy);
+      end;
+      dec(sy, 16);  inc(sx, 8);  inc(curchar, 2);
+    end;
   end;
-end;
 
 procedure MakeNumDots(x,y,c:int;num:long);
   var s:string; l:byte absolute s;
@@ -474,11 +353,8 @@ procedure MakeNumDots(x,y,c:int;num:long);
     if l>6 then PutPixel(x+(l-6)*8-1,y+7,c);
   end;
 
-procedure MouseHandler; assembler;
-  asm
-        mov     ax,MouseEvent
-        mov     mEvent,ax
-  end;
+procedure MouseHandler;
+  begin mEvent := MouseEvent; end;
 
 procedure MouseMotionHandler;
 begin
