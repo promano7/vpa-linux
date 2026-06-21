@@ -1,5 +1,6 @@
 Unit	Keyboard;		(* Keyboard functions *)
-{$C MOVEABLE PRELOAD PERMANENT}
+{$V-}
+
 
 Interface
 
@@ -15,56 +16,49 @@ function KbdFlags : byte;
 
 Implementation
 
-function FastKeyPressed : boolean; assembler;
-  asm
-	mov	es,Seg0040
-	mov	ax,es:[1Ah]
-	sub	ax,es:[1Ch]
+uses ptccrt;
+
+var
+  bufKey  : word;      { buffer de retroceso de 1 tecla (para PreviewKey/peek) }
+  bufFull : boolean;
+
+{ lee una tecla cruda y la convierte al 'word' de VPA:
+  ascii normal -> byte bajo; tecla extendida (#0 + scancode) -> scancode en byte alto }
+function RawReadKey : word;
+  var c : char;
+  begin
+    c := ptccrt.ReadKey;
+    if c = #0 then
+      RawReadKey := word(ord(ptccrt.ReadKey)) shl 8
+    else
+      RawReadKey := ord(c);
   end;
 
-function KeyPressed : boolean; assembler;
-  asm
-	int	28h
-	mov	ah,11h
-	int	16h
-	mov	al,0
-	jz	@@1
-	mov	al,1
-@@1:
+function FastKeyPressed : boolean;
+  begin FastKeyPressed := bufFull or ptccrt.KeyPressed; end;
+
+function KeyPressed : boolean;
+  begin KeyPressed := bufFull or ptccrt.KeyPressed; end;
+
+function ReadKey : word;
+  begin
+    if bufFull then begin ReadKey := bufKey; bufFull := False; end
+    else ReadKey := RawReadKey;
   end;
 
-procedure FetchKey; assembler;
-  asm
-	int	16h
-	or	al,al
-	jz	@@1
-	cmp	al,0E0h
-	jne	@@2
-	or	ah,ah
-	jz	@@1
-	xor	al,al
-	jmp	@@1
-@@2:	xor	ah,ah
-@@1:
+function PreviewKey : word;   { use only if KeyPressed }
+  begin
+    if not bufFull then begin bufKey := RawReadKey; bufFull := True; end;
+    PreviewKey := bufKey;
   end;
 
-function ReadKey : word; assembler;
-  asm
-	int	28h
-	mov	ah,10h
-	call	FetchKey
+function KbdFlags : byte;
+  begin
+    { TODO: ptccrt no expone el estado Shift/Ctrl/Alt del teclado.
+      Se devuelve 0 (sin modificadores) hasta engancharlo al backend ptc. }
+    KbdFlags := 0;
   end;
 
-function PreviewKey : word; assembler;	{ use only if KeyPressed }
-  asm
-	mov	ah,11h
-	call	FetchKey
-  end;
-
-function KbdFlags : byte; assembler;
-  asm
-	mov	es,Seg0040
-	mov	al,es:[17h]
-  end;
-
-End.
+begin
+  bufFull := False;
+end.

@@ -343,8 +343,8 @@ categoría (esto es la hoja de ruta de las Fases 2–4):
 |---|---|---|
 | 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Resuelto el caso `libXxf86dga` (AUR). Pendiente solo admin: `git init` + rama + licencia. |
 | 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya OFF. `vpa.cfg` generado. **Units portadas: `STRF`, `AUXF`** (compilan + validadas). Receta de port en §6. |
-| 2 — Capa gráfica (`ptcgraph`) | 🟡 En curso | Drop-in verificado; `swapgraph.py` aplicado a 26 ficheros; SVGA fuera. **El racimo compila en orden** (`VPA→AUXF→SCREEN→STRF→MOUSE`) hasta `MOUSE`. **Config renombrado `fpc.cfg`→`vpa.cfg`** (un `fpc.cfg` local eclipsaba el del sistema y se perdía la RTL). |
-| 3 — Entrada (ratón/teclado) | 🟡 En curso | **`MOUSE.PAS` portado a `ptcmouse`** (compila + lógica de eventos validada). Modelo callback→sondeo vía nueva `PollMouse`. Rango emulado por software (`ptcmouse` no exporta `SetMouseXRange/YRange`). Pendiente: `KEYBOARD` + llamar a `PollMouse` desde el bucle de entrada. |
+| 2 — Capa gráfica (`ptcgraph`) | 🟡 En curso | Drop-in verificado; swap aplicado; SVGA fuera; config `vpa.cfg`. **El racimo del núcleo compila** (`VPADATA↔SCREEN↔CONFIG↔INI↔VPA2`) con `MOUSE`/`KEYBOARD` portados. **VPACC desactivado** temporalmente (`{.$DEFINE VPACC}`) para reducir superficie. Frente actual: rutinas de bajo nivel de `SCREEN.PAS` (BIOS/asm: `mem[Seg0040]`, `WaitRetrace`, `WriteChar`, `MouseHandler`, `litt_vpa.obj`). |
+| 3 — Entrada (ratón/teclado) | 🟡 En curso | **`MOUSE`→`ptcmouse` y `KEYBOARD`→`ptccrt` portados y validados.** `KbdFlags` (Shift/Ctrl) queda como `0` (ptccrt no lo expone) — TODO. Pendiente: llamar a `PollMouse` desde el bucle de entrada. |
 | 3 — Entrada (ratón/teclado) | ⬜ Pendiente | |
 | 4 — Limpieza de bajo nivel | ⬜ Pendiente | |
 | 5 — E/S y portabilidad de datos | ⬜ Pendiente | |
