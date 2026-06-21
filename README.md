@@ -294,6 +294,25 @@ Aprendido al portar la primera unit (`UNIT/STRF.PAS`). Estos patrones se repetir
 > **Estado:** `UNIT/STRF.PAS` portado, compila limpio y validado funcionalmente
 > (`ItemPos`/`ItemStr` reescritas desde asm). Es la primera unit hoja verde del árbol.
 
+### Herramienta `preport.py`
+
+Automatiza los pasos **mecánicos** (1, 2 y 4) de la receta: normaliza EOL preservando
+el encoding original, elimina `{$C ...}`, e inserta `{$V-}`. Lo que requiere criterio
+(asm, interrupciones, puertos, `uses Graph/Dos/WinAPI`) **no lo toca**: lo detecta y avisa
+con número de línea, y devuelve código de salida 2 si queda trabajo manual (0 si limpio).
+Peca de avisar de más a propósito (p.ej. marca asm/`int` aunque esté en comentarios) para
+no dejar pasar nada real.
+
+```bash
+python3 preport.py UNIT/VHLP.PAS              # vista previa (no modifica)
+python3 preport.py UNIT/VHLP.PAS --in-place   # aplica y deja copia .orig
+```
+
+Units de `UNIT/` que salen **limpias** (compilan tras el preport, sin trabajo manual):
+las del build vivo dependen de `ptcgraph` (`VHLP`, `VHLPMAKE`→vía `vhlp`) o son entrada
+(`KEYBOARD`, `MOUSE`, Fase 3). `SYSEXT`/`MEMTEST`/`DPMI*` pertenecen al subsistema DPMI
+descartado.
+
 | Fase | Estado | Notas |
 |---|---|---|
 | 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Resuelto el caso `libXxf86dga` (AUR). Pendiente solo admin: `git init` + rama + licencia. |
