@@ -313,6 +313,33 @@ las del build vivo dependen de `ptcgraph` (`VHLP`, `VHLPMAKE`→vía `vhlp`) o s
 (`KEYBOARD`, `MOUSE`, Fase 3). `SYSEXT`/`MEMTEST`/`DPMI*` pertenecen al subsistema DPMI
 descartado.
 
+### Pasada mecánica global y hoja de ruta
+
+`preport-all.sh` aplica `preport.py` a todo el build vivo de una vez (con copias `.orig`),
+omitiendo descartes (`DPMI*`, `MEMTEST`, `SYSEXT`) y la capa `SVGA` a reemplazar:
+
+```bash
+bash preport-all.sh           # vista previa (no modifica)
+bash preport-all.sh --apply   # aplica in-place + informe en preport-report.txt
+```
+
+Tras la pasada sobre los 40 ficheros del build vivo, el **trabajo manual restante** por
+categoría (esto es la hoja de ruta de las Fases 2–4):
+
+| Categoría | Ficheros | Fase |
+|---|---:|---|
+| `uses Graph` | 26 | **2** (el cuello de botella: portar la capa gráfica desbloquea la mayoría) |
+| `asm` / `assembler` | 15 / 6 | 2–4 (concentrado en gráficos, init, combate) |
+| `INT/Intr` | 10 | 3–4 |
+| `uses Dos` | 5 | 4–5 |
+| `uses WinAPI` | 1 | 3 (`MOUSE`, solo bajo `{$IFDEF DPMI}` que está OFF) |
+| `Mem[]` | 3 | 4 |
+
+> **Conclusión:** 26 de ~40 ficheros dependen de `Graph`. La migración
+> `Graph` → `ptcgraph` (Fase 2) es la **llave maestra** que abre la mayor parte del árbol.
+> Importante: aplicar `preport-all.sh --apply` **no** hace compilar esos ficheros (faltan
+> deps y el trabajo manual), pero deja la capa mecánica hecha en todo el proyecto.
+
 | Fase | Estado | Notas |
 |---|---|---|
 | 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Resuelto el caso `libXxf86dga` (AUR). Pendiente solo admin: `git init` + rama + licencia. |

@@ -1,0 +1,32 @@
+# --- Artefactos de compilacion de Free Pascal ---
+*.ppu
+*.o
+*.a
+*.or
+*.compiled
+*.res
+link*.res
+ppas.sh
+ppas.bat
+fpcmade.*
+*.fpm
+
+# El ejecutable resultante (ajustar el nombre cuando lo fijemos)
+/vpa
+/vpalin
+/vpamm
+
+# --- Artefactos heredados de Borland Pascal (se eliminan en limpieza) ---
+*.tpu
+*.tpp
+*.map
+*.bak
+*.dsk
+*.old
+*.orig
+
+# --- Editores / SO ---
+*~
+.vscode/
+.idea/
+.DS_Store
