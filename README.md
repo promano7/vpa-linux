@@ -166,13 +166,12 @@ verificable al final de cada una.
 - [ ] Primer compilado de tanteo (bottom-up, empezando por una unit hoja como `STRF`): **recoger la lista de errores reales**.
 
 ### Fase 2 — Capa gráfica (`ptcgraph`)
-- [ ] Eliminar `SVGA.PAS`/`SVGA.OBJ` y la dependencia de la unit `SVGA`.
-- [ ] Reescribir la inicialización gráfica en `VPA/VPAINIT.PAS`: sustituir el registro de
-      drivers BGI custom (`InstallUserDriver`, `RegisterBGIDriver @svgaProc`/`@EGAVGADriverProc`,
-      `RegisterBGIFont`) por `InitGraph` estándar de `ptcgraph` en modo VGA.
-- [ ] Cambiar `uses Graph` para que resuelva contra `ptcgraph`.
-- [ ] Resolver las fuentes BGI (`LITT_VPA.CHR`, `SANSERIF`) con el mecanismo de `ptcgraph`.
-- [ ] Reescribir `GREETS.ASM` (pantalla de saludo) en Pascal puro o eliminarla.
+- [x] **Verificado: `ptcgraph` cubre el 100% de la API BGI que usa VPA** (probado compilando un programa con todas las llamadas: `Line`, `OutTextXY`, `GetImage`/`PutImage`, `Circle`, `Bar`, paletas, viewports…). Es prácticamente *drop-in*.
+- [x] **`swapgraph.py`**: cambia `uses Graph`→`ptcgraph` (y `Crt`→`ptccrt`) en las cláusulas `uses` de los 22 ficheros afectados, preservando encoding. (VPA no usa `Crt`; sí `Dos` en 5 ficheros → Fase 4.)
+- [ ] Aplicar `swapgraph.py` a los ficheros con `uses Graph`.
+- [ ] **Reescribir la init de `VPA/VPAINIT.PAS`**: las ramas SVGA/CustomBGI/EGAVGA registran drivers BGI externos (`@svgaProc`, `@EGAVGADriverProc`, `@SmallFontProc`) que no enlazan en Linux. En ptcgraph `InstallUserDriver`/`RegisterBGIDriver` son no-ops; se sustituye todo el bloque por una llamada directa `InitGraph(gd,gm,'')` con un modo nativo (p.ej. `gd:=D8bit; gm:=m640x480` para 256 colores). Eliminar `SVGA.PAS`/`SVGA.OBJ`.
+- [ ] Reescribir `GREETS.ASM` en Pascal o eliminarla.
+- [ ] Portar la cadena del núcleo gráfico (`SCREEN`, `VPADATA`, `Global`…) hasta compilar.
 - [ ] **Hito:** arrancar en modo gráfico y dibujar el mapa estelar.
 
 ### Fase 3 — Entrada: ratón y teclado
@@ -344,7 +343,7 @@ categoría (esto es la hoja de ruta de las Fases 2–4):
 |---|---|---|
 | 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Resuelto el caso `libXxf86dga` (AUR). Pendiente solo admin: `git init` + rama + licencia. |
 | 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya OFF. `fpc.cfg` generado. **Units portadas: `STRF`, `AUXF`** (compilan + validadas). Receta de port en §6. |
-| 2 — Capa gráfica (`ptcgraph`) | ⬜ Pendiente | |
+| 2 — Capa gráfica (`ptcgraph`) | 🟡 En curso | **Verificado drop-in:** ptcgraph cubre toda la API BGI de VPA. `swapgraph.py` listo. Pendiente: aplicar swap + reescribir init de `VPAINIT`. |
 | 3 — Entrada (ratón/teclado) | ⬜ Pendiente | |
 | 4 — Limpieza de bajo nivel | ⬜ Pendiente | |
 | 5 — E/S y portabilidad de datos | ⬜ Pendiente | |
