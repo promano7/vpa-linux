@@ -1,0 +1,87 @@
+VPA/CC -- PCC code within VPA
+=============================
+
+What the he**?
+--------------
+
+  I'm trying to get some PCC code working within VPA. Essentially, I want
+  all the PHost support stuff from PCC also in VPA. I think having command
+  message support directly in the client is a Good Thing(tm), especially
+  when the number of command messages grows. Writing `give' and `remote'
+  messages manually just can be a major PITA.
+
+  What we have right now:
+
+  + VPA manages remote control. On the ship screen, you see the remote-
+    control status of each ship and can change it with Shift-C. Due to
+    limited screen real-estate, it's quite terse, though:
+    - `RCtl (own:9)' means this ship is owned by player 9, but currently
+      under remote control by the player shown as owner
+    - `RCtl no' if remote control for this (your/enemy) ship is forbidden
+    - `RCtl allow' if remote control for this (your) ship is allowed
+    - `RCtl req'd' if we requested control
+    - `RCtl drop' if we dropped control
+    The status is also color-coded: red=forbidden, green=remote controlled,
+    yellow=dropped
+
+  + VPA manages ship givings. On the ship screen, there is an item `Give'.
+    When the ship is being given away, it reads `Giv:RACE'. The key is V.
+
+  + VPA recognizes PHost 4.0j hullfuncs. Note that due to the fact that VPA
+    abbreviates hull names, hull names in HULLFUNC.TXT may not work the
+    same way as in PHost. "Hulls = Talarian" will most likely work (because
+    VPA leaves the initial part of the name alone), but "Hulls = Talarian
+    Class Merchantman" will not work because VPA removes the 'Class' while
+    shortening the name. Use Shift-F on the ship build screen or the
+    ship info screen to display a list of hull functions the ship has. 
+
+  The layout might not be optimal. If you have better ideas, go ahead...
+  Same goes for the keys. All the good ones are already taken.
+
+  The code is based on PCC 1.1.2, and updated from 1.1.12. Actually, the
+  source files except for the glue code in `vpacc.pas' are directly from
+  the PCC source tree. Okay, granted, I added some $IFDEFs :-) The user
+  interface parts have been added to various places in VPA, and are guarded
+  by {$IFDEF VPACC} (just in case someone does not like my code :-)
+
+  The commands are stored in the file `cmdX.txt'. PCC has the option to
+  store them directly in the message file (and filter them out again when
+  it loads them), but I did not yet implement that yet for VPA. I think
+  it's pretty hard to do that due to the way VPA handles messages. The
+  bottom line is that you must use a Maketurn program that supports
+  `cmdX.txt'. Programs that do so as of June 2002 are (of course) VPA and
+  PCC, and my Portable Maketurn. VPA handles the meta-commands $time
+  and $send-file, but not $thost-allies.
+
+
+Notes
+-----
+
+  This currently does not handle history. For example, in the presence
+  of remote control, missions might be displayed wrong as they are always
+  interpreted by the current remote owner.
+
+  Hull functions are not stored in the history either, but the author
+  believes this is not a big deal.
+
+  Layout of ship function display:
+    [C] Imperial Assault              123456789AB   234
+  - Type of assignment: [C]=assigned to ship class, [S]=assigned to
+    this particular ship, [R]=racial ability (all ships can do it),
+    [U]=universal ability (everyone can do it with every ship).
+  - Name of ability.
+  - Races that can use it. One letter for each player. Your race is
+    highlighted if it can use the ability.
+  - Experience levels that can use it. The current experience level
+    is highlighted if known.
+
+
+Compiling
+---------
+
+  Add "/u..\cc" to bpc.cfg
+  Add "{$DEFINE VPACC}" to switches.inc
+  Recompile
+
+
+      -- Stefan Reuther <Streu@gmx.de>

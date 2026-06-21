@@ -1,0 +1,65 @@
+  A modifed version of the Portable Host Development Kit EXAMPLE PROGRAM #5
+
+   I've made very few changes, it does not generate the "xyz has been
+ teleported" messages, has some getch()s in case of problems and displays
+ a bit of what is going on to the screen.
+
+	 9-Jan-97 Andy Dukes - eMail ADukes@CityScape.Co.UK
+
+ This program is meant to demonstrate what an AUXHOST add-in program
+ might look like. It is really no different from an external program
+ except that it calls WriteAUXHOSTMessage() instead of WriteMessageToRST()
+ or WriteExternalMessage() to write player messages.
+
+ This example program implements rudimentary transporter technology
+ for starbases. Starbases may send one type of mineral (or colonists,
+ supplies, and money) to another starbase on each turn. The amount of
+ that substance or item to transport is fixed at 20% of the current
+ stock but this can be made configurable or intelligent by some enterprising
+ young programmer.
+
+ The planetary friendly code is used to effect transfer. If a planet's
+ friendly code is 'TX_' (where _ is N, T, D, M, C, S, or $) then the
+ starbase in orbit of that planet is a transmitter. The special transmit
+ friendly codes, then, are:
+
+          TXN     -- Transmit Neutronium
+          TXT     -- Transmit Tritanium
+          TXD     -- Transmit Duranium
+          TXM     -- Transmit Molybdenum
+          TXC     -- Transmit Colonists
+          TXS     -- Transmit Supplies
+          TX$     -- Transmit Megacredits
+
+ The starbase will transmit 20% of the current stock of the item to
+ the receiver starbase. The receiver starbase must have its friendly
+ code set to 'RX_' where '_' is once again the letter code for the item
+ to receive (as above). Multiple transports may be occuring at once on
+ the same turn but they are all done in order of base ID numbers. That
+ is, the lowest numbered base with a transmit friendly code is found, and
+ then the lowest numbered base with a matching receive code is used as
+ the receiver. The next-lowest numbered base is found with a transmit
+ code, etc.
+
+ This utility is meant to be run in the AUXHOST1 phase. For example,
+ in a PHOST batch file, you would type:
+
+              PHOST -1 gamedir
+              TELEPORT gamedir
+              PHOST -2 gamedir
+              PHOST -3 gamedir
+
+ Using HOST 3.2, the AUXHOST1.BAT file should contain:
+              TELEPORT gamedir
+
+ and the AUXHOST2.BAT file may be left blank.
+
+ This file is copyrighted by the PDK authors Andrew Sterian, Thomas Voigt
+ and Steffen Pietsch in 1995. You may copy and distribute this file
+ freely as long as you retain this notice and explicitly document any
+ changes you make to this file (along with your name and date) before
+ distributing modified versions.
+
+ This is an example program for instructional purposes only. It is not
+ guaranteed to work correctly, or even to necessarily compile on all
+ systems. You use this program at your own risk.

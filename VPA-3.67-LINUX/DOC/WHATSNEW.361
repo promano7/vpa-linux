@@ -1,0 +1,356 @@
+Note a new 'whatsnew' format:
+! bug fixed
++ new feature added
+- old feature removed
+
+* * *
+
+Version 3.60a:
++ Two new markers: grave and cactus.
++ Marker text starting with ` does not show up on the screen.
+
+Version 3.60b:
+! Crush-on-message-parsing bug is squished, null pointers are evil }3F~
+
+Version 3.60c:
++ Marker text alignment is persistent now.
+
+Version 3.60d:
++ Introducing marker filters: you can assign every marker type/color pair
+  to some group (1, 2, A, etc., case insensitive), make some masks for
+  those groups (12, 4AZ, etc., use * for all) and rotate masks with Alt-A.
+  Note, Shift-A works as ususal and the default behavior of filters is as
+  in pre-3.60d.
+
+Version 3.60e:
+! Unload in space bug.
++ Faster map scrolling.
+
+Version 3.60f:
+! PVCR call works again. Download PVCR 3.3e(2) first [http://phost.org].
++ SVGA support is added, use /S start switch. VPA will start in 640x480x256
+  mode, so you get the same display size etc., but using VESA modes allows
+  to set higher refresh rate. Use utils packaged with your video card or
+  universal utils like unirefresh [http://unirefresh.demonews.com]. Note,
+  default mode is old VGA 640x480x16. Note(2), this mode needs a lot of
+  testing, please, send us your comments!
+
+Version 3.61:
++ UTIL.DAT reading significantly improved. VPA now reads mine fields, dark
+  sense, super spy, and several exploration records.
++ Show gravity wells in high zoom levels. Shift-G toggles this feature.
++ Improved tax predictions; ShowFinalHappy.
++ Show hull functions for scanned ships.
++ Minefield information improved.
++ More PConfig keys supported (MaxShipsHissing, CPEnableGive,
+  CPEnableRemote, NativeTaxRate, ColonistTaxRate)
++ SHIPXY parser workaround for Winplan unpacker bug. When you unpack with
+  a recent Winplan version, some "ghosting" ships would show up near (0,0)
+  sometimes.
++ Added experimental command message processing (from PCC). You can give
+  remote control (Shift-C) and give (V) commands for ships. These will be
+
+  stored in a file CMDx.TXT. To have them sent to the host, you must use
+  VPA's built-in Maketurn (or PCC's, of course :-)  Comments highly
+  appreciated.
+
+Version 3.61a
+! Marker filters made more robust. In addition, the first marker filter
+  now always is `*'.
+! Command processing made more robust.
+! Fixed garbled display of equipment of foreign ships.
+! UTIL.DAT parser fixed. It would have applied the "owner" from a sensor
+  sweep record to all following "bioscan" records, and probably other
+  oddnesses. Bug found by Heiko Schlenker.
++ Message templates can generate variable-sized circles. Just make a
+  standard `Message Marker' template with `Radius' placeholder and
+  `Keep Circle COLOR'.
+! when a ship is under remote control, use correct "mission 9"
+! report generator handles extended missions better
++ Shift-B to compute ship costs
++ Shift-U in build screen toggles upgrade cost display
+
+Version 3.61b
++ Instant battle result for PHost (using util.dat)
++ N in construction yard give prediction of next turn available resources
+! Improved fuel burn prediction
+! Cloak fuel now handled correctly for all PHost extmissions
+
+Version 3.61c
+! Fixed crash when trying to unload to planet about which nothing is known
+! Improved fuel burn prediction
+! Use correct UnitsPerTorpRate when predicting minelay
+! Mineral extraction should now be exact for THost
+! RamScoopFuelPerLY option corrected
+! VPA/MM: mouse pointer fixed
++ Reply also works when message is not English
++ Pillaging will update database with natives information
++ Warning when vpa.msg is in Unix format
++ Recognize remote-controlled hissers
+
+Version 3.61d
+! Fixed overflow in mineral extraction
+! VPA/MM: fixed bitmap display problems
++ display build queue positions in PHost games: '@3' on the base screen
+  means that this base is on position 3 of the queue.
++ give 'v' now also works on planets
++ added message filter (ported from PCC). When reading a message, you can
+  hit 'k' to "kill" this message and all messages of a similar type. For
+  example, when you kill a "mine-lay" message, all other mine-lay messages
+  will be hidden as well. In the future, these messages will be skipped when
+  browsing with the Left/Right arrow keys. To view such a message again,
+  use Shift+Left/Shift+Right; you can then "unkill" a message with 'u'.
+  The settings will be stored in a file "msgX.cc" which is also used for
+  the same purpose by PCC 1.1.5.
++ added PBP utility. Hit Ctrl-P to pop up a list of planets with 'PBx'
+  friendly codes. Hit Enter on an occupied slot to go to that planet, hit
+  Enter on a free slot to change the friendly code of the current planet
+  to 'PBx'.
++ new VPA.INI keyword: "Font=file" in the [System] section can be used to
+  override the font VPA uses for messages. It has no effect when you use
+  standard VPA in 16 colors, though. The VPA support files, version 2,
+  contain one such font. Some more are available on the VPA website.
++ added sorting of ship list. Shift-z changes sort key : ship id,
+  battle order, ship hull id, tow groups. Same extra information is
+  displayed left to ship name.
++ extended minefield simulator Alt-F9. For given radius number
+  of torpedos and other minefield information are displayed.
+! improved ship external mission interface.
+! improved minefield information, 'r' key helps in laying/scooping planning.
+! Mouse and video reset is now Shift-v
+
+Version 3.61e
+! Fixed: 3.61d would often lose command messages
++ mineral prediction includes cloning
+
+Version 3.61f
+! Rounding errors in VPAMM are now gone. VPAMM now always yields the
+  same results as VPA
+! Mine laying and Cobol rules improved
+! Support for unpacking Host999 RST was missing. We also generate the
+  correct checksums now so that Winplan's Maketurn can be used
++ added support for PHost 4 experience. Experience levels are now read
+  from util.dat, stored in the database, and displayed on the ship/planet
+  screen. For example, a level-3 ship will report as "Ship 156 (L3)".
+
+Version 3.61g
+! Fixed display error for L0 experience :)
+! VPA can now correctly launch PVCR 4.0
+! Left/right keys could get stuck on a planet if something was known about
+  it but not its coordinates (happens in ExplMap games)
++ When displaying a minefield, use 't' to cycle through beam types for
+  sweep prediction (from Brian Graversen)
++ Mining predictions now consider over-mining. In case of over-mining,
+  the respective field of the info pane turns yellow.
++ Added 'actual list' (todo list). Toggle an object's status using '/',
+  and cycle through still-marked objects using '.' and ','. See FAQ for
+  details (by Andrew Andrienko).
+
+Version 3.62
++ Planet economy simulator - F6 in planet context
++ Minerals prediction in next turn - Shift-F1
++ Ships prediction in next turn - Shift-F2 - can be used with Shift-z to 
+  see battle order next turn.
++ VPA can find some common mistakes - Shift-F11
++ New function to select nearest ship/planet. Key O iterates through
+  planets or ships, and sets 'skip' mark, Shift-O sets 'done' mark
+  (actual list); both of which cause this function to skip the respective
+  object next time. Ctrl-O clears all 'skip' marks.
++ VPA now derives the score from the actual game data if a score blanker
+  is used. Idea: James Heinrich
+! Movement prediction should now match Host 3.22.026 and later, i.e. if
+  VPA says you need one turn, you should *really* need one turn.
+! Fuel usage computation handles 'mdX' fcodes
+
+Version 3.62a
+! Fixed crashes in prediction functions
++ Added a boatload of new features which were previously known as 'CGExt'.
+  'extfeat.txt' has a detailed description.
+  - Quality Assurance: '#' brings up visual interface to actual list
+  - Borgculator: taxation/economy simulator (ctrl-b)
+  - Object Notes: attach free-text notes to your units (ctrl-n), with
+    history of old notes
+  - Resource Statistics: displays useful stuff (ctrl-f10)
+  - Fleet Report: A structured overview of your ships (ctrl-f11)
+  - Inter-Planetary Connections: Constellations of the Echocluster
+    (shift-l, ctrl-l)
+  - Ion Storm Waypoint Prediction: Navigate in class 4 and 5 storms
+    (alt-i in distance mode compensates storm drag)
+  - Population Growth Prediction: Display it on the planet info screen.
+    (shift-j)
+  - Map Border: Disable it if it annoys you.
+  - Data Exchange Subscription: Automate sending of planet data.
+  - Score Prediction: What your ships are worth in AutoScore or PTScore.
+  - Territory Overview: Your area of influence at a glance (experimental).
+    (ctrl-e)
+! Fixed Bug 917480 marker to base now possible
++ Show engine number of ships in Phost-Games for AlternativeTow
+! Fixed part of bug 906502 - no scroll when pressing o any more
++ Make ShowMaxPop configurable in vpa.ini. New key: ShowMaxPop=On|Off
+
+Version 3.62b
+! Maketurn now filters out dull transfers generated by planets.exe
+! Solved integer overflow problem in score calculation (bug#928225).
++ Ships and planets that have a note attached to them are now marked with
+  an icon on their info screen and on the QA overview list.
+! Changes to the item note (ctrl-n) interface that should make it easier to
+  handle. Edit/clear doesn't need to be confirmed anymore.
++ If ConfirmNotes=On is set in VPA.INI VPA will ask twice before modifying or
+  clearing an item note.
+! Big improvements on population prediction.
+! Fuel computations for HOST should now be exact. Since the compiler used
+  to compile HOST generates bogus computations (for example, you are billed
+  only 2 ly movement for moving 3 ly north), VPA uses a table with all
+  relevant distance values. This table is stored in file 'disttabl.dat';
+  without that table, VPA will not run in HOST mode.
++ Planets with defenses (or SB defenses) now show battle values (battlemass,
+  beams x beamtype and fighters : fighterbays). Configurable in vpa.ini:
+  new key: ShowCombatStrength. Can be toggled by shift-d.
++ Added the running-out-of-fuel formular to the movement fuel-calculations so
+  you can use significantly less fuel and still arrive at the desired wp.
+! Connection lines between planets (shift-l, ctrl-l) are now calculated more
+  precisely. Warp-wells are taken into acount automatically. If the distance
+  specified is less than 10 it will be interpreted as warp speed instead of
+  lightyears. If it is given as warp speed VPA will determine the distance
+  using movement simulation for borderline cases.
++ Enemy ships show mass changes
++ CTRL-T now sets the maximum tax for max-grow when Ntax<1. This way, you
+  can see right away how many colonists you need to collect all the taxes.
+! Menues are improved so empty lines get skipped, SHIFT+letter jumps to
+  the first item (not the last as usual) and you can enter more letters to
+  specify the line you're searching for ... an O,u,t would find an Outrider
+  Scout in a hulls list.
+! Combat simulator improved by menues for engines,beam,torps and race (use
+  Enter)
+! Enemy ships with warp 0 enter distance-mode with warp>0 to predict fuel.
++ Added 1 message type (HConfig4) and 9 new fields to vpa.msg, so be sure to
+  use the new vpa.msg or change your current one correspondingly.
+
+Version 3.62c
++ many feature requests satisfied (clock: shift-C, reset waypoints of ships
+  in warp-wells: ctrl-Z, new mistake warnings, warp-circles: shift-W)
+! bogus-score-in-turn-one problems should be fixed
++ minfield handling improved
++ config dialog (ctrl-o)
++ Added command line switch /BGI to support third party BGI drivers. Syntax is
+  /BGI:drivername,driverdir,bgimode. E.g., if you copy your BGI driver named
+  svga.bgi to your VPA directory and you intend to use it's mode number 5
+  say: /BGI:svga,,5
+
+Version 3.63
++ worst-case finder in simulator: 'w' to find worst case for left side, 'W'
+  for right side
++ support PHost 4.x new functions:
+  - hull functions: assigned to ships, new functions, per-race functions
+  - StarbaseCost, BaseFighterCost, FreeFighterCost, MaximumFightersOnBase,
+    MaximumDefenseOnBase
+  - new mining formula
+  - recognize ChunnelSelf,ChunnelOthers,ChunnelTarget abilities for chunnel
+    prediction. Note that ChunnelOthers ships will draw a Chunnel line, but
+    not move themselves, so be careful.
++ reads TARGETx.EXT if exists, deletes it on unpack. This allows VPA to
+  be used together with VPUNPACK / VPUTIL.
+! some PList 3 ships did not show costs in build screen
+! fixed crash in experience games
+! do no longer accept mission arguments above 10000 (not allowed with any
+  host)
++ added Range function (Shift-R) that draws circles for the distances that
+  a ship can travel in the next 6 turns
++ added OptimizeFuel and AutoAdjustWarp options
++ a few bugs fixed (bioscan messages would erase the owner info, ships with 
+  an advanced cloaking device would still be predicted to burn fuel for 
+  cloaking, planet simulation had a few glitches, crash in notepad editor)
+  
+Version 3.64
++ Destination of chunnel is shown as a yellow dotted line
++ Chunnel-Check in SHIFT-F11 - Most common Mistakes
+ S-Chunnel -> Green: A (Firecloud) ship tries to perform a chunnel (has FC set)
+ No Start: -> Origin ship fails because of wrong own parameters (fuel/warp/tow etc.)
+ No End: -> destination ship(s) fail because of wrong parameters (fuel/warp/tow etc.)
+ Low Distance: -> Distance for Chunnel is to short (i.e. 100LY)
+! Waypoint of ships with warp are shown as dotted lines
++ added support for Unity-Addon. Borg colonits prediction with Fcode DA? is shown correctly.
+! Fixed a nasty bug that assimilation grow was not displayed on non-growning planets.
++ added support for Unity-Addon AHP-Jump
++ added support for Unity-Addon advanced Merlin
++ added Unity Advanced Jump in SHIFT-F11 - Most common Mistakes
++ added DA max disassemble in SHIFT-F11 - Most common Mistakes
++ added VPAADDON.INI to manage Addon-Functionality (CTRL-U)
++ performing HYP/AHP jumps are shown in different color, wrong destinations are shown dotted
+! Borg Self Repair valid only with Fuel
++ integrated Calculator! (ALT-C)
++ With SHIFT-F9 you can draw now amounts of units, too
++ Check sweep (msc) and mines (md?, mi?) within Most Common Mistakes
+! MineSim Bugfixed, swept mines are shown now better
+! Experimatal: CTRL-U allows writing of {FOLDER}\VPA.INI (requested by users)
++ Check Addon Starbase+ Money-Transfer, RMT and TM[1-5] Base-Codes within Common Mistakes SHFT-F11
+ Even Moneytranser from Settings are handled.
++ Read AllowWraparoundMap and WraparoundRectangle from PCONFIG.SRC, so it also works
+ if player forgets to make a MAP.INI.
+
+Version 3.65
++ Klingon Pillage in Planet Simulation (F6) added
+! F6: Klingon Pillage/Rebel RGA -> No ship movement calculated. (Feature, no bug, to simulate the planet better)
++ Rebel RGA in Planet Simulation (F6) added 
+! Build Screen fixed for special abilities in prediction (Bug ID ID: 3278371)
++ Shift-F: Forecast for Planets (Minerals, Cash, Weappons) and Ships (ID and Name) are subtitled on screen
+ -> almost all T-Host-orders are simulated, still beta and to be improved
+! Klingon Pillage/Rebel RGA in Planet-View (Happy, Colonist, Natives)
+! Shift-F1 Planet-Forecast now shows its forecasted ships, too (like Shift-F2)
+! Shift-F1 and Shift-F: Forecast in correct order, with Pillage/RGA and Planet Growth, all well sorted and reorganized. Still to be checked and improved! Now is a complete host run for the planet simulated.
+! Free Fighters are read and calculated from Host Messages, too
+! Civil War/Riots fixed
++ VPA Extra Feature are read from messages and handled in transfers 
++ Super Refit in Forecast and in ship display added
++ Forecast for brandnew starbases added (N)
++ Forecast for Ground Attacks, per defined Colonists and Defense Posts
+! Find ships is again on F8
++ Check Mistakes Shift-F11: Cloning added, see change.txt for details
++ Help pages for Shift-F11 updated
+! minor bugfixes
+! Now shows (almost) correct amount of new clans and natives, and happyness.
++ CTRL-V added to edit Common Mistakes parameters in VPACMx.INI
+! NoNTax in Common Mistakes reestablished (acts like VPA 364 beta 4, LowNTax)
+
+Version V3.66 
+! Shows bases that built, lastbuilt and are supposed to be to build next
+  B: This base built a ship last turn
+  L: This was last base that built a ship (end of queue)
+  N: This will be the next (own) base to build
++ Reads Distress Call (Ground Attack) messages and puts correct planet owner
+  -> take care: use correct VPA.MSG
+! Minor bugfixes
+! Ground Attack simulation optimized
++ Common Mistakes added: Check 'trg'/'pop', Build Base, No construction on starbase
+! Shows if a Starbase might be built (Minerals+Cash on Planet and Ships)
++ Shows PlanetYnfos, aka Minerals and Money on Planet (Shift Y)
++ Shows Navtives at planets (Shift N)
+! Reset Video and Mouse, now CTRL-V
+! Config Common Mistakes Parameter, now CTRL-W
++ Shows Addon Teleport Bases with transfer, SHIFT-V
+! All unfinished "task-code" removed 
+! New Addon-Feature "Teleport" - use CRTL-U to activate
++ Addon Teleport added in forecast
++ Addon Teleport-Control in Planet/Base dialog
++ Teleport Add-on in Common Mistakes (F11)
+
+Version V3.67
++ Teleport Add-On better integrated, docs below
+  CTLR-V  - View Teleport
+  SHIFT-V - See Teleport Data on map (view on/off)
+  ALT-V   - Teleport Manager
+  P	      - (at planets) change Fcodes, see overview for Fcodes
+! Planet Sim: Max Colos some bugs fixed, THOST added
+! fixed minesim (Shift F10), now allied fields are treated correctly, maybe move check code to startup, vpa3.pas 'Phase 0'
+  to be treated corrctly, at least one overlaping minefield must exist.
++ In Quality-Assurance (# or Shift-V) 'z' to center map
+! Reset Mouse and Video moved to CTRL-S (sorry again)
++ Minesim enhanced: now recocnizes own fields correctly, and colonial fightersweep works, too. 
+					Decay comes after lay/sweep, no sweep inside Ionstorms, mineexplosions
++ show Super Spy D. (deluxe) if fcode does NOT start with 'x', otherwise show it yellow (standard superspy without planet fcode change)
++ Unity Features added: bd[1-9,h], Klingon Vailand makes fighters
++ Common errors Shift F11: Switch off calculation of taxes for 1-clan planets in config
++ ALT-F1: Online-Help integrated - Take care to remap DOSBOX eventually
+          you need external program (in DOC distribution) to show textfiles
+					If you get messed just delete VPAHELP.INI
++ All ini-files can be edited within VPA (needs DOS edit.com in VPA folder)					

@@ -1,0 +1,181 @@
+#
+#  Makefile for VPA
+#
+#  Run this from within the "root" directory:
+#    make all       -- make a runnable VPA in this directory
+#    make dist      -- make distribution archive
+#    make distmm    -- make distribution archives *including* vpamm
+#    make clean     -- clean up
+#    make src       -- make source code archive (includes "make clean")
+#    make utod      -- run "utod" on all text files (see rule below)
+#    make vpamm.exe -- make "mixed mode" VPA
+#
+
+### Configure paths and program names here
+BPC    = bpc
+TASM   = tasm
+BINOBJ = binobj
+BGIDIR = V:\BP7\BGI
+MV     = move 
+PERL   = v:\perl\bin
+ZIP    = pkzip -ex -xcvs*.*
+ZIP_R  = pkzip -ex -P -xcvs*.*
+# ZIP  = zip -9 -j
+# ZIP_R = zip -9
+D4TP   = vpamm
+UTOD   = utod
+
+SOURCES_VPA = vpa\building.pas vpa\config.pas vpa\details.pas vpa\messages.pas \
+   vpa\msgread.pas vpa\report.pas vpa\rst_trn.pas vpa\scores.pas \
+   vpa\screen.pas vpa\scrsaver.pas vpa\svga.pas vpa\tasks.pas vpa\tcombat.pas \
+   vpa\vcs.pas vpa\vpa.pas vpa\vpa2.pas vpa\vpa3.pas vpa\vpadata.pas \
+   vpa\vpaexit.pas vpa\vpainit.pas vpa\utilfmt.pas vpa\switches.inc \
+   vpa\rusfont.inc vpa\configio.pas vpa\plansim.pas vpa\ini.pas vpa\vpa4.pas
+SOURCES_VHLP = vhlp\vhlp.pas
+SOURCES_UNIT = unit\auxf.pas unit\keyboard.pas unit\mouse.pas unit\strf.pas
+SOURCES_VPAMM = vpamm\*.pas 
+SOURCES_CC = cc\ccfileut.pas cc\hullfunc.pas cc\msgwin.pas cc\phostm.pas cc\vpacc.pas
+SUBDIRS = cc vpa vhlp unit vpamm
+
+OBJECTS = vpa\egavga.obj vpa\greets.obj vpa\litt_vpa.obj
+OBJECTSMM = $(OBJECTSMM) vpamm\sansfont.obj vpamm\propfont.obj
+
+DISTFILESCOMMON = vpa.hlp vpa_rus.hlp vpa.msg disttabl.dat 
+DISTFILES = vpa.exe
+DISTFILESMM = vpamm.exe vpamm.ovr vpamm\vpamm.txt
+DISTPATHFILES = examples\vpa.ini
+DOCDISTFILES1 = doc\colors.txt doc\complete.frm doc\keys.txt doc\reports.txt
+DOCDISTFILES2 = doc\vpafaq.txt doc\vpaini.txt doc\vpamsg.txt doc\whatsnew.3*
+DOCDISTFILES3 = doc\extfeat.txt doc\unity.txt doc\starbase.txt doc\teleport.txt
+DOCDISTFILES4 = doc\help.zip doc\viewht25.zip
+
+### Phony targets
+
+all: $(DISTFILES) $(DISTPATHFILES) $(DISTFILESCOMMON)
+
+dist: vpa.zip vpadoc.zip vpafaq.htm
+
+distmm: dist vpamm.zip
+
+src: clean vpasrc.zip
+
+### Zipfiles. We have to be careful with command line length limits here.
+
+vpa.zip: $(DISTFILES) $(DISTPATHFILES) $(DISTFILESCOMMON)
+  -del vpa.zip
+  $(ZIP) vpa.zip $(DISTFILES)
+  $(ZIP) vpa.zip $(DISTFILESCOMMON)
+  $(ZIP_R) vpa.zip $(DISTPATHFILES)
+
+vpamm.zip: $(DISTFILESMM) $(DISTPATHFILES) $(DISTFILESCOMMON)
+  -del vpamm.zip
+  $(ZIP) vpamm.zip $(DISTFILESMM)
+  $(ZIP) vpamm.zip $(DISTFILESCOMMON)
+  $(ZIP_R) vpamm.zip $(DISTPATHFILES)
+
+vpadoc.zip: $(DOCDISTFILES1) $(DOCDISTFILES2) $(DOCDISTFILES3)
+  -del vpadoc.zip
+  $(ZIP) vpadoc.zip $(DOCDISTFILES1)
+  $(ZIP) vpadoc.zip $(DOCDISTFILES2)
+  $(ZIP) vpadoc.zip $(DOCDISTFILES3)
+	$(ZIP) vpadoc.zip $(DOCDISTFILES4)
+	
+vpasrc.zip:
+  -del vpasrc.zip
+  $(ZIP_R) vpasrc.zip $(SUBDIRS: =\*.* )\*.* doc\*.* change.txt bpc.cfg makefile
+
+### VPA.EXE
+
+vpa.exe: vpa\vpa.exe
+  copy vpa\vpa.exe .
+
+disttabl.dat: vpa\disttabl.dat
+  copy vpa\disttabl.dat .
+
+vpa\vpa.exe: $(SOURCES_VPA) $(SOURCES_VHLP) $(SOURCES_UNIT) $(SOURCES_CC) $(OBJECTS) bpc.cfg
+  $(BPC) vpa\vpa.pas
+
+vpa\greets.obj: vpa\greets.asm
+  $(TASM) /m vpa\greets.asm, vpa\greets.obj
+
+vpa\egavga.obj: $(BGIDIR)\egavga.bgi
+  $(BINOBJ) $(BGIDIR)\egavga.bgi vpa\egavga.obj EGAVGADriverProc
+
+vpa\litt_vpa.obj: vpa\litt_vpa.chr
+  $(BINOBJ) vpa\litt_vpa.chr vpa\litt_vpa.obj SmallFontProc
+
+### VPAMM.EXE
+
+vpamm.exe: vpamm\vpamm.exe
+  copy vpamm\vpamm.exe .
+  copy vpamm\vpamm.ovr .
+
+vpamm\vpamm.exe: $(SOURCES_VPA) $(SOURCES_VPAMM) $(SOURCES_UNIT) $(OBJECTSMM)
+  $(BPC) /gd /cd /dVPAMM /ivpamm /uvpamm /u$(D4TP) /$O+,N- /ovpamm vpamm\vpamm.pas
+
+vpamm\sansfont.obj: vpamm\sans.rzg
+  $(BINOBJ) vpamm\sans.rzg vpamm\sansfont.obj SansFont
+
+vpamm\propfont.obj: vpamm\propfont.fnt
+  $(BINOBJ) vpamm\propfont.fnt vpamm\propfont.obj ProportionalFont
+
+### Help files
+
+# I'd like to use a pattern rule for this, but Borland make does not
+# understand that.
+vpa.hlp: vhlp\vpa.hhh vhlp\vhlpmake.exe
+  vhlp\vhlpmake.exe vhlp\vpa.hhh
+  $(MV) vhlp\vpa.hlp vpa.hlp
+
+vpa_rus.hlp: vhlp\vpa_rus.hhh vhlp\vhlpmake.exe
+  vhlp\vhlpmake.exe vhlp\vpa_rus.hhh
+  $(MV) vhlp\vpa_rus.hlp vpa_rus.hlp
+
+vhlp\vhlpmake.exe: vhlp\vhlpmake.pas $(SOURCES_VHLP) $(SOURCES_UNIT)
+  $(BPC) vhlp\vhlpmake.pas
+
+vpa.msg: vpa\vpa.msg
+  copy vpa\vpa.msg .
+
+examples\vpa.ini: vpa\vpa.ini
+  copy vpa\vpa.ini examples\vpa.ini
+
+vhlpshow.exe: vhlp\vhlpshow.exe
+  copy vhlp\vhlpshow.exe .
+
+vhlp\vhlpshow.exe: $(SOURCES_VHLP) $(SOURCES_UNIT) $(OBJECTS)  bpc.cfg
+  $(BPC) vhlp\vhlpshow.pas
+
+# I wrote this rule this way so that when you don't have perl, it will
+# not overwrite "vpafaq.htm" with an empty file
+vpafaq.htm: doc\vpafaq.txt doc\vpafaq.pl
+  $(PERL) doc\vpafaq.pl doc\vpafaq.txt >vpafaq.new
+  $(MV) vpafaq.new vpafaq.htm
+
+clean:
+  -for %i in ($(SUBDIRS)) do del %i\*.tpu
+  -for %i in ($(SUBDIRS)) do del %i\*.tpp
+  -for %i in ($(SUBDIRS)) do del %i\*.bak
+  -for %i in ($(SUBDIRS)) do del %i\*.map
+  -for %i in ($(SUBDIRS)) do del %i\*.dsk
+  -del vhlp\vhlpmake.exe
+  -del vhlp\vhlpshow.exe
+  -del vpa\vpa.exe
+  -del vpa\greets.obj
+  -del vpa\egavga.obj
+  -del vpa\litt_vpa.obj
+  -del vpamm\vpamm.exe
+  -del vpamm\vpamm.ovr
+
+# utod is from the DJGPP package. It converts Unix-style text files into
+# DOS/Windows format. It does not modify the files when they already have
+# the right format. It will not change the files' mtime, either, so you
+# can run "make utod" anytime you wish.
+utod:
+  -$(UTOD) bpc.cfg change.txt makefile
+  -$(UTOD) cc/*.pas cc/readme
+  -$(UTOD) doc/*.txt doc/complete.frm doc/vpafaq.pl doc/whatsnew.3*
+  -$(UTOD) unit/*.pas
+  -$(UTOD) vhlp/*.hhh vhlp/*.pas
+  -$(UTOD) vpa/*.pas vpa/*.asm vpa/*.bat vpa/*.inc vpa/vpa.ini vpa/vpa.msg
+  -$(UTOD) vpamm/*.pas vpamm/*.inc vpamm/vpamm.txt

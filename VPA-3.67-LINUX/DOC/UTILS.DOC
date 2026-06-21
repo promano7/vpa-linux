@@ -1,0 +1,1480 @@
+
+==============================================================================
+
+                        UTILITAIRES TURBO PASCAL 7.0
+
+==============================================================================
+
+
+
+
+                            TABLE DES MATIERES
+
+------------------------------------------------------------------------------
+1. TOUCH
+2. GREP
+	Les options de ligne de commande de GREP
+	Comment rechercher du texte avec GREP
+	Exemples d'utilisation de GREP
+3. BINOBJ
+4. Utilisation de TPUMOVER, le gestionnaire d'unit‚s
+	Pr‚sentation des unit‚s
+	Utilisation de TPUMOVER
+5. MAKE
+	Cr‚ation de fichiers MAKE
+		Commentaires
+		Lois explicites
+		Lois implicites
+		Liste de commandes
+		Macros
+			macro test d‚finie {$d}
+			macro nom de fichier de base {$*}
+			macro nom de fichier complet {$<}
+			macro chemin d'accŠs de fichier {$:}
+			macro nom de fichier et extension {$.}
+			macro nom de fichier seul {$&}
+		Directives
+	Utilisation de MAKE
+		Le fichier BUILTINS.MAK
+		Comment MAKE recherche les fichiers
+		Options de ligne de commande de MAKE
+		Messages d'erreur de MAKE
+			Erreurs fatales
+			Erreurs simples
+------------------------------------------------------------------------------
+
+
+
+1. L'UTILITAIRE DE RETOUCHE DES DATES DE VALEUR : TOUCH
+-------------------------------------------------------
+
+Dans certaines situations, vous voudrez qu'un fichier cible sp‚cifique soit
+recompil‚ ou reconstruit mˆme s'il n'y a eu aucune modification de son code
+source. Vous pouvez le faire en faisant appel … l'utilitaire TOUCH fourni avec
+Turbo Pascal. TOUCH a pour seul but de modifier la date et l'heure
+caract‚ristiques d'un fichier ou d'une s‚rie de fichiers en utilisant la date
+et l'heure courantes transmises par le systŠme d'exploitation. TOUCH fait
+ainsi paraŒtre ces fichiers plus r‚cents qu'ils ne le sont, le contenu n'‚tant
+absolument pas modifi‚.
+
+Dans le cadre de l'utilisation de MAKE, pour forcer la reconstruction d'un
+fichier cible, il vous suffit de "toucher" … un des fichiers dont le fichier
+cible d‚pend. Pour cela, entrez la ligne de commande suivante … l'invite du
+DOS :
+
+	TOUCH fichier1 [ fichier2 ... ]
+
+Touch mettra … jour ainsi la date de valeur des fichiers.
+Vous pouvez ensuite invoquer MAKE pour recompiler les fichiers 'modifi‚s'.
+
+
+
+1. L'UTILITAIRE DE RECHERCHE DE TEXTE : GREP
+--------------------------------------------
+
+GREP est un utilitaire dont le nom provient des initiales Get Regular
+Expression Pattern (Recherche de S‚quences … Expression R‚guliŠre). GREP peut
+rechercher un texte dans plusieurs fichiers … la fois ou depuis l'entr‚e
+standard.
+
+La syntaxe de la ligne de commande de GREP est :
+
+        grep  [options]  ChaŒne_Recherch‚e  [fichier(s) ... ]
+
+Les options comprennent une ou plusieurs lettres, pr‚c‚d‚es d'un trait (-)
+qui permettent de modifier les divers aspects du comportement de GREP.
+
+ChaŒne_Recherch‚e fournit le modŠle … chercher.
+
+fichier(s) indique … GREP les fichiers o— chercher (* et ? sont accept‚s).
+Si vous ne sp‚cifiez aucun fichier, GREP recherche sur l'entr‚e standard.
+(donc vous devrez rediriger les donn‚es vers GREP avec '<' ou '|').
+
+Si les r‚sultats de votre GREP d‚passent de l'‚cran,
+vous pouvez rediriger la sortie vers un fichier.
+
+Les options de GREP
+-------------------
+Les options sont constitu‚es d'un ou de plusieurs caractŠres pr‚c‚d‚s d'un
+tiret. Chaque option est une bascule pouvant ˆtre activ‚e en la faisant suivre
+du signe (+) ou d‚sactiv‚e en la faisant suivre d'un symbole tiret (-).
+Par d‚faut, l'option est active (+), -r a donc la mˆme signification que -r+.
+Pour une mˆme commande, vous pouvez utiliser plusieurs options, sp‚cifi‚es
+individuellement (-i -d -l) ou combin‚es (-ild, -il -d, etc.).
+
+Voici la liste des options de GREP :
+
+Option       Effet
+
+-c          (Count) Seul le nombre de lignes contenant l'‚l‚ment recherch‚ est
+            transmis. Pour chaque fichier qui contient au moins une ligne
+            positive, le nom du fichier et le nombre de lignes sont transmis.
+            Le contenu des lignes n'est n‚anmoins pas transmis.
+
+-d          (Directories) Etend la recherche aux sous-r‚pertoires d‚pendants.
+            Pour chaque ensemble de fichiers sp‚cifi‚ dans la ligne de
+            commande, les fichiers sont recherch‚s dans le r‚pertoire sp‚cifi‚
+            ainsi que dans tous les sous-r‚pertoires d‚pendants de celui-ci.
+            Si un ensemble de fichiers est sp‚cifi‚ sans chemin d'accŠs, le
+            r‚pertoire courant sert de point de d‚part de cette recherche "en
+            profondeur".
+
+-i          (Ignore) Permet d'ignorer la diff‚rence entre majuscules et
+            minuscules. Toutes les lettres de a … z sont consid‚r‚es comme
+            identiques aux lettres correspondantes entre A et Z. Attention
+            cela ne concerne pas les accents.
+
+-l          (List) Seul le nom des fichiers contenant le texte recherch‚ est
+            retransmis. DŠs qu'une occurrence du texte est trouv‚e, le nom du
+            fichier est transmis et le programme procŠde imm‚diatement au
+            traitement du fichier suivant.
+
+-n          (Numbers) Les lignes positives sont transmises pr‚c‚d‚es de leur
+            num‚ro.
+
+-o          (Output UNIX) Format de fichier de sortie UNIX. Fait correspondre
+            le format de sortie des lignes s‚lectionn‚es au style UNIX de
+            redirection d'informations. Toutes les lignes en sortie sont
+            pr‚c‚d‚es du nom du fichier les contenant.
+
+-r          (Regular) Le texte d‚fini par chaŒne_…_rechercher est consid‚r‚
+            comme une expression r‚guliŠre et non en tant que chaŒne
+            litt‚rale. Option active par d‚faut.
+
+       Une expression standard est constitu‚e d'un ou plusieurs caractŠres
+       ‚ventuellement ‚crits entre guillemets, qui apparaŒt une ou
+       plusieurs fois. Les symboles ci-dessous sont trait‚s s‚par‚ment :
+        ^  d‚but de ligne      $  fin de ligne
+        .  tout caractŠre      \  caractŠre guillemet suivant
+        *  z‚ro ou ou plus     +  un ou plus
+
+        [aeiou0-9]             inclut    : a, e, i, o, u, et 0 … 9
+        [^aeiou0-9]            tout sauf : a, e, i, o, u, et 0 … 9
+
+-u          (Update) Permet de rendre permanentes les options sp‚cifi‚es sur
+            la ligne de commande en les combinant avec les options par d‚faut.
+            La configuration de travail r‚sultante est ‚crite dans le fichier
+            GREP.COM. Cette option vous permet d'adapter les options par
+            d‚faut … votre go–t. Pour connaŒtre les options par d‚faut d'une
+            version de GREP, depuis l'invite du DOS lancez la commande
+            grep ?
+            Chaque option affich‚e dans l'‚cran d'aide est suivie d'un signe +
+            ou - correspondant … sa configuration.
+
+-v          (Nonmatch) Seules les lignes n‚gatives sont transmises. Seules les
+            lignes ne contenant pas l'‚l‚ment recherch‚ sont consid‚r‚es comme
+            positives.
+
+-w          (Word search) Recherche de mot seulement. Les textes trouv‚s
+            correspondant … l'expression r‚guliŠre ne seront consid‚r‚s comme
+            des ‚l‚ments s‚lectionnables que si le  caractŠre suivant et
+            pr‚c‚dant imm‚diatement la s‚quence ne peut faire partie d'un mot.
+            Le jeu de caractŠres qui peut former les mots comprend en standard
+            les lettres A-Z, les chiffres 0-9 et le caractŠre de soulignement.
+
+            Une autre forme de cette option vous permet de d‚finir l'ensemble
+            des caractŠres accept‚s pour former les mots. Cette forme est la
+            suivante : -w[jeu] dans laquelle jeu correspond … toute
+            expression r‚guliŠre de d‚finition valide.
+
+            Si les caractŠres alphab‚tiques sont utilis‚s pour d‚finir le jeu,
+            ce jeu sera automatiquement d‚fini pour contenir aussi bien les
+            majuscules que les minuscules quelle que soit la casse dans
+            laquelle ont ‚t‚ frapp‚s les caractŠres et mˆme si la recherche
+            est sensible … la casse (aux diff. MAJ/min). Si l'option -w est
+            utilis‚e en combinaison avec l'option -u, le nouveau jeu de
+            caractŠres autoris‚ pour former des mots est sauvegard‚ sous forme
+            de jeu par d‚faut.
+
+-z          (Verbose) Rend le programme volubile : le nom de chaque fichier
+            recherch‚ est transmis ainsi que chaque ligne positive, pr‚c‚d‚e
+            de son num‚ro. Le nombre de lignes positives dans chaque fichier
+            est sp‚cifi‚, mˆme s'il est ‚gal … z‚ro.
+
+
+- Ordre de priorit‚
+
+Rappelez-vous que toutes les options de GREP sont des bascules. L'‚tat de
+chacune d'elles reflŠte le dernier positionnement que vous lui avez appliqu‚.
+A tout moment, une option est active ou inactive. Chaque occurrence d'une
+option sur la ligne de commande neutralise la d‚finition ant‚rieure. Par
+exemple, vous pouvez taper la ligne de commande suivante :
+
+	grep -r -i- -d -i -r-  Procedure (mes*.pas
+
+En utilisant cette ligne de commande, GREP fonctionne sous l'effet de l'option
+-d, de l'option -i et sans l'effet de l'option -r.
+
+Grƒce … l'option -u vous pouvez installer votre jeu de configuration pr‚f‚r‚
+pour chaque option dans le fichier ex‚cutable GREP.COM. Si vous voulez par
+exemple que GREP g‚nŠre toujours une recherche avec tous les affichages actifs
+(-z actif), vous pouvez installer ce choix par la commande suivante :
+
+	grep -u -z
+
+
+Comment rechercher du texte avec GREP
+-------------------------------------
+
+La valeur de chaŒne_…_rechercher d‚finit l'‚l‚ment … rechercher. Il peut
+s'agir d'une chaŒne litt‚rale ou une expression r‚guliŠre.
+
+o Dans les expressions r‚guliŠres certains caractŠres ont une signification
+  particuliŠre, ce sont des op‚rateurs influant sur la recherche.
+
+o Les chaŒnes litt‚rales ne comportent pas d'op‚rateurs, chaque caractŠre est
+  trait‚ litt‚ralement.
+
+Une chaŒne peut ˆtre d‚limit‚e par des guillemets afin de permettre l'emploi
+d'espaces ou de tabulations dans la chaŒne (qui n'y sont donc pas consid‚r‚
+comme des d‚limiteurs. La recherche s'effectue ligne par ligne, en aucun cas
+la chaŒne trouv‚e ne peut s'‚tendre sur plusieurs lignes.
+
+Une expression est un simple caractŠre ou un ensemble de caractŠres d‚limit‚s
+par des crochets. La concat‚nation d'expressions r‚guliŠres est une expression
+r‚guliŠre.
+
+- Op‚rateurs des expressions r‚guliŠres
+
+Avec l'option -r, la chaŒne … rechercher est trait‚e comme une expression
+r‚guliŠre et non pas en tant que chaŒne litt‚rale, et les caractŠres suivants
+ont une signification particuliŠre.
+
+
+Signification des options
+
+^       L'accent circonflexe plac‚ au d‚but de l'expression correspond au
+        d‚but de la ligne.
+
+$       Le signe dollar … la fin de l'expression correspond … la fin de ligne
+        (tous les caractŠres suivant l'expression jusqu'au Retour Chariot).
+
+.       Le point correspond … n'importe quel caractŠre (un seul).
+
+*       Une expression suivie d'un ast‚risque * correspond … un nombre
+        quelconque (y compris z‚ro) d'occurrences de l'expression : ainsi,
+        dans fo*, * concerne le seul caractŠre le pr‚c‚dant (f), et les
+        expressions f, fo, foo...correspondront … la recherche (f suivi d'un
+        ou plusieurs o), mais fa ne convient pas.
+
++       Une expression suivie d'un signe d'addition + correspond … une
+        s‚quence de 1 … n occurrences de l'expression. En conservant l'exemple
+        pr‚c‚dent, fo+ correspond … fo, foo, foo ... mais pas … f. C'est une
+        restriction du m‚tacaractŠre *.
+
+[ ]     Une chaŒne d‚limit‚e par un jeu de crochets correspond … n'importe
+        lequel des caractŠres contenus dans la chaŒne, et aucun autre. Si le
+        premier caractŠre de l'ensemble est un accent circonflexe (^), le
+        r‚sultat est invers‚, l'expression correspondant dans ce cas … tout
+        caractŠre sauf les caractŠres de l'ensemble.
+
+        Par exemple, [xyz] correspond … x, y, et z tandis que [^xyz]
+        correspond … a ou b, mais ni … x ni … y ni … z. Un intervalle de
+        caractŠres peut ˆtre sp‚cifi‚ en ‚crivant deux caractŠres (les deux
+        bornes) s‚par‚s par un trait d'union (ou tiret) -. En combinant de
+        telles sp‚cifications on peut, par exemple, formuler une expression
+        comme [a-bd-z?] qui correspond … n'importe quelle lettre autre que c,
+        ainsi qu'… ?.
+
+\       Le caractŠre barre inverse (backslash), dit caractŠre d'‚chappement,
+        permet de supprimer temporairement l'effet d'un m‚tacaractŠre. Par
+        exemple, \. correspond litt‚ralement … un signe "point" et non plus …
+        n'importe quel caractŠre. Cette barre inverse sert ‚galement pour se
+        sp‚cifier, \\ signifie une barre inverse litt‚rale.
+
+Nota : Quatre des m‚tacaractŠres ($, +, * et .) n'ont plus de signification
+sp‚ciale lorsqu'ils sont utilis‚s dans un ensemble. Le caractŠre ^ ne conserve
+son effet de m‚tacaractŠre que s'il se trouve en premiŠre position
+(c'est-…-dire imm‚diatement aprŠs le crochet ouvrant).
+
+Tout autre caractŠre ordinaire non mentionn‚ dans la liste pr‚c‚dente est
+toujours ‚valu‚ litt‚ralement ; il correspond … lui-mˆme (>, #, etc.)
+
+
+Exemples d'utilisation de GREP
+------------------------------
+Dans les exemples qui suivent, nous supposons que les options par d‚faut
+n'ont pas ‚t‚ modifi‚e.
+
+------------------------------------------------------------------------------
+
+Tapez:
+		grep -n function dirdemo.pas
+
+R‚sultat :	
+		File DIRDEMO.PAS:
+		51        LessFunc = function(X, Y: DirPtr): Boolean;
+		60      function NumStr(N, D: Integer): String;
+		73      function LessName(X, Y: DirPtr): Boolean;
+		78      function LessSize(X, Y: DirPtr): Boolean;
+		83      function LessTime(X, Y: DirPtr): Boolean;
+
+Remarques :
+Trouve toutes les fonctions dans le fichier DIRDEMO.PAS. Le -n sp‚cifie
+… GREP de faire pr‚c‚der toutes les lignes trouv‚es de leur num‚ro de ligne.
+------------------------------------------------------------------------------
+Tapez :
+		grep {\$ dirdemo.pas
+
+R‚sultat :
+		File DIRDEMO.PAS:
+		{$I-,S-}
+		{$M 8192,8192,655360}
+		{$F+}
+		{$F-}
+
+Remarques :
+Trouve toutes les directives de compilation dans DIRDEMO.PAS. Le \ (backslash)
+pr‚c‚dant le $ est n‚cessaire. Autrement, le $ indiquerait la fin de la ligne.
+Toutes les lignes avec '{' comme dernier caractŠre v‚rifieraient la condition
+et seraient imprim‚es.
+-----------------------------------------------------------------
+Tapez :
+		grep -i "^ *function.*).*real" *.pas
+
+R‚sultat :
+		File WORKERS.PAS:
+		function RoundPay(Wages: Real): Real;
+
+Remarques :
+Trouve toutes les lignes commen‡ant avec 0 ou plus d'espaces, suivis du
+mot 'function', suivi de 0 ou plus caractŠres, suivi d'une parenthŠse, une
+autre chaŒne, le mot 'Real', et ignore les diff‚rences MAJ/min.
+L'effet voulu est la recherche de toutes les fonctions renvoyant un r‚el.
+Essayez d'y parvenir d'une autre fa‡on !
+
+Les guillemets sont n‚cessaires du fait des espaces dans la chaŒne de
+recherche. Ils indiquent au processeur de ligne de commande de DOS que les
+caractŠres suivants sont un seul argument. Sans eux, ils repr‚senteraient
+plusieurs arguments, et GREP penserait que tout ce qui suit ^ est des noms
+de fichiers, et exprimerait son d‚saccord de la fa‡on suivante :
+
+		No files matching: *FUNCTION.*).*.
+
+
+
+3. L'UTILITAIRE BINOBJ
+----------------------
+Le programme utilitaire BINOBJ permet de convertir un fichier binaire
+en un fichier au format .OBJ, utilisable ensuite par Turbo Pascal lors de
+l'‚dition des liens, comme Proc‚dure.
+Ceci est particuliŠrement utile si vous disposez d'un fichier binaire que
+vous voulez int‚grer au segment de code ou s'il s'agit
+d'une constante typ‚e de taille trop importante. Vous pouvez, par exemple,
+utiliser BINOBJ pour ins‚rer un pilote graphique ou des polices de caractŠres
+graphiques directement dans le fichier ex‚cutable. Vous vous lib‚rez ainsi …
+l'avenir de la n‚cessit‚ de disposer de ceux-ci sous forme de fichiers
+accessibles au programme lors de son ex‚cution. Reportez-vous … l'exemple
+BGILINK.PAS livr‚ avec votre exemplaire du produit.
+
+BINOBJ n‚cessite 3 paramŠtres :
+
+	BINOBJ  <source[.BIN]>  <destination[.OBJ]>  <nom public>
+
+<source> est le fichier binaire … convertir, et <destination> le nom du
+fichier objet r‚sultant. <Nom public> est le nom que portera la proc‚dure dans
+votre programme Turbo Pascal.
+
+L'exemple suivant, la proc‚dure AfficheEcran, prend un pointeur comme
+paramŠtre et d‚place 4000 octets de m‚moire ‚cran. Le fichier nomm‚ MENU.DTA
+contient l'image du menu principal  (80 * 25 = 4000 octets).
+Note : aucune v‚rification n'est effectu‚e dans cet exemple.
+
+
+	PROGRAM Jaffiche;
+	USES Crt;
+
+	PROCEDURE AfficheEcran(VAR DataEcran : POINTER);
+	  { Affichage d'un ‚cran complet sans contr“le d'erreurs }
+	VAR
+	  SegmentEcran : WORD;
+	BEGIN
+	  IF (Lo(LastMode) = 7) THEN
+	    SegmentEcran := $B000       { Zone RAM pour ‚cran Mono }
+	  ELSE
+	    SegmentEcran := $B800;      { Zone RAM pour ‚cran Couleur }
+	  Move(DataEcran^, Ptr(SegmentEcran, 0)^, 4000);
+	END;
+
+	{ Version classique de JAFFICHE lisant le masque ‚cran sur disque }
+	VAR
+	  MenuP : POINTER;
+	  MenuF : File;
+	BEGIN
+	  Assign(MenuF, 'MENU.DTA');      { Ouverture fichier }
+	  Reset(MenuF, 1);
+	  GetMem(MenuP, 4000);            { Demande de 4000 octets dans le Tas }
+	  BlockRead(MenuF, MenuP^, 4000); { Recopie de disque … m‚moire }
+	  Close(MenuF);                   { Fermeture fichier disque }
+	  AfficheEcran(MenuP);            { Appel de proc‚dure }
+	END.
+
+Le contenu du fichier de masque d'‚cran MENU.DTA est charg‚ dans un tampon du
+segment de tas. Le fichier disque correspondant doit ˆtre accessible au moment
+du d‚marrage du programme. BINOBJ vous permet de transformer ce fichier de
+donn‚es en un fichier au format .OBJ que vous associez ensuite … un
+identificateur de proc‚dure externe, par exemple MenuData. Lorsque vous lancez
+l'‚dition des liens en mentionnant ce fichier .OBJ … l'aide d'une directive
+{$L}, les 4000 octets de donn‚es repr‚sentant l'‚cran MENUDATA sont incorpor‚s
+au fichier ex‚cutable.
+
+L'exemple de JAFFICHE sera grandement simplifi‚, la proc‚dure AfficheEcran
+n'est pas modifi‚e et aucune gestion interm‚diaire (ouverture, recopie,
+fermeture) n'est plus n‚cessaire :
+
+	PROGRAM JAFFICHE;
+	USES Crt;
+
+	PROCEDURE AfficheEcran(VAR DataEcran : POINTER);
+	  { Affichage d'un ‚cran complet sans contr“le d'erreurs }
+	VAR
+	  SegmentEcran : WORD;
+	BEGIN
+	  IF (Lo(LastMode) = 7) THEN
+	    SegmentEcran := $B000        { Zone RAM pour ‚cran Mono }
+	  ELSE
+	    SegmentEcran := $B800;       { Zone RAM pour ‚cran Couleur }
+	  Move(DataEcran^, Ptr(SegmentEcran, 0)^, 4000); { 80 * 25 * 2 }
+	END;
+
+	{ Version moderne de JAFFICHE lisant le masque ‚cran int‚gr‚ }
+	PROCEDURE MenuData; EXTERNAL;
+	{$L MENUDTA.OBJ
+
+	BEGIN
+	  AfficheEcran(@MenuData);      { Adresse du fichier ‚cran }
+	END.
+
+Notez que la proc‚dure AfficheEcran n'a pas ‚t‚ modifi‚e et que nous
+transmettons … pr‚sent l'adresse de notre pseudo-proc‚dure
+MenuData.
+
+L'avantage est ‚vident : vous n'avez plus besoin de fichiers additionnels
+pour que le programme fonctionne. En outre, vous acc‚dez … l'‚cran
+par nom symbolique (MenuData). Voici les inconv‚nients:
+
+
+
+4. UTILISATION DE TPUMOVER
+--------------------------
+Quand vous ‚crivez des unit‚s, vous souhaitez qu'elles soient facilement
+accessibles aux programmes que vous d‚veloppez. Cette section illustre
+l'utilisation de TPUMOVER, utilitaire permettant d'ajouter et d'enlever des
+unit‚s de TURBO.TPL. Les unit‚s peu ou pas utilis‚es seront extraites tandis
+que de nouvelles unit‚s destin‚es … un usage fr‚quent seront introduites dans
+la librairie.
+
+On distingue deux types de fichiers unit‚s, les fichiers .TPU et les fichiers
+.TPL. Quand vous compilez une unit‚, Turbo Pascal g‚nŠre un fichier .TPU
+(Turbo Pascal Unit) contenant le code objet. Ce fichier ne peut contenir
+qu'une seule unit‚.
+
+En revanche, plusieurs unit‚s peuvent ˆtre rassembl‚es dans un fichier .TPL
+(Turbo Pascal Library). Par exemple, toutes les unit‚s livr‚es avec Turbo
+Pascal sont plac‚es dans le fichier TURBO.TPL. Ce fichier est actuellement le
+seul fichier librairie … partir duquel Turbo Pascal chargera des unit‚s.
+
+Vous avez pu constater, cependant, que vous pouvez utiliser la librairie
+standard de Turbo Pascal sans pr‚ciser de nom. C'est parce que ces unit‚s sont
+stock‚es dans le fichier d'unit‚s standard de Turbo Pascal : TURBO.TPL.
+
+Supposons une unit‚ nomm‚e OUTILS.TPU utilis‚e par de nombreux programmes.
+Bien qu'ajouter l'unit‚ Outils dans la librairie r‚sidente TURBO.TPL augmente
+l'occupation en m‚moire vive (TURBO.TPL est automatiquement charg‚ en m‚moire
+par le compilateur), son utilisation en devient plus efficace car l'unit‚ est
+d‚j… en m‚moire et non pas sur disque.
+
+Turbo Pascal vous fournit cinq unit‚s standard dans TURBO.TPL : System,
+Overlay, Printer, Crt et Dos.
+
+
+Utilisation de TPUMOVER
+-----------------------
+Vous pouvez utiliser plusieurs paramŠtres dans la ligne de commande.
+Ils vous permettent de manipuler plus facilement les unit‚s. La syntaxe
+de ces paramŠtres est la suivante :
+
+	TPUMOVER fichier op‚rations
+
+o— fichier est	 - soit le nom d'un fichier unit‚ .TPU,
+                - soit celui d'un fichier librairie .TPL.
+
+et op‚rations est une liste optionnelle de commandes telle que :
+
+  +NomUnit‚     Ajoute l'unit‚ d‚sign‚e … la librairie .TPL.
+
+  -NomUnit‚     Supprime l'unit‚ d‚sign‚e dans la librairie .TPL.
+
+  *NomUnit‚     Extrait (copie) l'unit‚ d‚sign‚e de la librairie .TPL
+                et la sauvegarde dans le fichier nomm‚ NomUnit‚.TPU.
+
+Si aucune op‚ration n'est mentionn‚e, TPUMOVER dresse la liste des unit‚s
+contenues dans la librairie avec la taille et les informations de d‚pendance.
+
+
+
+5. L'UTILITAIRE MAKE
+--------------------
+Cette section fournit une documentation complŠte traitant de la cr‚ation des
+fichiers de reconstruction s‚lective, dits fichiers make et de l'utilisation
+du programme de mˆme nom qui fonde son travail sur leur contenu.
+
+
+La cr‚ation de fichiers make
+============================
+Un fichier make est une liste de d‚finitions et de descriptions des relations
+entre les diff‚rents modules constituant un projet de programme. L'utilitaire
+MAKE puise dans ce fichier les renseignements qui lui permettent d'effectuer
+la mise … jour automatique de vos programmes. Vous pouvez cr‚er autant de
+fichiers Make que vous voulez. En l'absence de sp‚cification de nom de fichier
+make, l'utilitaire MAKE (si vous le lancez avec l'option -f) utilise le nom de
+fichier MAKEFILE par d‚faut.
+
+Vous pouvez cr‚er un fichier make avec n'importe quel ‚diteur de texte ASCII,
+tel que l'‚diteur int‚gr‚ de Turbo Pascal. Toutes les rŠgles, d‚finitions et
+directives se terminent par un Retour chariot. Si une ligne est trop longue,
+vous pouvez la prolonger sur la ligne suivante en pla‡ant une barre oblique
+inverse (\) en tant que dernier caractŠre de la ligne.
+
+Les espaces et les tabulations sont utilis‚s pour s‚parer les identificateurs
+juxtapos‚s (tels que les d‚pendances) et pour distinguer les commandes de la
+rŠgle dans un ‚nonc‚ de rŠgle.
+
+
+Les composants d'un fichier make
+--------------------------------
+La cr‚ation d'un fichier make s'apparente … l'‚criture d'un programme ; elle
+comporte des d‚finitions, des commandes et des directives. Voici la liste des
+constructions qui sont autoris‚es dans un fichier make :
+
+  o les commentaires
+  o les rŠgles explicites
+  o les rŠgles implicites
+  o les d‚finitions de macros
+  o les directives : inclusion de fichiers, ex‚cution conditionnelle,
+    d‚tection d'erreurs, annulation de d‚finition de macro
+
+Examinons de plus prŠs chacune d'elles en commen‡ant par la plus simple.
+
+
+Les commentaires
+----------------
+Les commentaires d‚butent par un signe diŠse (#) ; les caractŠres plac‚s aprŠs
+ce signe, et jusqu'… la fin de la ligne, sont ignor‚s par MAKE. Un commentaire
+peut ˆtre plac‚ n'importe o— et peut commencer … partir de n'importe quelle
+colonne.
+
+RŠgles explicites
+-----------------
+Les rŠgles explicites ont la forme :
+
+	cible [cible ... ] :  [source source ... ]
+	  [commande]
+	  [commande]
+	      ...
+
+o— cible est le fichier … mettre … jour, source est un fichier dont cible
+d‚pend et commande est une commande MS-DOS valide (y compris celles qui
+appellent des fichiers .BAT ou ex‚cutent des fichiers .COM ou .EXE).
+
+Les rŠgles explicites d‚finissent un ou plusieurs noms de fichiers cible,
+g‚n‚ralement plusieurs fichiers source, et une liste facultative de commandes
+… ex‚cuter. Les noms des fichiers cible et source contenus dans une rŠgle
+explicite peuvent comporter les sp‚cifications normales d'unit‚ de disque et
+de chemin d'accŠs au fichier mais ne peuvent comporter de caractŠres
+g‚n‚riques.
+
+Ici, la pr‚sentation est importante. cible doit se trouver en d‚but de ligne
+(dans la premiŠre colonne), tandis que chaque commande doit ˆtre en retrait
+(pr‚c‚d‚e par au moins un espace ou une tabulation). Dans la pratique, deux
+espaces permettent d'am‚liorer la lisibilit‚ de l'ensemble. Comme mentionn‚
+ci-dessus, la barre inverse \ peut ˆtre utilis‚e comme caractŠre de
+prolongation si la liste des fichiers source ou une des commandes
+est trop longue pour une ligne, ce qui arrive assez souvent. Enfin, les
+fichiers source et les commandes sont facultatifs ; il est possible d'‚crire
+une rŠgle explicite uniquement form‚e de :
+
+	cible [cible ...] :
+
+L'id‚e sous-jacente d'une rŠgle explicite est la suivante : la ou les
+commande(s) sp‚cifi‚e(s) cr‚eront ou mettront … jour cible, d'ordinaire
+… l'aide des fichiers source sp‚cifi‚s. Quand MAKE rencontre une rŠgle
+explicite, il v‚rifie d'abord si les fichiers source qui lui sont propos‚s ne
+sont pas eux-mˆmes des fichiers cible dans une rŠgle situ‚e plus loin dans le
+fichier make. S'il en est ainsi, ces rŠgles sont ‚valu‚es d'abord, suspendant
+ainsi l'‚valuation de la premiŠre rŠgle.
+
+Une fois que tous les fichiers source ont ‚t‚ cr‚‚s ou mis … jour au moyen
+d'autres rŠgles explicites (ou implicites), MAKE v‚rifie si le fichier cible
+existe. Si ce n'est pas le cas, chaque commande est appel‚e selon l'ordre de
+lecture. Si le fichier cible existe, son heure et date de g‚n‚ration sont
+compar‚es avec celles de chaque fichier source. Si l'un de ceux-ci est plus
+r‚cent, la liste des commandes est ex‚cut‚e comme si le fichier cible
+n'existait pas.
+
+Un mˆme fichier ne peut ˆtre mentionn‚ qu'une seule fois dans la partie gauche
+d'une rŠgle explicite, c'est-…-dire en tant que fichier cible.
+
+Chacune des lignes de commande d'une rŠgle explicite commence par au moins un
+espace ou une tabulation. MAKE considŠre que toutes les lignes qui suivent une
+rŠgle explicite font partie de la liste des commandes de cette rŠgle, et ce
+jusqu'… la prochaine ligne comportant un caractŠre autre qu'un espace ou une
+tabulation dans la premiŠre colonne (ou, a fortiori, jusqu'… la fin du
+fichier). Les lignes vides sont ignor‚es.
+
+Une rŠgle explicite inerte (non suivie de lignes de commandes) est trait‚e
+diff‚remment d'une rŠgle explicite active (suivie de lignes de commande) :
+
+S'il existe une rŠgle explicite active, les seuls fichiers dont d‚pend le
+fichier cible sont ceux list‚s dans cette rŠgle.
+
+S'il n'existe qu'une rŠgle explicite inerte, le fichier cible d‚pend des
+fichiers source sp‚cifi‚s dans cette rŠgle explicite, mais ‚galement de ceux
+concern‚s par l'application d'une rŠgle implicite au fichier cible.
+
+Voici quelques exemples de rŠgles explicites :
+
+	monutil.obj: monutil.asm
+	  tasm monutil.asm,monutil.obj;
+
+	monapp.exe: monapp.pas magloba.tpu mesutil.tpu
+	  tpc monapp /Tc:\tp\bin
+
+La premiŠre rŠgle explicite indique que MONUTIL.OBJ d‚pend de MONUTIL.ASM, et
+que MONUTIL.OBJ est cr‚‚ au moyen du macro-assembleur TASM. (La construction
+/T chemin_d'accŠs_fichier de ces exemples sera d‚crite plus loin).
+
+La deuxiŠme rŠgle indique que MONAPP.EXE d‚pend de MONAPP.PAS,
+MAGLOBA.TPU et de MESUTIL.TPU ; ce fichier ex‚cutable est g‚n‚r‚ par la
+commande TPC (compilateur Turbo Pascal) sp‚cifi‚e.
+
+Si vous modifiez l'ordre des rŠgles, en sorte que celle concernant MONAPP.EXE
+se retrouve plac‚e avant les autres, MAKE ne recompilera (ou ne r‚assemblera)
+que les fichiers dont la mise … jour lui semblera n‚cessaire. En effet, MAKE
+a, avant toute chose, besoin d'un pr‚texte : un fichier cible ex‚cutable …
+‚valuer. L'ordre de lecture doit donc ˆtre soigneusement ‚tudi‚ pour que les
+d‚ductions que MAKE fera soient les plus riches.
+
+RŠgles implicites
+------------------
+MAKE vous permet aussi de d‚finir des rŠgles implicites. Elles peuvent ˆtre
+vues comme des rŠgles explicites g‚n‚riques, applicables … des
+situations beaucoup moins rigides grƒce … un travail suppl‚mentaire du
+programme. Voici un exemple illustrant les relations entre ces deux types de
+rŠgles. Consid‚rons une rŠgle explicite extraite de l'exemple pr‚c‚dent :
+
+	monutil.obj: myutil.asm
+	  tasm monutil.asm,monutil.obj;
+
+Cette rŠgle est fr‚quemment utilis‚e parce qu'elle ob‚it … un principe
+g‚n‚ral : un fichier .OBJ d‚pend du fichier .ASM portant le mˆme nom et il est
+cr‚‚ par l'ex‚cution du macro-assembleur TASM. En fait, dans un mˆme fichier
+make, vous pouvez avoir … sp‚cifier une quantit‚ non n‚gligeable de rŠgles
+explicites de ce type.
+
+En transformant la rŠgle explicite pr‚c‚dente en rŠgle implicite, vous pourrez
+vous ‚viter d'‚crire toutes les rŠgles explicites de mˆme forme. La rŠgle
+implicite "magique" serait la suivante :
+
+	asm.obj:
+	  tasm $*.asm,$*.obj;
+
+Cette rŠgle ‚dicte que "tout fichier d'extension .OBJ d‚pend du fichier de
+mˆme nom et d'extension.ASM", et que si n‚cessaire, le fichier .OBJ peut ˆtre
+r‚g‚n‚r‚ par la commande
+
+	tasm $*.asm,$*.obj
+
+dans laquelle $* repr‚sente le nom du fichier sans son extension.
+(Le symbole $* est une macro sp‚ciale, pr‚sent‚e dans la prochaine section.)
+
+La syntaxe d'une rŠgle implicite est :
+
+.	extension_source.extension_cible:
+	  [commande]
+	  [commande]
+	  ...
+
+Comme dans le cas des rŠgles explicites, les commandes sont facultatives et
+doivent ˆtre indent‚es. .extension_source (attention au point), qui doit
+commencer en premiŠre colonne, est l'extension du nom du fichier source.
+Autrement dit, cette rŠgle s'appliquera … tout fichier de format
+
+	nom_fichier.extension_source
+
+De mˆme, extension_cible d‚signe le fichier :
+
+	nom_fichier.extension_cible
+
+nom_fichier ‚tant le mˆme pour la source et la cible. Cette rŠgle
+implicite peut donc effectivement remplacer toutes les rŠgles explicites ayant
+le format :
+
+	nom_fichier.extension_cible: nom_fichier.extension_source
+	  [commande]
+	  [commande]
+	  ...
+
+pour tout fichier de nom nom_fichier.
+
+Les rŠgles implicites sont utilis‚es, si pour une cible donn‚e, aucune rŠgle
+explicite n'est trouv‚e, ou s'il n'existe qu'une rŠgle explicite inerte (sans
+commandes).
+
+L'extension du nom de fichier permet de d‚terminer la rŠgle implicite …
+utiliser. La rŠgle implicite est appliqu‚e quand il existe un fichier de mˆme
+nom que la cible mais avec l'extension du fichier source. Par exemple,
+supposons que vous ayez un fichier make nomm‚ MAKEFILE, dont le contenu est :
+
+
+	.asm.obj:
+	  tasm $*.asm,$*.obj;
+
+Si vous disposez d'une routine en langage d'assemblage, nomm‚e RATIO.ASM, que
+vous voulez compiler en RATIO.OBJ, vous pouvez utiliser la commande :
+
+	make  ratio.obj
+
+La cible de MAKE est dans ce cas RATIO.OBJ. Puisqu'il n'y a aucune rŠgle
+explicite pour cr‚er RATIO.OBJ, MAKE applique la rŠgle implicite ; il g‚nŠre
+donc la commande :
+
+	tasm ratio.asm,ratio.obj;
+
+Celle-ci accomplit bien l'action n‚cessaire pour cr‚er RATIO.OBJ.
+
+Les rŠgles implicites s'utilisent aussi quand une rŠgle explicite est inerte
+(donn‚e sans commandes). Supposons que vous ins‚riez la rŠgle implicite
+suivante au d‚but de votre fichier make :
+
+	.pas.tpu:
+	  tpc $<
+
+Vous pourriez alors r‚crire les deux rŠgles explicites mentionn‚es plus haut
+sous forme de deux rŠgles inertes :
+
+	magloba.tpu: magloba.pas
+	mesutil.tpu: mesutil.pas magloba.tpu monutil.obj
+
+Puisque vous n'avez pas sp‚cifi‚ explicitement comment cr‚er ces fichiers
+.TPU, MAKE applique la rŠgle implicite applicable, d‚finie plus haut.
+
+Vous pouvez ins‚rer plusieurs rŠgles implicites concernant la mˆme extension
+de nom de fichier cible mais une seule rŠgle peut s'appliquer … la fois. S'il
+existe plus d'une rŠgle implicite pour une extension cible donn‚e, chaque
+rŠgle est v‚rifi‚e en respectant l'ordre naturel de lecture jusqu'… ce que
+toutes les rŠgles applicables aient ‚t‚ v‚rifi‚es.
+
+MAKE utilise la premiŠre rŠgle implicite applicable. Si les commandes de cette
+rŠgle ‚chouent, MAKE ne tente pas d'utiliser les autres rŠgles implicites qui
+seraient applicables.
+
+Toutes les lignes qui suivent une rŠgle implicite sont consid‚r‚es comme
+faisant partie de la liste des commandes de cette rŠgle, jusqu'… la prochaine
+ligne commen‡ant par un caractŠre autre qu'un espace ou une tabulation, ou
+jusqu'… la fin du fichier. Les lignes vides sont ignor‚es. Le modŠle de
+syntaxe des lignes de commande est fourni dans la prochaine section.
+
+Dans le cas des rŠgles implicites, et … la diff‚rence des rŠgles explicites,
+MAKE ne connaŒt pas le nom complet du fichier. Pour cette raison, des macros
+sp‚ciales fournies avec MAKE vous permettent d'inclure le nom que portera le
+fichier … construire par une rŠgle implicite (les d‚finitions de macro sont
+d‚taill‚es plus loin).
+
+
+Les listes de commandes
+------------------------
+Les commandes d'une liste de commandes doivent ˆtre indent‚es, c'est-…-dire,
+pr‚c‚d‚es par au moins un espace ou une tabulation, et doivent se conformer au
+format suivant :
+
+	[ prefixe ... ] bloc_de_commandes
+
+Chaque ligne de commande dans une liste de commandes comporte une liste
+(facultative) de pr‚fixes, suivie d'un bloc de commandes.
+
+Les pr‚fixes autoris‚s dans une commande modifient la maniŠre dont MAKE traite
+la commande. Le pr‚fixe est soit le signe @, soit le tiret - (ou signe moins)
+imm‚diatement suivi d'un chiffre.
+
+@       D‚sactive l'affichage de la commande avant l'ex‚cution. L'affichage
+        est d‚sactiv‚ mˆme si l'option -s n'a pas ‚t‚ sp‚cifi‚e dans la ligne
+        de commande de MAKE. Ce pr‚fixe ne s'applique qu'… la commande avec
+        laquelle il est associ‚.
+
+-num    Permet de contr“ler le seuil de tol‚rance aux erreurs. Si un nombre
+        (num) est sp‚cifi‚, MAKE n'interrompra le traitement que si le code de
+        sortie est sup‚rieur au nombre indiqu‚. Dans l'exemple qui suit, MAKE
+        n'interrompt le traitement que si le code de sortie est sup‚rieur … 4
+        :
+
+	-4 monprog exemple.x
+
+        En l'absence de pr‚fixe -num, MAKE v‚rifie le code de sortie de la
+        commande. S'il est diff‚rent de z‚ro, MAKE s'arrˆtera et effacera le
+        fichier cible courant.
+
+-       Lorsque vous sp‚cifiez un tiret non suivi d'un nombre, MAKE ne v‚rifie
+        tout simplement pas le code de sortie ; quelle que soit sa valeur,
+        MAKE poursuit son action.
+
+
+Le corps de la commande subit le mˆme traitement que s'il avait ‚t‚ transmis
+comme ligne de commande … l'interpr‚teur de commandes (COMMAND.COM), … la
+seule exception prŠs que ni la redirection des entr‚es/sorties, ni les tubes
+(pipe), communications inter-processus) ne sont autoris‚s. MAKE ex‚cute les
+commandes internes du DOS catalogu‚es ci-dessous en appelant une copie de
+COMMAND.COM pour les r‚aliser :
+
+        BREAK    CD      CHDIR   CLS      COPY
+        MD       MKDIR   PATH    PROMPT   REN
+        RENAME   SET     TIME    TYPE     VER
+        VERIFY   VOL
+
+MAKE recherche toutes les autres commandes grƒce … l'algorithme de recherche
+du MS-DOS :
+
+Il recherche d'abord dans le r‚pertoire courant puis dans chaque r‚pertoire de
+la liste des chemins d'accŠs ‚tablie par la commande PATH du DOS.
+
+Dans chaque r‚pertoire, il recherche le fichier en lui appliquant, dans
+l'ordre, les extensions .COM puis .EXE et enfin .BAT.
+
+S'il trouve un fichier .BAT, une copie de COMMAND.COM est appel‚e pour
+ex‚cuter le fichier de commandes.
+
+L'exemple suivant provoquera la recherche de monprog.pas, en utilisant
+l'algorithme de recherche complet :
+
+	tpc  monprog.pas  /$B+,R+,I+
+
+
+Les macros
+----------
+Il arrive assez fr‚quemment que l'on ait l'occasion de r‚utiliser plusieurs
+fois les mˆmes commandes, noms de fichiers ou options dans un ficher make.
+Dans un des exemples pr‚c‚dents de cette annexe, toutes les commandes TPC
+utilisaient la mˆme directive /Tc:\tp\bin, qui signifie que les fichiers
+TPC.CFG et TURBO.TPL sont … chercher dans le sous-r‚pertoire C:\TP\BIN.
+Supposons que l'on veuille sp‚cifier un autre sous-r‚pertoire de recherche
+pour ces fichiers. Comment faire ? La solution banale est de modifier chacune
+des occurrences de l'option /T en ins‚rant le nom de chemin appropri‚ au moyen
+de la fonction Recherche/Remplace de votre ‚diteur. La solution "rus‚e" est de
+d‚finir une macro.
+
+Une macro est un nom symbolisant une chaŒne de caractŠres. Une d‚finition de
+macro comporte un nom de macro et le texte qu'elle repr‚sente. Quand MAKE
+rencontre le nom de la macro, il remplace celui-ci par le texte associ‚.
+Supposons que vous d‚finissiez la macro suivante au d‚but de votre fichier
+make :
+
+	TURBO=c:\tp\bin
+
+Vous venez de d‚finir la macro TURBO, en l'associant … la chaŒne c:\tp\bin.
+Vous pouvez … pr‚sent r‚crire le fichier make de la fa‡on suivante :
+
+	TURBO=c:\tp\bin
+	monapp.exe: monapp.pas magloba.tpu mesutil.tpu
+	  tpc monapp /T$(TURBO)
+
+	mesutil.tpu: mesutil.pas magloba.tpu monutil.obj
+	  tpc mesutil /T$(TURBO)
+
+Chaque fois que le r‚pertoire TURBO est sp‚cifi‚, vous utilisez l'appel macro
+$(TURBO). Quand vous ex‚cutez MAKE, $(TURBO) est remplac‚e par le texte
+qu'elle repr‚sente. Vous obtenez strictement le mˆme jeu de commandes que
+celui que vous aviez pr‚c‚demment.
+
+De plus, si vous omettez tout simplement la premiŠre ligne, vous pouvez, …
+chaque fois que vous ex‚cutez MAKE, sp‚cifier le sous-r‚pertoire de votre
+choix … l'aide de l'option -D (Define) :
+
+	make -DTURBO=c:\tp\projet
+
+Les d‚finitions de macro ont alors la forme :
+
+	nom_de_macro=texte_d'expansion
+
+o— nom_de_macro est le nom de la macro, une suite de lettres et de chiffres ne
+contenant pas d'espaces. Les espaces sont admis entre nom_de_macro et le signe
+‚gal =. Le texte_d'expansion, texte symbolis‚ par la macro, est une suite
+quelconque de lettres, chiffres, espaces et signes de ponctuation ; il se
+termine par un Retour Chariot.
+
+Si nom_de_macro a d‚j… ‚t‚ d‚fini, soit par une macro d‚finie ant‚rieurement
+dans le fichier make, soit par l'option -D de la ligne de commande de MAKE, la
+nouvelle d‚finition remplace l'ancienne.
+
+Les macros sont utilis‚es dans votre fichier make avec le format suivant :
+
+	$(nom_de_macro)
+
+Les macros dans les macros
+--------------------------
+Les macros ne peuvent pas ˆtre appel‚es dans la partie gauche (nom_de_macro)
+d'une d‚finition de macro. Elles peuvent par contre ˆtre utilis‚es dans la
+partie droite (texte_d'expansion), mais elles ne sont remplac‚es par leur
+texte associ‚ que lors de l'appel de la macro qui les h‚berge. En d'autres
+termes, au moment o— un appel de macro est traduit, sont ‚galement traduites
+toutes les macros qu'elle contient dans son texte d'expansion.
+
+MAKE est dot‚ de plusieurs macros pr‚d‚finies : $d, $*, $<, $:, $. et $&. La
+premiŠre, $d, est une macro de test, utilis‚e dans les directives
+conditionnelles !if et !elif. Les autres sont des macros de nom de fichier,
+utilis‚es dans les rŠgles explicites ou implicites. De plus, les variables de
+l'environnement DOS (voir la commande SET du DOS) sont automatiquement
+charg‚es en tant que macros. La macro _MAKE_ est d‚finie comme repr‚sentant la
+valeur 1.
+
+
+Macro de test de d‚finition ($d)
+--------------------------------
+La macro de test $d est remplac‚e par 1 si le nom de macro test‚ est d‚fini,
+et par 0 s'il ne l'est pas. Le contenu du texte d'expansion de la macro n'a
+pas d'importance, seule la pr‚sence ou l'absence joue. Cette macro sp‚ciale
+n'est autoris‚e que dans les directives !if et !elif. Par exemple, si vous
+voulez modifier votre fichier make afin qu'il utilise un r‚pertoire
+particulier de Turbo Pascal si aucun n'est sp‚cifi‚, vous pouvez ins‚rer les
+lignes suivantes au d‚but de votre fichier :
+
+	!if !$d(TURBO)                     # Si TURBO n'est pas d‚fini,
+	  TURBO=c:\tp\bin                  # le d‚finir dans C:TP\BIN
+	!endif
+
+Si vous ex‚cutez MAKE avec la ligne de commande suivante :
+
+	make -DTURBO=c:\tp\projet
+
+TURBO sera d‚fini comme C:\TP\PROJET. Si, en revanche, vous appelez MAKE tout
+seul :
+
+	make
+
+TURBO sera d‚fini comme C:\TP\BIN, votre r‚pertoire par d‚faut.
+
+
+Les diff‚rentes macros de nom de fichier
+----------------------------------------
+Les diff‚rentes macros de nom de fichier fonctionnent toutes de maniŠre
+similaire : elles remplacent la macro par une variante du nom de chemin
+d'accŠs complet du fichier concern‚.
+
+
+	o La macro de sp‚cification de fichier sans extension ($*)
+
+Elle est autoris‚e dans les commandes des rŠgles explicites et implicites.
+Cette macro $* est remplac‚e par la sp‚cification complŠte du fichier (chemin
+d'accŠs et nom de base) sans son extension :
+
+	Si le nom du fichier est A:\P\FICTEST.PAS,
+	$* est remplac‚ par A:\P\FICTEST.
+
+On peut, par exemple, modifier la rŠgle explicite d‚j… mentionn‚e pour
+MONAPP.EXE en lui donnant la forme suivante :
+
+	monapp.exe: monapp.pas magloba.tpu mesutil.tpu
+	  tpc $* /T$ (TURBO)
+
+
+	o La macro de sp‚cification complŠte de fichier ($<)
+
+La macro de nom complet de fichier $< est, elle aussi, utilis‚e dans les
+commandes des rŠgles explicites et implicites. Dans une rŠgle explicite, $<
+est remplac‚e par la sp‚cification complŠte du fichier cible (chemin d'accŠs,
+nom de base, point, extension) :
+
+	Si le nom du fichier est A:\P\FICTEST.PAS,
+	$< est remplac‚e par A:\P\FICTEST.PAS.
+
+Dans une rŠgle implicite, $< compose le nom de fichier en utilisant
+l'extension sp‚cifi‚e pour le fichier source. Par exemple, la rŠgle implicite
+d‚j… donn‚e :
+
+	.asm.obj:
+	  tasm $*.asm,$*.obj;
+
+peut se r‚crire :
+
+	.asm.obj:
+	  tasm $<,$*.obj;
+
+
+	o La macro de chemin d'accŠs de fichier ($:)
+
+Cette macro est remplac‚e par une sp‚cification de chemin d'accŠs sans nom de
+base ni extension, de la fa‡on suivante :
+
+	Si le nom du fichier est A:\P\FICTEST.PAS,
+	$: est remplac‚e par A:\P\.
+
+
+	o La macro de nom de fichier avec extension ($.)
+
+Cette macro est remplac‚e par un nom de fichier avec extension mais sans
+chemin d'accŠs :
+
+	Si le nom du fichier est A:\P\FICTEST.PAS,
+	$. est remplac‚e par FICTEST.PAS.
+
+
+	o La macro de nom de base de fichier ($&)
+
+Cette macro est remplac‚e par un nom de fichier sans chemin ni extension, de
+la fa‡on suivante :
+
+	Si le nom du fichier est A:\P\FICTEST.PAS,
+	$& est remplac‚e par FICTEST.
+
+
+Les directives
+--------------
+L'utilitaire MAKE fourni avec Turbo Pascal (contrairement … d'autres versions
+de MAKE) supporte un jeu de directives conditionnelles similaires … celles de
+Turbo Pascal. Ces directives sont utilis‚es pour inclure d'autres fichiers
+make, pour rendre conditionnelles les rŠgles et les commandes, pour imprimer
+des messages d'erreur et pour annuler (undefine) des d‚finitions de macro.
+
+Dans un fichier make, les directives commencent par un point d'exclamation
+(!). Ce doit ˆtre le premier caractŠre de la ligne. Voici la liste complŠte
+des directives de MAKE :
+
+!include
+!if
+!else
+!elif
+!endif
+!error
+!undef
+
+
+Une directive d'inclusion de fichier (!include) sp‚cifie le nom d'un fichier
+devant ˆtre inclus dans le fichier make et imm‚diatement interpr‚t‚ …
+l'emplacement de l'insertion. Elle a la forme suivante :
+
+include "nom_fichier"
+
+ou
+
+!include <nom_fichier>
+
+Les directives de ce type peuvent ˆtre ind‚finiment imbriqu‚es. Si une
+directive d'inclusion essaie d'inclure un fichier qui est d‚j… inclus … un
+niveau sup‚rieur (pr‚parant ainsi les conditions d'une boucle infernale), MAKE
+d‚tecte cette situation dangereuse et refuse de r‚aliser la directive
+d'inclusion la plus interne.
+
+Les directives conditionnelles fournissent une souplesse accrue dans la
+construction des fichiers make. Les rŠgles et les macros peuvent ˆtre rendues
+sensibles … des conditions variables. Ainsi, une d‚finition de macro dans la
+ligne de commande (… l'aide de l'option -D) peut activer ou d‚sactiver
+certaines parties du fichier make.
+
+Le format de ces directives est similaire … celui des directives
+conditionnelles de Turbo Pascal, mais elles offrent ici un plus grand nombre
+de possibilit‚s :
+
+!if expression   #SI
+  [ lignes ]     #ACTIONS-SI
+!endif           #FIN-SI
+
+!if expression   #SI
+  [ lignes ]     #ACTIONS-SI
+!else            #SINON
+  [ lignes ]     #ACTIONS-SINON
+!endif           #FIN-SI
+
+!if expression   #SI
+  [ lignes ]     #ACTIONS-SI
+!elif expression #SINON-SI
+  [ lignes ]     #ACTIONS-SINON-SI
+!endif           #FIN-SI
+
+
+Les directives conditionnelles constituent un bloc d‚limit‚ par au moins une
+directive !if au d‚but et une directive !endif … la fin.
+
+Il peut y avoir une seule directive !else … l'int‚rieur du bloc.
+
+Des directives !elif peuvent figurer entre la directive !if et la directive
+!else ‚ventuelle.
+
+Les expressions autoris‚es dans les directives !if et !elif se conforment …
+une syntaxe similaire … celle du langage C. L'expression est ‚valu‚e comme un
+entier sign‚ sur 32 bits.
+
+Les nombres peuvent ˆtre sp‚cifi‚s sous forme de constantes d‚cimales, octales
+ou hexad‚cimales. Par exemple, les expressions suivantes sont valables :
+
+4536    # Constante d‚cimale
+0677    # Constante octale (notez le z‚ro initial)
+0x23AF  # Constante hexad‚cimale
+
+Une expression peut utiliser les op‚rateurs unaires suivants :
+
+   -            n‚gation
+   ~            compl‚ment de bit
+   !            n‚gation logique
+
+Une expression peut utiliser les op‚rateurs binaires (bi-op‚randes) suivants :
+
+   +            addition
+   -            soustraction
+   *            multiplication
+   /            division
+   %            reste de la division
+   >>           d‚calage … droite
+   <<           d‚calage … gauche
+   &            ET binaire
+   |            OU binaire
+   ^            OU exclusif binaire
+   &&           ET logique
+   ||           OU logique
+   >            sup‚rieur
+   <            inf‚rieur
+   >=           sup‚rieur ou ‚gal
+   <=           inf‚rieur ou ‚gal
+   ==           ‚galit‚
+   !=           in‚galit‚
+
+Une expression peut contenir l'op‚rateur ternaire suivant :
+
+   ?:	L'op‚rande devant le ? est consid‚r‚ comme un test.
+
+                Si la valeur de cet op‚rande est diff‚rente de z‚ro, alors la
+                valeur du deuxiŠme op‚rande (celui se trouvant entre le ? et
+                le signe deux-points, :) d‚termine celle de l'expression. Si
+                la valeur du premier op‚rande est z‚ro, la valeur de
+                l'expression est d‚duite de celle du troisiŠme op‚rande (la
+                partie se trouvant aprŠs le :).
+
+Vous pouvez utiliser des parenthŠses pour grouper les op‚randes d'une
+expression. En l'absence de parenthŠses, les op‚rateurs binaires sont trait‚s
+selon la hi‚rarchie des op‚rateurs du langage C.
+
+Comme en C, les op‚rateurs ayant le mˆme niveau de priorit‚ hi‚rarchique sont
+‚valu‚s de gauche … droite, sauf pour l'op‚rateur ternaire (? :) pour lequel
+le regroupement se fait de droite … gauche.
+
+On peut appeler une macro de l'int‚rieur d'une expression et la macro sp‚ciale
+$d() est reconnue. AprŠs expansion de toutes les macros, l'expression doit
+avoir une syntaxe correcte. Toute chaŒne errant dans l'expression finale
+produite par la macro produit une erreur.
+
+La directive d'erreur (error directive) !error provoque l'abandon du processus
+MAKE et l'impression d'un diagnostic de rupture de traitement correspondant au
+texte plac‚ aprŠs !error. Elle possŠde le format :
+
+	!error description_erreur
+
+Cette directive s'incorpore dans une directive conditionnelle afin de
+permettre … l'utilisateur de d‚finir une condition d'arrˆt. Par exemple, vous
+pouvez ins‚rer le code suivant juste avant la premiŠre rŠgle explicite :
+
+Enfin, la directive !undef permet d'annuler toute d‚finition d'une macro
+sp‚cifi‚e. Si la macro concern‚e n'a pas de d‚finition, la directive n'a pas
+d'effet. En voici la syntaxe :
+
+	!undef nom_de_macro
+
+
+L'utilisation de MAKE
+=====================
+Vous en savez maintenant beaucoup sur l'‚criture de fichiers make ; il est
+temps d'apprendre comment les utiliser avec MAKE.
+
+Note pr‚liminaire : Si votre systŠme ne possŠde pas d'horloge interne, prenez
+l'excellente habitude de le remettre soigneusement … l'heure (et de v‚rifier)
+en d‚but de session si ce n'est pas encore dans vos pratiques courantes. Vous
+imaginez ais‚ment que g‚rer des projets avec un utilitaire tel que MAKE, fond‚
+totalement sur la date de valeur des fichiers, n'a aucun sens si l'heure
+systŠme est incoh‚rente.
+
+La fa‡on la plus simple d'utiliser MAKE est de frapper la commande
+
+	make
+
+… l'invite du DOS. MAKE recherche alors le fichier MAKEFILE ; s'il ne le
+trouve pas, il cherche MAKEFILE.MAK ; si celui-ci est, lui aussi, introuvable,
+MAKE se termine en affichant un message d'erreur.
+
+Supposons que vous vouliez utiliser un fichier portant un nom diff‚rent de
+MAKEFILE ou de MAKEFILE.MAK. Il vous faut dans ce cas sp‚cifier l'option de
+nom de fichier (-f), comme dans l'exemple suivant :
+
+	make -fetoile.mak
+
+Le sch‚ma syntaxique de MAKE est le suivant :
+
+	make option option ... cible cible ...
+
+o— option est une des options de MAKE (elles sont d‚crites plus loin) et cible
+est le nom d'un fichier cible qui satisfera au moins une rŠgle explicite.
+
+S'il n'y a pas de nom de cible sur la ligne de commande, MAKE utilise le
+premier fichier cible (dans l'ordre de lecture) mentionn‚ dans une des rŠgles
+explicites. Si une ou des cible(s) sont mentionn‚es dans la ligne de commande,
+celles-ci seront construites selon leurs sp‚cifications.
+
+Voici quelques exemples de lignes de commande MAKE :
+
+	make -n fetoile.mak
+	make -s
+	make -Iinclude -DTURBO=c:\tp\projet
+
+
+Le fichier BUILTINS.MAK
+-----------------------
+En utilisant MAKE, vous remarquerez que certaines macros et rŠgles
+(habituellement des rŠgles implicites) reviennent trŠs fr‚quemment. Vous
+pouvez g‚rer cette situation de trois fa‡ons diff‚rentes : Vous pouvez les
+ins‚rer laborieusement dans chacun de vos fichier make. Vous pouvez rassembler
+toutes ces rŠgles dans un seul fichier commun et utiliser la directive
+!include dans chaque fichier make concern‚. Enfin, vous pouvez regrouper
+toutes ces rŠgles dans un fichier sp‚cial nomm‚ BUILTINS.MAK.
+
+En d‚but de processus, MAKE recherche un fichier appel‚ BUILTINS.MAK ; s'il le
+trouve, il en lit le contenu avant mˆme de se consacrer … MAKEFILE (ou au
+fichier make que vous avez sp‚cifi‚).
+
+Le fichier BUILTINS.MAK est destin‚ … recevoir des rŠgles (normalement des
+rŠgles implicites) ou des macros qui seront utilis‚es commun‚ment dans votre
+environnement de d‚veloppement.
+
+L'existence d'un fichier BUILTINS.MAK n'est pas obligatoire. Si MAKE trouve un
+fichier BUILTINS.MAK, il l'interprŠte en premier. Si MAKE ne le trouve pas, il
+procŠde directement … l'interpr‚tation du fichier make.
+
+
+Comment MAKE recherche-t-il un fichier ?
+----------------------------------------
+MAKE recherche BUILTINS.MAK dans le r‚pertoire courant (et ‚galement dans le
+r‚pertoire exec si vous utilisez une version DOS 3.x ou ult‚rieure). Il
+convient de placer ce fichier dans le mˆme r‚pertoire que l'ex‚cutable
+MAKE.EXE.
+
+MAKE ne cherche le fichier make que dans le r‚pertoire courant. Rappelons que
+ce fichier contient l'ensemble des rŠgles et commandes n‚cessaires … la
+cr‚ation d'un programme ex‚cutable.
+
+Les fichiers !include sont ‚galement recherch‚s, par d‚faut, dans le
+r‚pertoire courant. Si vous utilisez l'option -I (Include), la recherche
+s'effectue ‚galement dans le r‚pertoire sp‚cifi‚.
+
+
+Les options de la ligne de commande de MAKE
+-------------------------------------------
+
+-Didentificateur     D‚finit l'identificateur comme ‚quivalent … la chaŒne
+                     constitu‚e par le seul caractŠre isol‚ 1 (pour
+                     utilisation en tant que valeur Vrai).
+
+-Diden=chaŒne        D‚finit l'identificateur iden comme ‚quivalent … la
+                     chaŒne plac‚e aprŠs le signe =. Celle-ci ne peut contenir
+                     ni espace ni tabulation.
+
+-Ir‚pertoire         Indique … MAKE de rechercher ‚galement les fichiers …
+                     inclure (Include) dans le r‚pertoire indiqu‚ (il
+                     recherche dans le r‚pertoire courant au pr‚alable).
+
+-Uidentificateur     Annule toute d‚finition ant‚rieure de l'identificateur
+                     sp‚cifi‚ (Undefine).
+
+-s                   Normalement, MAKE affiche l'‚nonc‚ des commandes avant
+                     d'en lancer l'ex‚cution. L'option -s (silence) d‚sactive
+                     cet affichage.
+
+-n                   Cette option est, en quelque sorte, l'inverse de -s :
+                     MAKE affiche les commandes sans les ex‚cuter. Elle est
+                     utile lors de la mise au point d'un fichier make.
+
+-fnom_fic            Utilise nom_fic comme fichier make. Si le fichier nom_fic
+                     n'existe pas et si aucune extension n'est sp‚cifi‚e, MAKE
+                     cherche le fichier nomfic.mak.
+
+-? ou -h             Affiche un texte d'aide.
+
+
+Les messages d'erreur de MAKE
+-----------------------------
+
+	o Erreurs fatales
+
+Don't know how to make XXXXXXXXXX
+	Je ne sais pas comment cr‚er XXXXXXXXXX
+
+        Ce message apparaŒt quand MAKE rencontre un nom de fichier inexistant
+        dans la s‚quence de cr‚ation et s'il n'existe pas de rŠgle permettant
+        la cr‚ation de ce fichier.
+
+Error directive : XXXX
+	Directive d'erreur : XXXX
+
+        Ce message est affich‚ quand MAKE rencontre une directive #error dans
+        le fichier source. Le texte de la directive est affich‚ dans le
+        message.
+
+Incorrect command line argument : XXXX
+	Argument XXXX incorrect dans la ligne de commande
+
+        Cette erreur a lieu lorsque vous tentez de transmettre … MAKE des
+        arguments incorrects dans la ligne de commande.
+
+Not enough memory
+	Pas assez de m‚moire
+
+        Ce message est affich‚ lorsque l'espace de travail en m‚moire vive est
+        parvenu … saturation. Il vous faut soit travailler sur une machine
+        dot‚e de plus de m‚moire vive (RAM) soit, si la machine comporte d‚j…
+        640 Ko, simplifier le fichier source (attention ‚galement aux
+        programmes r‚sidents).
+
+Unable to execute command
+	Impossible d'ex‚cuter la commande
+
+        Ce message est affich‚ lors d'une demande d'ex‚cution d'une commande.
+        Il peut ˆtre provoqu‚ par l'incapacit‚ de trouver le fichier
+        ex‚cutable correspondant, une faute d'orthographe dans son nom ou,
+        enfin, (plus rarement, et c'est heureux) parce que le fichier
+        ex‚cutable est endommag‚.
+
+Unable to open makefile
+	Impossible d'ouvrir le fichier make
+
+        Ce message est affich‚ lorsque le r‚pertoire courant ne contient pas
+        au moins le fichier make par d‚faut nomm‚ MAKEFILE.
+
+
+	o Les erreurs simples
+
+Bad file name format in include statement
+	Mauvais format de nom de fichier dans une d‚claration d'inclusion
+
+        Les noms de fichiers inclus doivent ˆtre d‚limit‚s par des guillemets
+        ("nom_fichier") ou des crochets (<nom_fichier>). Il manque un de ces
+        d‚limiteurs (fr‚quemment celui d'ouverture).
+
+Bad undef statement syntax
+	Mauvaise syntaxe dans une d‚claration undef
+
+	Une d‚claration !undef ne doit contenir qu'un seul identificateur.
+
+Character constant too long
+	Constante de type caractŠre trop longue
+
+	Une constante caractŠre ne peut comporter qu'un … deux caractŠres.
+
+Command arguments too long
+	Les arguments d'une commande sont trop longs
+
+        Les arguments d'une commande demand‚e par MAKE forment une chaŒne de
+        plus de 127 caractŠres, et cette valeur est une limite du systŠme
+        MS-DOS).
+
+Command syntax error
+	Erreur dans la syntaxe d'une commande
+
+	Ce message apparaŒt dans les situations suivantes :
+
+        La premiŠre ligne de rŠgle du fichier make d‚bute par un espace ou une
+        tabulation.
+
+	Une rŠgle implicite n'est pas conforme … la syntaxe .ext.ext:.
+
+	Une rŠgle explicite ne comporte pas de nom de fichier cible avant le
+	caractŠre :.
+
+	Une d‚finition de macro ne comporte pas de nom devant le caractŠre =.
+
+Division by zero
+	Division par z‚ro
+
+        Une division ou un calcul de reste dans une d‚claration !if contient
+        un diviseur ‚gal … z‚ro.
+
+Expression syntax error in !if statement
+	Erreur dans la syntaxe d'une expression dans une d‚claration !if
+
+        L'expression d'une d‚claration !if est mal form‚e. Elle comporte une
+        parenthŠse non appari‚e, un op‚rateur manquant ou inutile, ou encore
+        une constante manquante ou inutile.
+
+File name too long
+	Nom de fichier trop long
+
+        Un nom de fichier sp‚cifi‚ dans une directive !include est trop long
+        et MAKE ne peut le traiter. Sous MS-DOS, la sp‚cification complŠte
+        d'un fichier (unit‚, r‚pertoires et nom de fichier) ne peut exc‚der 78
+        caractŠres.
+
+Illegal character in constant expression X
+	CaractŠre ill‚gal dans l'expression constante X
+
+        MAKE a rencontr‚ un caractŠre interdit dans une expression constante.
+        Si le caractŠre est une lettre, la cause en est probablement un
+        identificateur mal orthographi‚.
+
+Illegal octal digit
+	Chiffre octal ill‚gal
+
+	Il existe une constante octale contenant un chiffre 8 ou 9.
+
+Macro expansion too long
+	Expansion de macro trop longue
+
+        Une macro ne peut pas r‚sulter en une expression de plus de 4096
+        caractŠres. Cette erreur arrive souvent si une macro se traduit
+        r‚cursivement. Vous ne devez jamais demander le remplacement d'une
+        macro par une expression qui la contient.
+
+Misplaced elif statement
+	D‚claration elif mal plac‚e
+
+	MAKE a rencontr‚ une directive !elif pour laquelle il n'y a pas de
+	directive !if correspondante.
+
+Misplaced else statement
+	D‚claration else mal plac‚e
+
+	MAKE a rencontr‚ une directive !else pour laquelle il n'y a pas de
+	directive !if correspondante.
+
+Misplaced endif statement
+	D‚claration endif mal plac‚e
+
+	MAKE a rencontr‚ une directive !endif pour laquelle il n'y a pas de
+	directive !if correspondante.
+
+No file name ending
+	Pas de fin de nom de fichier
+
+	Le nom de fichier dans une d‚claration include n'est pas suivi de
+	guillemets ou du symbole "sup‚rieur …" > permettant d'en d‚terminer
+	la fin.
+
+Redefinition of target XXXXXXXX
+	Red‚finition de cible XXXXXXXX
+
+	Le fichier cible nomm‚ existe en tant que membre gauche de plus d'une
+	rŠgle explicite.
+
+Unable to open include file XXXXXXXXXXXX
+	Impossible d'ouvrir fichier include XXXXXXXXXXXX
+
+        Le fichier nomm‚ n'a pas pu ˆtre trouv‚. Ce message peut aussi ˆtre d–
+        au fait qu'un fichier include s'inclut lui-mˆme. V‚rifiez d'abord si
+        le fichier nomm‚ existe.
+
+Unexpected end of file in conditional started on line #
+        Fin de fichier inattendue dans la directive conditionnelle d‚butant …
+        la ligne num‚ro
+
+        Le fichier source arrive … sa fin avant que MAKE ne rencontre un
+        !endif attendu. La directive !endif est soit absente soit mal ‚crite.
+
+Unknown preprocessor statement
+	D‚claration de pr‚processeur inconnue
+
+        Un caractŠre ! a ‚t‚ d‚tect‚ en d‚but de ligne, et le nom de la
+        directive associ‚e n'‚tait pas error, undef, if, elif, include, else
+        ou endif.
+

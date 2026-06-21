@@ -1,0 +1,519 @@
+
+==============================================================================
+
+                         LES MACROS DE TURBO EDITOR
+
+==============================================================================
+
+TEMC.EXE est un compilateur de macros d'‚diteur pour l'EDI. Il gŠre un fichier
+script qui d‚finit les macros de l'‚diteur et les combinaisons de touches et
+g‚nŠre un fichier de configuration. Ce fichier est lu par l'EDI de maniŠre …
+d‚finir les effets des commandes du clavier dans l'‚diteur.
+
+Le fichier DEFAULTS.TEM contient les d‚finitions de macros standard et les
+combinaisons de touches implicites de l'‚diteur de l'EDI. Il sert de script de
+r‚f‚rence et de base pour personnaliser l'‚diteur. D'autres fichiers .TEM sont
+‚galement fournis.
+
+
+==============================================================================
+  Ligne de commande de TEMC
+==============================================================================
+
+TEMC est appel‚ … partir de la ligne de commande DOS. Tapez :
+
+	temc [-c] [-u] <fichier_script[.TEM]> <fichier_config[.TP]>
+
+L'extension du fichier script est .TEM sauf indication contraire. .TP
+correspond … l'extension du fichier de configuration.
+
+Si le fichier de configuration n'existe pas, cr‚ez-le. L'option facultative -c
+peut ‚galement ˆtre sp‚cifi‚e sous la forme /c et apparaŒtre quelque soit la
+position de l'argument sur la ligne de commande. Si vous utilisez cette
+option, la table de commande existante du fichier de configuration est
+supprim‚e avant que TEMC ne gŠre le fichier script. Si -c n'est pas utilis‚,
+les combinaisons de touches des fichiers script sont fusionn‚es avec celles
+d‚j… d‚finies dans le fichier de configuration.
+
+Vous pouvez utiliser DEFAULTS.TEM pour g‚n‚rer les mˆmes paramŠtres implicites
+du jeu de commandes Alternate. Ce fichier est fourni … la fois comme fichier
+script d'exemples que sous forme de table de commandes implicites. Vous pouvez
+le copier et le modifier selon vos besoins.
+
+==============================================================================
+  Syntaxe de TEML
+==============================================================================
+
+La syntaxe utilis‚e pour d‚finir une macro d'‚diteur est:
+
+	MACRO <nommacro>
+	  <commande1>;
+	  [ <commande2>; ... ]
+	END;
+
+<nommacro> comprend tout symbole C valide et <commande> le nom de toute autre
+macro pr‚d‚finie ou d'une commande d'‚diteur TEMC ‚galement pr‚d‚finie. Nous
+vous proposons la liste des commandes de l'‚diteur.
+
+Lorsque vous d‚finissez la macro :
+
+1. Une instruction d‚finit une macro nomm‚e ou combinaison de touches.
+
+2. Les espaces et les nouvelles lignes sont optionnels.
+
+3. Les commentaires sont ins‚r‚s dans des paires /* ... */ de style C.
+
+4. Contrairement … C, le langage TEMC n'est pas sensible aux majuscules
+   et minuscules.
+
+5. La syntaxe de certaines commandes pr‚d‚finies de l'‚diteur ressemble …
+   l'appel d'une fonction C avec un argument. Exemple :
+
+	SetMark(5);
+
+   Suivant la commande, l'argument est la constante d'un entier d‚cimal, d'un
+   caractŠre ou un litt‚ral. Tous sont sp‚cifi‚s avec la syntaxe C.
+
+Exemple de la d‚finition d'une macro … partir de DEFAULTS.TEM:
+
+	MACRO MacScrollUp
+	  ScrollScreenUp; FixCursorPos;
+	END;
+
+La syntaxe utilis‚e pour d‚finir une combinaison de touche est :
+
+	<key-sequence>: <command>;
+
+ou
+
+	<key-sequence>: BEGIN <command1>; [ <command2>; ... ]
+	END;
+
+<key-sequence> (Alt en option) est une touche (caractŠre pr‚c‚d‚ de Ctrl ou
+une s‚rie de touches s‚par‚es par le signe plus (+). Les caractŠres des
+touches sont eux-mˆmes sensibles … la diff‚rence MAJ/min.
+
+L'espace vierge est autoris‚ entre la s‚quence de touches et le caractŠre deux
+points (:). <command> peut ˆtre le nom d'une macro pr‚alablement d‚finie ou
+d'une commande de l'‚diteur (Tableau 1.1).
+
+
+==============================================================================
+  Codes des touches
+==============================================================================
+
+L'‚diteur de l'EDI utilise un jeu de caractŠres ‚tendu incluant des
+combinaisons de touches en principe non disponibles pour les programmes DOS.
+Ces codes peuvent ˆtre sp‚cifi‚s dans un script au moyen de toute combinaison
+"Ctrl-", "Shift-" "Alt-" et d'un caractŠre.
+
+Il est possible d'entrer directement certaines touches dans un script TEM et
+de les appeler par leur nom comme indiqu‚ dans la table qui suit.
+
+Le caractŠre ^ ou @@ peut pr‚c‚der toute touche dans une s‚quence (sauf la
+premiŠre touche). Le caractŠre (^) indique qu'il est possible d'utiliser toute
+combinaison de casse. "Ctrl" permet d'entrer la touche. Le signe @ indique la
+casse non valide pour le caractŠre suivant bien que "Ctrl" ne soit pas
+accept‚. Exemple :
+
+	o Ctrl-k+b sp‚cifie Ctrl-K suivi d'un petit b.
+
+	o Ctrl-k+^b sp‚cifie Ctrl-K suivi de b, B ou Ctrl-B.
+
+	o Ctrl-k+@B sp‚cifie Ctrl-K suivi de b ou B.
+
+
+Nom des touches ==============================================================
+
+Des lettres, des nombres ou des caractŠres ‚ventuellement pr‚c‚d‚s d'un ou
+plusieurs Ctrl, Alt- ou Shift- permettent de d‚signer les touches. Les noms
+ci-dessous sp‚cifient celles qu'il n'est pas possible d'entrer dans la syntaxe
+TEMC.
+
+
+        ----------------------------------------------------------------------
+	Nom de
+	touche	Description
+        ----------------------------------------------------------------------
+	Home
+	End
+	PgUp
+	PgDn
+	LfAr      FlŠche gauche
+	RgAr      FlŠche droite
+	UpAr      FlŠche vers le haut
+	DnAr      FlŠche vers le bas
+	Ins
+	Del
+	Enter
+	Return    Comme Enter
+	BkSP      Effacement arriŠre
+	Tab
+	BkTab     Plus disponible d‚sormais, utilisez Maj-Tab
+	Esc
+	Star      touche * sur clavier num‚rique
+	Minus     touche - sur clavier num‚rique
+	Plus      touche + sur clavier num‚rique
+	Space     Espace arriŠre
+	PrtSc
+	F1 … F10  Touches de fonction
+        ----------------------------------------------------------------------
+
+
+==============================================================================
+Commandes pr‚d‚finies de l'‚diteur
+==============================================================================
+
+TEMC permet d'utiliser les commandes de l'‚diteur et les macros d‚finies par
+l'utilisateur comme des commandes dans des macros si vous ne g‚n‚rez aucune
+boucle, comme des macros s'appelant les unes-les autres ; mˆme par macros
+interpos‚es. Certaines commandes vous font sortir de l'‚diteur et entrer dans
+l'EDI par exemple en appelant une boŒte de dialogue. Votre macro va
+"s'arrˆter" jusqu'au retour … l'‚diteur.
+
+La table suivante rassemble toutes les commandes pr‚d‚finies de l'‚diteur TEMC
+sauf les commandes terminales. Une seconde table rassemble les commandes
+provoquant une sortie imm‚diate de l'‚diteur.
+
+------------------------------------------------------------------------------
+Commandes de l'‚diteur TEMC (non terminales)
+
+Nom de commande             Action de l'‚diteur
+------------------------------------------------------------------------------
+BackspaceDelete             Fait reculer le curseur d'un caractŠre en le
+                            supprimant
+
+BottomOfScreen              AmŠne le curseur dans le coin inf‚rieur gauche de
+                            l'‚cran sans modifier la colonne.
+
+CenterFixScreenPos          R‚ajuste la position de la fenˆtre ‚cran par
+                            rapport … celle du curseur.
+
+CopyBlock                   InsŠre une copie du bloc s‚lectionn‚ … la position
+                            du curseur. A la diff‚rence de la macro
+                            CopyBlockRaw, celle- ci garde s‚lectionn‚ le bloc
+                            nouvellement ins‚r‚.
+
+CursorCharLeft              D‚place le curseur d'un caractŠre vers la gauche.
+                            Si le curseur se trouve en d‚but de ligne,
+                            celui-ci est remont‚ jusqu'au dernier caractŠre
+                            imprimable de la ligne pr‚c‚dente.
+
+CursorCharRight             D‚place le curseur d'un caractŠre vers la gauche.
+                            Si le curseur se trouve en d‚but de ligne,
+                            celui-ci est remont‚ jusqu'au dernier caractŠre
+                            imprimable de la ligne pr‚c‚dente.
+
+CursorDown                  D‚place le curseur d'une ligne vers le bas.
+
+CursorLeft                  D‚place le curseur vers la gauche.
+
+CursorRight                 D‚place le curseur d'une colonne vers la droite.
+
+CursorSwitchedLeft          Comme CursorLeft, attention au d‚filement du
+                            curseur dans les paramŠtres de l'option tab (voir
+                            SetCursorThroughTabMode).
+
+CursorSwitchedRight         Comme CursorRight ; mais attention au d‚placement
+                            du curseur dans les paramŠtres de l'option tab
+                            (voir SetCursorThroughTabMode).
+
+CursorUp                    D‚place le curseur d'une ligne vers le haut.
+
+DeleteBlock                 Supprime le bloc s‚lectionn‚.
+
+DeleteChar                  Supprime le caractŠre d‚sign‚ par le curseur.
+
+DeleteLine                  Supprime la ligne d‚sign‚e par le curseur.
+
+DeleteToEOL                 Supprime tout le texte entre la position du
+                            curseur et la fin de la ligne.
+
+DeleteWord                  Supprime le mot sous le curseur ainsi que les
+                            espaces suivant ce mot.
+
+EndCursor                   Place le curseur … la fin du fichier.
+
+ExtendBlockBeg              Initialise une s‚rie de commandes qui
+                            s‚lectionnent un bloc de texte entre la position
+                            initiale et finale du curseur.
+
+ExtendBlockEnd              Termine une s‚rie de commandes commen‡ant par
+                            ExtendBlockBeg.
+
+FixCursorPos                Permet … la valeur du curseur de sp‚cifier une
+                            ligne entre 1 et le nombre de lignes du tampon,
+                            une colonne sup‚rieure … 0. Si l'option Cursor
+                            Through Tab n'est pas r‚gl‚e, le curseur n'est pas
+                            positionn‚ au centre d'une tabulation (voir
+                            SetCursorThroughTabMode).
+
+FixScreenPos                D‚finit l'affichage pour que le curseur soit
+                            visible.
+
+FullPaintScreen             Redessine la fenˆtre.
+
+HideBlock                   D‚finit un drapeau indiquant que le texte choisi
+                            ne doit pas ˆtre en surbrillance.
+
+HighlightBlock              D‚finit un drapeau indiquant que si les marqueurs
+                            de d‚but et de fin de texte sont valides, le texte
+                            choisi doit ˆtre en surbrillance.
+
+HomeCursor                  RamŠne le curseur au d‚but du fichier.
+
+IndentBlock                 InsŠre un espace au d‚but de chaque ligne dans le
+                            texte en surbrillance.
+
+InsertText                  InsŠre la chaŒne litt‚rale dans le tampon … la
+                            position du curseur. Utilisez la syntaxe
+                            InsertText(string) pour appeler cette commande.
+
+LeftOfLine                  RamŠne le curseur au d‚but de la ligne.
+
+LiteralChar                 InsŠre le caractŠre … la position du curseur.
+                            Utilisez la syntaxe LiteralChar(c) si c est un
+                            caractŠre ou une valeur entiŠre.
+
+MarkBufModified             D‚finit un drapeau indiquant que le contenu du
+                            tampon est diff‚rent de celui du fichier disque.
+
+MarkBufUnModified           Supprime un drapeau, indiquant que le contenu du
+                            tampon est identique … celui du fichier disque.
+
+MatchPairBackward           Comme MatchPairForward sauf si le curseur est sur
+                            un ' ou " (recherche … rebours)
+
+MatchPairForward            Si le curseur est sur (, ), {, }, [, ], ou sur le
+                            premier caractŠre d'une des paires /* ou */,
+                            recherche dans le sens appropri‚ l'instance la
+                            plus proche du d‚limiteur. Si le curseur est sur '
+                            ou ", recherche en avant le caractŠre. Positionnez
+                            ‚ventuellement le curseur.
+
+MoveBlock                   Comme CopyBlock, mais supprime texte initial.
+
+MoveToBlockBeg              AmŠne le curseur au d‚but du bloc s‚lectionn‚.
+
+MoveToBlockEnd              AmŠne le curseur … la fin du bloc s‚lectionn‚.
+
+MoveToMark                  AmŠne le curseur … la position indiqu‚e par la
+                            macro SetMark(n). Utilisez la syntaxe
+                            MoveToMark(n), si n est un nombre de
+
+MoveToPrevPos               RamŠne le curseur … la position sp‚cifi‚e par le
+                            marqueur de position pr‚c‚dente.
+
+MoveToTempPos               RamŠne le curseur au marqueur provisoire sauv‚.
+
+NullCmd                     Pas d'op‚ration. Appelle l'‚diteur mais n'ex‚cute
+                            aucune fonction.
+
+OutdentBlock                Supprime l'espace au d‚but de chaque ligne du
+                            texte en surbrillance.
+
+PageDown                    D‚place le curseur vers le bas
+
+PageScreenDown              D‚place l'affichage d'une page ‚cran dans la
+                            fenˆtre, sans modifier la position du curseur.
+
+PageScreenUp                D‚place le curseur vers le haut, du nombre de
+                            lignes indiqu‚ dans la fenˆtre.
+
+PageUp                      D‚place le curseur vers le haut, du nombre de
+                            lignes indiqu‚ dans la fenˆtre.
+
+PaintScreen                 Redessine la fenˆtre en supposant que l'‚cran
+                            affiche toujours ce que l'‚diteur a dessin‚.
+
+ReDo                        Ex‚cute une op‚ration Redo.
+
+RightOfLine                 RamŠne le curseur … la fin de la ligne active.
+
+RightOfWord                 RamŠne le curseur … la colonne suivante plac‚e
+                            aprŠs un mot.
+
+ScrollScreenDown            D‚cale l'‚cran d'une ligne vers le bas sans
+                            d‚placer le curseur.
+
+ScrollScreenUp              D‚cale l'‚cran d'une ligne vers le haut sans
+                            d‚placer le curseur.
+
+SetAutoIndent               Active l'option Auto avec Indent.
+
+SetAutoOutdent              Active l'option Backspace Unindents.
+
+SetBlockBeg                 D‚finit la position du curseur en tant que d‚but
+                            de bloc.
+
+SetBlockEnd                 D‚finit la position du curseur comme fin du bloc
+                            s‚lectionn‚.
+
+SetCursorThroughTabMode     Active l'option Cursor Through Tabs.
+
+SetInsertMode               RŠgle l'option Insert/Overwrite sur Insert.
+
+SetMark                     Pose un marqueur … la position du curseur.
+                            Utilisez la syntaxe SetMark(n) o— n est un chiffre
+                            de 0 … 9.
+
+SetOptimalFillMode          Active l'option Optimal Fill.
+
+SetPrevPos                  Pose le marqueur … la position actuelle du curseur
+                            modifiable uniquement par un appel … SetPrevPos or
+                            SwapPrevPos.
+
+SetTabbingMode              Active l'option Use Tab Char.
+
+SetTempPos                  M‚morise l'emplacement du curseur dans un marqueur
+                            provisoire utilisable par certaines commandes
+                            internes de l'‚diteur. Dans les macros d‚finies
+                            par l'utilisateur, utilisez SetMark.
+
+SmartRefreshScreen          R‚affiche les seules parties de l'‚cran qui ont
+                            ‚t‚ modifi‚es.
+
+SmartTab                    InsŠre des espaces ou des tabulations suivant les
+                            paramŠtres actifs.
+
+SwapPrevPos                 Commute entre position courante du curseur et
+                            position d‚finie par la macro SetPrevPos.
+
+ToggleAutoIndent            Bascule de l'option Auto Indent.
+
+ToggleAutoOutdent           Bascule de l'option Backspace Unindents.
+
+ToggleCursorThroughTabMode  Bascule de l'option Cursor Through Tabs.
+
+ToggleHideBlock             Bascule l'‚tat du drapeau texte (surbrillance).
+
+ToggleInsert                Bascule de l'option Insert.
+
+ToggleOptimalFillMode       Bascule de l'option Optimal Fill.
+
+ToggleTabbingMode           Bascule de l'option Use Tab Char.
+
+TopOfScreen                 RamŠne le curseur en haut de la ligne affich‚e
+                            dans la fenˆtre, sans modifier la colonne.
+
+UnDo                        Ex‚cute une op‚ration Undo.
+
+WordLeft                    RamŠne le curseur au d‚but du mot pr‚c‚dent ou …
+                            la fin de la ligne pr‚c‚dente.
+
+WordRight                   RamŠne le curseur au d‚but du mot suivant ou … la
+                            fin d'une ligne.
+------------------------------------------------------------------------------
+
+
+
+Les commandes ci-dessous permettent de sortir de l'‚diteur en appelant une
+boŒte de dialogue. La macro est … nouveau active lorsque la fenˆtre de
+l'‚diteur reprend le contr“le.
+
+Les touches mentionn‚es correspondent … celles du mode Alternate de l'EDI.
+
+------------------------------------------------------------------------------
+Commandes terminales de l'‚diteur TEMC
+
+Nom de commande     Action de l'‚diteur
+------------------------------------------------------------------------------
+ChangeDirectory     Ouvre une boŒte de dialogue pour changer de r‚pertoire
+                    actif.
+
+ChangeModeFlags     Utilis‚ aprŠs une commande (comme ToggleInsert) qui
+                    modifie l'‚tat du commutateur de l'option de l'‚diteur.
+                    Actualisation par l'EDI des ‚l‚ments ou ic“nes du menu.
+
+ClipCopy            Copie le texte choisi dans le presse- papiers (Ctrl-Ins).
+
+ClipCut             Coupe le texte choisi dans le presse-papiers (Shift-Del).
+
+ClipPaste           InsŠre le presse-papiers dans le tampon au curseur
+                    (Shift-Ins).
+
+ClipShow            Affiche le presse-papiers (aucune touche d'activation
+                    d‚finie).
+
+CloseWindow         Ferme la fenˆtre de l'‚diteur (Alt-F3).
+
+CompileFile         Compile le tampon actif (Alt-F9).
+
+CompileMenu         Choisit le menu Compile (Alt-C).
+
+CompilerOptions     Choisit le menu Options Compiler
+
+EditMenu            Choisit le menu Edit (Alt-E).
+
+FileMenu            Choisit le menu File (Alt-F).
+
+GetFindString       Ouvre la boŒte de dialogue pour la Recherche (Alt-S F)
+
+GotoWindow1         Choisit la fenˆtre 1 (Alt-1).
+GotoWindow2         Choisit la fenˆtre 2 (Alt-1).
+GotoWindow3         Choisit la fenˆtre 3 (Alt-1).
+GotoWindow4         Choisit la fenˆtre 4 (Alt-1).
+GotoWindow5         Choisit la fenˆtre 5 (Alt-1).
+GotoWindow6         Choisit la fenˆtre 6 (Alt-1).
+GotoWindow7         Choisit la fenˆtre 7 (Alt-1).
+GotoWindow8         Choisit la fenˆtre 8 (Alt-1).
+GotoWindow9         Choisit la fenˆtre 9 (Alt-1).
+
+Help                Ouvre la fenˆtre d'aide (F1).
+HelpMenu            Choisit le menu d'aide (Alt-H).
+HelpIndex           Affiche l'index du systŠme d'aide (Shift-F1)
+
+LastHelp            Ouvre la fenˆtre d'aide pr‚c‚dente (Alt-F1).
+
+Make                Cr‚e le projet (F9 = make).
+
+Menu                Met en surbrillance la barre du menu sup‚rieur
+
+Modify              EvalueLmodifie la variable ou l'expression (Ctrl-F4).
+
+NextWindow          Choisit la fenˆtre suivante de l'EDI (F6).
+
+OpenFile            Ouvre la boŒte de dialogue d'ouverture d'un fichier (F3).
+
+OptionsMenu         Choisit le menu Options (Alt-O).
+
+PrintBlock          Imprime le texte s‚lectionn‚
+
+Quit                Sort de l'EDI (Alt-X).
+
+ReadBlock           Ouvre la boŒte de dialogue demandant le nom du fichier …
+                    lire dans le tampon … l'endroit du curseur et rep‚r‚ comme
+                    texte s‚lectionn‚.
+
+RepeatSearch        Nouvelle recherche avec les anciens paramŠtres.
+
+Replace             Ouvre une boŒte de dialogue pour l'op‚ration de
+                    remplacement
+
+RunMenu             Choisit le menu Run (Alt-R).
+
+RunProgram          Fait un Make et lance l'ex‚cutable actif (Ctrl-F9).
+
+SaveFile            Sauve le tampon d'‚diteur actif (F2).
+
+SaveFileAs          Ouvre le dialogue de Sauvegarde de fichier sous un nom
+                    particulier.
+
+SearchMenu          Choisit le menu Search (Alt-S).
+
+WindowList          Affiche la liste des fenˆtres (Alt-0).
+
+WindowMenu          Choisit le menu fenˆtre (Alt-W).
+
+WindowCascade       Organise les fenˆtres en cascade.
+
+WindowTile          Organise les fenˆtres en mosa‹que.
+
+WordHelp            Aide contextuelle (Ctrl-F1).
+
+WriteBlock          Ouvre la boŒte de dialogue demandant le nom du du fichier
+                    o— le texte choisi sera copi‚.
+
+ZoomWindow          Agrandit/r‚duit la fenˆtre active (F5).
+------------------------------------------------------------------------------
+

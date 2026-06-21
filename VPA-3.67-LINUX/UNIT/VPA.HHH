@@ -1,0 +1,1140 @@
+VHLP
+
+;       1st line contains the VHLP signature
+;
+;       Command format:
+;       <command> <color> <x> <y> [parameters]
+;
+;       Command     Meaning     Parameters
+;       -------     -------     ----------
+;       T           text        <text>
+;       F           fill        <x2> <y2>
+;       L           line        <x2> <y2>
+;       C           circle      <radius>
+;
+;       Note: '*' instead of numeric <x> in Text command centers text line
+;             '+' before numeric <y> means displacement from the last <y>
+;
+;       Colors:
+;       -------
+;       Black      0       DarkGray      8
+;       Blue       1       LightBlue     9
+;       Green      2       LightGreen    10
+;       Cyan       3       LightCyan     11
+;       Red        4       LightRed      12
+;       Magenta    5       LightMagenta  13
+;       Brown      6       Yellow        14
+;       LightGray  7       White         15
+;
+;       Keywords:
+;       ---------
+;       WIDTH     <help window width>
+;       PAGE      <page ID>
+;       KEY       <keycode> <page ID>
+
+
+WIDTH   480
+
+; *** General help
+
+PAGE    0
+
+;F       8       480     0       482     479
+
+F       0       0       0       479     479
+T       11      0       0       GENERAL HELP
+L       11      0       +9      94      +
+
+T       15      0       22      Left Mouse Button
+T       7       144     +       is functionally equal to the Enter key
+T       15      376     +       Enter
+T       15      0       +8      Right Mouse Button
+T       7       152     +       is functionally equal to the Spacebar key
+T       15      384     +       Spacebar
+T       15      0       +8      Center Mouse Button
+T       7       160     +       is functionally equal to the Tab key
+T       15      392     +       Tab
+
+T       15      0       +22     ,,,
+T       7       88      +       - pointer movement (in keyboard-only mode)
+T       15      0       +9      Alt-,,,
+T       7       88      +       - accelerated pointer movement
+T       15      0       +9      Z
+T       7       88      +       - center view around the pointer position
+T       15      0       +9      Tab/Shift-Tab
+T       7       120     +       - zoom in/out
+T       15      0       +9      Ctrl-Tab
+T       7       120     +       - zoom out to view entire galaxy
+T       15      0       +9      Shift-Alt-0..9
+T       7       120     +       - store current map position
+T       15      0       +9      Alt-0..9
+T       7       120     +       - retrieve stored map position
+T       15      0       +9      Shift-S,
+T       7       88      +       - switch visibility on the map of your ships (S),
+T       15      16      +9        E,T,M,
+T       7       104     +         enemy ships (E), traces (T), mine fields (M),
+T       15      16      +9        I,U,A,
+T       7       104     +         ion storms (I), UFOs (U), markers (A),
+T       15      16      +9        P,G,C
+T       7       104     +         planet names (P), gravity wells (G), clock (C),
+T       15      16      +9        W,X
+T       7       104     +         warp circles (W), minefield exposions (X)
+T       15      16      +9        L
+T       7       104     +         planet connections (L)
+T       15      0       +9      Shift-B
+T       7       88      +       - show ship build costs for choosen race
+T       15      0       +9      Shift-V
+T       7       88      +       - reset mouse and video (if any problems)
+T       15      0       +9      +,-
+T       7       88      +       - view next/previous turn data
+T       15      0       +9      Ctrl/+,-
+T       7       88      +       - view last/first turn data
+T       15      0       +9      Spacebar
+T       7       88      +       - scroll map window (if the pointer is close
+T       7       104     +9        to the map edge and no objects selected)
+T       15      0       +9      Spacebar
+T       7       88      +       - Distance Mode on/off (if an object is selected)
+T       15      0       +9      Shift-Space
+T       7       88      +       - enter Distance Mode (if no objects selected)
+T       15      0       +9      Enter
+T       7       88      +       - select nearest object and view its info screen
+T       15      0       +9      Shift-Enter
+T       7       88      +       - select nearest circle-shaped object
+T       15      0       +9      P,B
+T       7       88      +       - select planet or SB under the pointer (if any)
+T       15      0       +9      0..9
+T       7       88      +       - select another object at the same spot (if any)
+T       15      0       +9      PgUp,PgDn
+T       7       88      +       - browse object list (if 10+ objects there)
+T       15      0       +9      ,
+T       7       88      +       - cycle through objects at the same spot
+T       7       104     +9        In keyboard-only mode: Ctrl-,
+T       15      0       +9      ,
+T       7       88      +       - cycle through objects of the same type
+T       7       104     +9        In keyboard-only mode: Ctrl-,
+T       15      0       +9      Esc
+T       7       88      +       - leave any info or help screen
+T       15      0       +9      Ins
+T       7       88      +       - set color marker at the pointer position
+T       15      0       +9      Ctrl-H
+T       7       88      +       - draw hyperjump circles (340-360 LYs radius)
+T       15      0       +9      Shift-Z
+T       7       88      +       - change ship list sort order
+T       15      0       +9      Alt-P
+T       7       88      +       - change player password
+T       15      0       +9      Alt-X
+T       7       88      +       - exit VPA (hold Ctrl to NOT save changes)
+T       15      0       +9      Ctrl-P
+T       7       88      +       - show used PBx codes
+T       15      0       +9      #
+T       7       88      +       - switch to quality assurance overview list
+T       15      0       +9      Ctrl-E
+T       7       88      +       - draw territory overview on map (experimental)
+
+T       7       0       418     See also:
+L       7       0       +9      68      +
+T       7       88      418     More general help (F1), Credits screen (press C),
+T       14      240     +                          F1                         C
+T       7       88      +9      Planet info screen (P), Starbase info screen (B),
+T       14      248     +                           P                         B
+T       7       88      +9      Ship info screen (S), Marker info screen (A),
+T       14      232     +                         S                       A
+T       7       88      +9      Construction yard (O), Combat simulator (F5),
+T       14      240     +                          O                     F5
+T       7       88      +9      Message editor (F3), Score screen (F10),
+T       14      216     +                       F3                 F10
+T       7       88      +9      Planet economy simulator (F6), Map legend (L)
+T       14      296     +                                 F6               L
+T       7       88      +9      Resource Statistics (Ctrl-F10)
+T       14      256     +                            Ctrl-F10
+
+
+KEY     99      1
+KEY     108     2
+KEY     112     $0800
+KEY     98      $0801
+KEY     115     $1000
+KEY     97      $2800
+KEY     111     3
+KEY     $3F00   4
+KEY     $3D00   6
+KEY     $4400   7
+KEY     $4000   9
+KEY     $3B00   10
+KEY     $6700   11
+
+; *** Credits screen
+
+PAGE    1
+
+F       0       0       0       479     479
+
+T       11      *       +20     VGA Planets (c) 1991-97 by Tim Wisseman
+T       13      *       +30     VGA Planets Assistant (c) 1993-97 by Alex V. Ivlev
+T       13      *       +10     (c) 2001-04 VPA Team at SourceForge
+T       15      *       +20     <http://vpa.sourceforge.net/>
+C       11      240     +40     1
+C       9       240     +       5
+L       1       130     +       230     +-2
+L       1       250     +-2     350     +2
+L       1       130     +2      230     +2
+L       1       250     +2      350     +-2
+L       1       230     +-4     228     +2
+L       1       228     +2      230     +2
+L       1       250     +-2     252     +2
+L       1       252     +2      250     +2
+
+T       15      *       +40     Special thanks to:
+T       14      *       +20     TIM WISSEMAN
+T       15      128     +20     Alex Miheev
+T       15      80      +10     Alexandar Perovic
+T       15      80      +10     Alexander Babanov
+T       15      56      +10     Alexander Bezborodov
+T       15      56      +10     Alexander Pozdniakov
+T       15      96      +10     Alexander Sessa
+T       15      88      +10     Alexander Shafir
+T       15      96      +10     Anatoly Mazhara
+T       15      104     +10     Andrew Sterian
+T       15      56      +10     Carlos Lorenzo Mates
+T       15      136     +10     Chris Olin
+T       15      104     +10     Dmitry Karasev
+T       15      96      +10     Dmitry Subbotin
+T       15      120     +10     Falko Poiker
+T       15      112     +10     Gleb Yaltchik
+T       15      80      +10     Hans-Joachim Gurt
+T       15      112     +10     John Graesser
+T       15      120     +10     John Schafer
+T       15      96      +10     Kirill Tchernov
+T       15      264     +-180   Konstantin Surkov
+T       15      264     +10     Lazy Tiger Garz
+T       15      264     +10     Maciek Lanko
+T       15      264     +10     Manuel Pancorbo Castro
+T       15      264     +10     Max Alginin
+T       15      264     +10     Max Pozdniakov
+T       15      264     +10     Michael Zeveke
+T       15      264     +10     Mike Arrowood
+T       15      264     +10     Peter Porai-Koshits
+T       15      264     +10     Red Troll
+T       15      264     +10     Serge Steblev
+T       15      264     +10     Serge Tatishev
+T       15      264     +10     Stanislav Bezgin
+T       15      264     +10     Steffen Frey
+T       15      264     +10     Thomas Voigt
+T       15      264     +10     Vlada Stavsky
+T       15      264     +10     Vladimir Naidenov
+T       15      264     +10     Yuri Kozachenko
+
+C       11      240     +50     1
+C       9       240     +       5
+L       1       130     +       230     +-2
+L       1       250     +-2     350     +2
+L       1       130     +2      230     +2
+L       1       250     +2      350     +-2
+L       1       230     +-4     228     +2
+L       1       228     +2      230     +2
+L       1       250     +-2     252     +2
+L       1       252     +2      250     +2
+
+T       15      *       +40     Thanks to all VPA users!
+
+KEY     32      0
+KEY     13      0
+
+
+; *** Map Legend
+
+PAGE    2
+
+F       0       0       0       479     479
+
+T       15      0       0       Map legend (with default color settings):
+L       15      0       +9      324     +
+
+L       15      10      43      10      +
+C       15      10      +       1
+T       7       20      +-3     - neutral planet
+L       9       10      +23     10      +
+C       9       10      +       1
+T       7       20      +-3     - your planet
+L       14      10      +23     10      +
+C       14      10      +       1
+T       7       20      +-3     - enemy planet
+L       13      10      +23     10      +
+C       13      10      +       1
+T       7       20      +-3     - allied planet
+L       11      10      +23     10      +
+C       11      10      +       1
+T       7       20      +-3     - your starbase
+L       12      10      +23     10      +
+C       12      10      +       1
+T       7       20      +-3     - enemy starbase
+L       10      10      +23     10      +
+C       10      10      +       1
+T       7       20      +-3     - allied starbase
+L       2       10      +23     10      +
+T       7       20      +-3     - your ship in space
+C       2       10      +23     3
+T       7       20      +-3     - your ship near planet
+L       12      10      +23     10      +
+T       7       20      +-3     - enemy ship in space
+C       12      10      +23     2
+T       7       20      +-3     - enemy ship near planet
+L       3       10      +23     10      +
+T       7       20      +-3     - allied ship in space
+C       3       10      +23     2
+T       7       20      +-3     - allied ship near planet
+
+C       3       250     43      7
+T       7       265     +-3     - your or allied mine field
+C       5       250     +23     7
+T       7       265     +-3     - enemy mine field
+C       2       250     +23     7
+T       7       265     +-3     - harmless ion storm
+C       14      250     +23     7
+T       7       265     +-3     - moderate ion storm
+C       4       250     +23     7
+T       7       265     +-3     - dangerous ion storm
+C       12      250     +23     7
+T       7       265     +-3     - wormhole
+;L       13      264     +29     276      +-12
+;T       7       285     +-9     - ship trace
+
+T       7       0       463     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1)
+T       14      304     +       Spacebar    F1
+
+KEY     32      0
+KEY     $3B00   10
+
+; *** Planet info
+
+PAGE    $0800
+
+F       0       0       0       479     479
+T       11      0       0       PLANET INFO SCREEN
+L       11      0       +9      142     +
+
+T       15      0       40      ,
+T       7       72      +       - select previous/next planet you own (by ID no.)
+T       7       88      +9        In keyboard-only mode: Ctrl-,
+T       15      0       +9      <,>
+T       7       72      +       - select previous/next planet you own (by actual)
+T       15      0       +9      /,Ctrl-A/D
+T       7       88      +       - toggle, on/off activity planet in actual list
+T       15      0       +9      O
+T       7       72      +       - select nearest planet in actual list
+T       15      0       +9      Shift-O
+T       7       72      +       - deactiviate planet and select nearest active planet
+T       15      0       +9      B
+T       7       72      +       - switch to starbase info screen (if have one)
+T       7       88      +9        or build a starbase (if you have 402 Tr, 120 Du,
+T       7       88      +9        340 Mo and 900 mc on the planet surface)
+T       14      352     +-9       402 Tr  120 Du
+T       14      88      +9        340 Mo     900 mc
+T       15      0       +9      T
+T       7       72      +       - set tax level for natives (if any) [M.O.T.]
+T       15      0       +9      Ctrl-T
+T       7       72      +       - calculate projective taxes for natives (if any)
+T       15      0       +9      X
+T       7       72      +       - set tax level for colonists [M.O.T.]
+T       15      0       +9      A,M,D
+T       7       72      +       - build factories, mines, defense outposts [M.O.T.]
+T       15      0       +9      Shift-D
+T       7       72      +       - toggle ShowCombatStrength on/off
+T       15      0       +9      S
+T       7       72      +       - sell supplies [M.O.T.]
+T       15      0       +9      F
+T       7       72      +       - change planetary friendly code
+T       15      0       +9      Ctrl-F
+T       7       72      +       - change friendly code on all planets that
+T       7       88      +9        have the same fc as the selected planet
+T       15      0       +9      R
+T       7       72      +       - set random planetary friendly code
+T       15      0       +9      Ctrl-R
+T       7       72      +       - set the same random friendly code on all planets
+T       7       88      +9        that have the same fc as the selected planet
+T       15      0       +9      Alt-R
+T       7       72      +       - randomize all planetary friendly codes
+T       7       88      +9        (except planets with fc "ATT", "NUK" and "mf?")
+T       15      0       +9      Alt-U
+T       7       72      +       - unload cargo from all your ships in orbit
+T       15      0       +9      F6
+T       7       72      +       - insert this planet into planet economy simulator
+T       15      0       +9      Shift-H
+T       7       72      +       - toggle ShowFinalHappy
+T       15      0       +9      V
+T       7       72      +       - Give planet away (PHost)
+T       15      0       +9      Shift-J
+T       7       72      +       - toggle through the modes of colonist-prediction
+T       15      0       +9      Ctrl-N
+T       7       72      +       - view and edit planet note
+T       15      0       +9      Ctrl-B
+T       7       72      +       - switch to Borgculator prediction and planning
+
+T       7       0       454     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1),
+T       14      304     +       Spacebar    F1
+T       7       88      +9      Starbase info screen (B), M.O.T. interface (M),
+T       14      264     +                             B                     M
+T       7       88      +9      Borgculator (Ctrl-B)
+T       14      192     +                    Ctrl-B
+
+KEY     32      0
+KEY     98      $0801
+KEY     109     5
+KEY     $3B00   10
+KEY     2       12
+
+; *** Base info
+
+PAGE    $0801
+
+F       0       0       0       479     479
+T       11      0       0       STARBASE INFO SCREEN
+L       11      0       +9      158     +
+
+T       15      0       40      ,
+T       7       72      +       - select previous/next base you own (by ID no.)
+T       7       88      +9        In keyboard-only mode: Ctrl-,
+T       15      0       +9      <,>
+T       7       72      +       - select previous/next base you own (by actual)
+T       15      0       +9      /,Ctrl-A/D
+T       7       88      +       - toggle, on/off activity base in actual list
+T       15      0       +9      P
+T       7       72      +       - switch to planet info screen
+T       15      0       +9      O
+T       7       72      +       - set base mission (order)
+T       15      0       +9      D
+T       7       72      +       - increase base defense factor [M.O.T.]
+T       15      0       +9      T
+T       7       72      +       - upgrade base tech levels [M.O.T.]
+T       15      0       +9      F
+T       7       72      +       - fix damaged ship
+T       15      0       +9      R
+T       7       72      +       - recycle useless ship
+T       15      0       +9      Home,End
+T       7       72      +       - browse base storage (if exceeds 1 page)
+T       15      0       +9      Y
+T       7       72      +       - build torpedoes or fighters [M.O.T.]
+T       15      0       +9      B
+T       7       72      +       - switch to ship construction screen
+T       15      0       +9      C
+T       7       72      +       - clone other race's ship design (if have one)
+T       15      0       +9      Ctrl-P
+T       7       72      +       - Show List of used PBx-Codes. Select free
+T       7       88      +9        code to change current planet to this code
+T       7       88      +9        or if PBx used jump to the selected planet.
+
+T       7       0       454     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1),
+T       14      304     +       Spacebar    F1
+T       7       88      +9      Planet info screen (P), Ship info screen (S),
+T       14      248     +                           P                     S
+T       7       88      +9      Construction yard (O), M.O.T. interface (M)
+T       14      240     +                          O                     M
+
+KEY     32      0
+KEY     112     $0800
+KEY     115     $1000
+KEY     111     3
+KEY     109     5
+KEY     $3B00   10
+
+; *** Ship info
+
+PAGE    $1000
+
+F       0       0       0       479     479
+T       11      0       0       SHIP INFO SCREEN
+L       11      0       +9      126     +
+
+T       15      0       13      ,
+T       7       72      +       - select previous/next ship you own (by ID no.)
+T       7       88      +9        In keyboard-only mode: Ctrl-,
+T       15      0       +9      <,>
+T       7       72      +       - select previous/next ship you own (by actual)
+T       15      0       +9      /,Ctrl-A/D
+T       7       88      +       - toggle, on/off activity ship in actual list
+T       15      0       +9      O
+T       7       72      +       - select nearest ship in actual list
+T       15      0       +9      Shift-O
+T       7       72      +       - deactiviate ship and select nearest active ship
+T       15      0       +9      P
+T       7       72      +       - switch to planet info screen (if at planet)
+T       15      0       +9      B
+T       7       72      +       - switch to starbase info screen (if at base)
+T       15      0       +9      Home,End
+T       7       72      +       - browse possible hull type list (for enemy ship
+T       7       88      +9        with unknown hull type)
+T       15      0       +9      A
+T       7       72      +       - show all possible hull types or ship designs
+T       7       88      +9        belonging to the enemy ship's race only
+T       15      0       +9      H
+T       7       72      +       - assume hull type for enemy ship of unknown type
+T       15      0       +9      F
+T       7       72      +       - forget assumed hull type of enemy ship
+T       15      0       +9      N
+T       7       72      +       - rename ship
+T       15      0       +9      M
+T       7       72      +       - set ship mission
+T       15      0       +9      E
+T       7       72      +       - set primary enemy
+T       15      0       +9      F
+T       7       72      +       - set friendly code
+T       15      0       +9      Ctrl-F
+T       7       72      +       - change friendly code on all ships that
+T       7       88      +9        have the same fc as the selected ship
+T       15      0       +9      R
+T       7       72      +       - set random friendly code
+T       15      0       +9      Ctrl-R
+T       7       72      +       - set the same random friendly code on all ships
+T       7       88      +9        that have the same fc as the selected ship
+T       15      0       +9      Y
+T       7       72      +       - build torpedoes/fighters and load them onto
+T       7       88      +9        the ship (at starbase) [M.O.T.]
+T       15      0       +9      C
+T       7       72      +       - load/unload/jettison cargo [M.O.T.]
+T       15      0       +9      T
+T       7       72      +       - transfer cargo to/from other ships [M.O.T.]
+T       15      0       +9      U
+T       7       72      +       - unload ship cargo (at planet)
+T       15      0       +9      L
+T       7       72      +       - load ship for torpedo/fighter building [M.O.T.]
+T       15      0       +9      I
+T       7       72      +       - fix ship at starbase (if it needs it)
+T       15      0       +9      W
+T       7       72      +       - set warp factor
+T       15      0       +9      Shift-F9
+T       7       72      +       - calculate projected mine field (for torp. ships)
+T       15      0       +9      Ins
+T       7       72      +       - set a marker and bind it to the ship
+T       15      0       +9      Spacebar
+T       7       72      +       - enter Distance Mode
+T       15      0       +9      V
+T       7       72      +       - give ship away (PHost)
+T       15      0       +9      Shift-C
+T       7       72      +       - remote Control (PHost)
+T       15      0       +9      Shift-Z
+T       7       72      +       - change ship list sort order
+T       15      0       +9      Ctrl-N
+T       7       72      +       - view and edit ship note
+T       15      0       +9      Alt-I
+T       7       72      +       - drag-prediction (if in class 4 or 5 ion storms)
+
+T       15      0       +14     Left Mouse Button                              Enter
+T       7       144     +       is functionally equal to the       key
+T       15      0       +9      Right Mouse Button                              Spacebar
+T       7       152     +       is functionally equal to the          key
+
+T       7       8       +11     Battle Order
+L       1       16      +14     16      +-2
+L       1       20      +       20      +-2
+L       1       17      +1      19      +
+L       1       17      +-4     19      +
+T       7       28      +-1     FC < 0 (before planet)
+L       2       16      +13     16      +-2
+L       2       20      +       20      +-2
+L       2       17      +1      19      +
+L       2       17      +-4     19      +
+T       7       28      +-1     FC > 0
+L       14      16      +14     16      +-2
+L       14      20      +       20      +-2
+L       14      17      +1      19      +
+L       14      17      +-4     19      +
+T       7       28      +-2     FC not numeric
+L       4       16      +14     20      +-4
+L       4       16      +-4     20      +4
+T       7       28      +-1     No fuel
+L       6       16      +12     18      +2
+L       6       16      +       18      +-2
+L       6       20      +       18      +2
+L       6       20      +       18      +-2
+T       7       28      +-3     No kill mission
+L       15      16      +12     18      +2
+L       15      16      +       18      +-2
+L       15      20      +       18      +2
+L       15      20      +       18      +-2
+T       7       28      +-3     Freighter
+
+T       7       216     +-55    Hull Order
+L       2       224     +14     229     +0
+L       2       224     +-5     229     +0
+L       2       224     +0      224     +5
+L       2       229     +0      229     +5
+T       7       235     +0      Own design
+
+T       7       216     +9      Tow Order
+L       2       224     +14     229     +0
+L       2       224     +-5     229     +0
+L       2       224     +0      224     +5
+L       2       229     +0      229     +5
+T       7       235     +0      Ship is towing
+L       2       224     +14     229     +-4
+L       2       224     +-4     229     +4
+T       7       235     +0      Ship beeing towed
+L       14      224     +14     229     +-4
+L       14      224     +-4     229     +4
+T       7       235     +0      Warp on beeing towed not 0
+L       4       224     +14     229     +-4
+L       4       224     +-4     229     +4
+T       7       235     +0      Towed by more than one ship
+
+T       7       0       454     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1),
+T       14      304     +       Spacebar    F1
+T       7       88      +9      Planet info screen (P), M.O.T. interface (M),
+T       14      248     +                           P                     M
+T       7       88      +9      Distance mode (D)
+T       14      208     +                      D
+
+KEY     32      0
+KEY     112     $0800
+KEY     109     5
+KEY     100     8
+KEY     $3B00   10
+
+; *** Marker info
+
+PAGE    $2800
+
+F       0       0       0       479     479
+T       11      0       0       MARKER INFO SCREEN
+L       11      0       +9      142     +
+
+T       15      0       40      T
+T       7       72      +       - input label text
+T       15      0       +9      A
+T       7       72      +       - align label text placement
+T       15      0       +9      R
+T       7       72      +       - enter radius (for r-circle only)
+T       15      0       +9      Del
+T       7       72      +       - erase marker
+
+T       7       0       463     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1)
+T       14      304     +       Spacebar    F1
+
+KEY     32      0
+KEY     $3B00   10
+
+; *** Construction yard
+
+PAGE    3
+
+F       0       0       0       479     479
+T       11      0       0       CONSTRUCTION YARD
+L       11      0       +9      134     +
+
+T       15      0       40      ,,,
+T       7       72      +       - choose hull, engine and weaponry type
+T       15      0       +9      PgUp,PgDn
+T       7       72      +       - move selection by 5 units up/down
+T       15      0       +9      B
+T       7       72      +       - change number of beams (when applicable)
+T       15      0       +9      T
+T       7       72      +       - change number of torpedo tubes (when applicable)
+T       15      0       +9      +
+T       7       72      +       - build ship parts manually
+T       15      0       +9      -
+T       7       72      +       - scrap ship parts built on the current turn
+T       15      0       +9      S
+T       7       72      +       - start/cancel ship construction
+T       15      0       +9      Shift-U
+T       7       72      +       - toggle show, hide tech upgrade costs
+T       15      0       +9      Shift-F
+T       7       72      +       - display hull functions
+T       15      0       +9      N
+T       7       72      +       - show prediction of next turn available resources
+T       15      0       +9      Esc
+T       7       72      +       - switch back to starbase info screen
+
+T       7       0       463     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1),
+T       14      304     +       Spacebar    F1
+T       7       88      +9      Starbase info screen (B)
+T       14      264     +                             B
+
+KEY     32      0
+KEY     98      $0801
+KEY     $3B00   10
+
+; *** Combat simulator
+
+PAGE    4
+
+F       0       0       0       479     479
+T       11      0       0       COMBAT SIMULATOR
+L       11      0       +9      126     +
+
+T       15      0       40      ,,,
+T       7       72      +       - cursor movement
+T       15      0       +9      +,-,Enter
+T       7       72      +       - change combatant configuration
+T       15      0       +9      Spacebar
+T       7       72      +       - use real ship/planet from the current
+T       7       88      +9        game as a combatant
+T       15      0       +9      Tab
+T       7       72      +       - swap combatants (ship-to-ship combat)
+T       15      0       +9      E
+T       7       72      +       - set Engine-Shield Bonus value
+T       15      0       +9      F
+T       7       72      +       - turn Fed Crew Bonus on/off
+T       15      0       +9      L
+T       7       72      +       - turn Anti-LeftWin feature on/off
+T       15      0       +9      A
+T       7       72      +       - turn combat animation on/off
+T       15      0       +9      O
+T       7       72      +       - turn combat sound on/off
+T       15      0       +9      1..9
+T       7       72      +       - adjust combat animation speed
+T       15      0       +9      S
+T       7       72      +       - start combat simulation with next random seed
+T       15      0       +9      Shift-S
+T       7       72      +       - start combat simulation with previous random seed
+T       15      0       +9      V
+T       7       72      +       - re-view last simulated battle
+T       15      0       +9      R
+T       7       72      +       - accept combat results for using in the next
+T       7       88      +9        simulation (survived combatants only)
+T       15      0       +9      Esc
+T       7       72      +       - exit from combat simulator
+T       15      0       +9      W
+T       7       72      +       - find worst case for ship on the left, calculate statistics
+T       15      0       +9      Shift-W
+T       7       72      +       - find worst case for ship or planet on the right
+
+T       7       0       +18     During the animated phase of simulation:
+T       15      0       +18     1..9,+,-
+T       7       72      +       - adjust combat animation speed
+T       15      0       +9      O
+T       7       72      +       - turn combat sound on/off
+T       15      0       +9      Esc
+T       7       72      +       - skip animation and get the result immediately
+T       15      0       +9      Spacebar
+T       7       72      +       - turn single step mode on
+
+T       7       0       +18     In single step mode:
+T       15      0       +18     Spacebar
+T       7       72      +       - perform a single step of combat
+T       15      0       +9      Enter
+T       7       72      +       - turn single step mode off
+
+T       7       0       472     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1)
+T       14      304     +       Spacebar    F1
+
+KEY     32      0
+KEY     $3B00   10
+
+; *** M.O.T. interface
+
+PAGE    5
+
+F       0       0       0       479     479
+T       11      0       0       MOVE-OR-TYPE (M.O.T.) INTERFACE
+L       11      0       +9      246     +
+
+T       15      0       40      ,
+T       7       72      +       - change value by 1 or move/build 1 unit
+T       15      0       +9      Ctrl-,
+T       7       72      +       - change value by 10 or move/build 10 units
+T       15      0       +9      Alt-,
+T       7       72      +       - change value by 100 or move/build 100 units
+T       15      0       +9      Shift-,
+T       7       72      +       - change value to the minimum/maximum
+T       7       88      +9        or move/build none/all
+T       15      0       +9      0..9
+T       7       72      +       - manually input the value
+T       15      0       +9      ,
+T       7       72      +       - move cursor vertically (when applicable)
+T       15      0       +9      Tab
+T       7       72      +       - move cursor horizontally (when applicable)
+T       15      0       +9      Enter,Esc
+T       7       72      +       - exit the M.O.T. mode
+T       7       0       +18     Note: during a planet-to-ship cargo transfer,
+T       7       0       +9      after all credits from the planet are loaded
+T       7       0       +9      onto the ship, all further money loading commands
+T       7       0       +9      will automatically sell supplies from the planet
+T       7       0       +9      and load them as credits onto the ship.
+
+T       7       0       454     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1),
+T       14      304     +       Spacebar    F1
+T       7       88      +9      Planet info screen (P), Starbase info screen (B),
+T       14      248     +                           P                         B
+T       7       88      +9      Ship info screen (S), Planet economy (F6)
+T       14      232     +                         S                   F6
+
+KEY     32      0
+KEY     112     $0800
+KEY     98      $0801
+KEY     115     $1000
+KEY     $4000   9
+KEY     $3B00   10
+
+; *** Message editor
+
+PAGE    6
+
+F       0       0       0       479     479
+T       11      0       0       MESSAGE EDITOR
+L       11      0       +9      110     +
+
+T       15      0       40      ,,Home,End
+T       7       96      +       - navigate through messages of the same type
+T       7       112     +9        hold down Shift to navigate through killed
+T       7       112     +9        messages
+T       15      0       +9      ,
+T       7       96      +       - cycle through message types (inbound,
+T       7       112     +9        outbound, VCR)
+T       15      0       +9      S
+T       7       96      +       - save message text to a file
+T       15      0       +9      R
+T       7       96      +       - reply inbound message with quoting
+T       15      0       +9      F
+T       7       96      +       - forward message to other player(s)
+T       15      0       +9      N,Ins
+T       7       96      +       - create new outbound message
+T       15      0       +9      L
+T       7       96      +       - load message text from file
+T       15      0       +9      E
+T       7       96      +       - edit outbound message text
+T       15      0       +9      D,Del
+T       7       96      +       - delete outbound message
+T       15      0       +9      V
+T       7       96      +       - view VCR record
+T       15      0       +9      M
+T       7       96      +       - show mentioned location/object on the map
+T       15      0       +9      K
+T       7       96      +       - kill (filter out) message
+T       15      0       +9      U
+T       7       96      +       - unkill message (display it again)
+T       15      0       +9      Enter
+T       7       96      +       - default action shortcut (depending on the
+T       7       112     +9        message type and contents)
+T       15      0       +9      Esc
+T       7       96      +       - exit from message editor
+
+T       7       0       463     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1)
+T       14      304     +       Spacebar    F1
+
+KEY     32      0
+KEY     $3B00   10
+
+; *** Score screen
+
+PAGE    7
+
+F       0       0       0       479     479
+T       11      0       0       SCORE SCREEN
+L       11      0       +9      94      +
+
+T       15      0       40      +,-
+T       7       96      +       - view next/previous turn scores
+T       15      0       +9      Ctrl/+,-
+T       7       96      +       - view last/first turn score
+T       15      0       +9      Shift/+,-
+T       7       96      +       - change turn number to compare current turn
+T       7       112     +9        score with
+T       15      0       +9      Esc
+T       7       96      +       - exit from score screen
+
+T       7       0       463     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1)
+T       14      304     +       Spacebar    F1
+
+KEY     32      0
+KEY     $3B00   10
+
+; *** Distance mode
+
+PAGE    8
+
+F       0       0       0       479     479
+T       11      0       0       DISTANCE MODE
+L       11      0       +9      102     +
+
+T       15      0       +9      0..9
+T       7       88      +       - set warp factor
+T       15      0       +9      N
+T       7       88      +       - move anchor point to location where the ship
+T       7       104     +9        will be next turn if proceeds to the specified
+T       7       104     +9        waypoint at current speed. Use it recursively
+T       7       104     +9        to calculate complicated routes step-by-step.
+T       7       104     +9        Time and fuel consumption is accumulated.
+T       15      0       +9      G
+T       7       88      +       - adjust pointer to the edge of planetary warp
+T       7       104     +9        well (planet must be selected and HCONFIG
+T       7       104     +9        gravity setting must be enabled)
+T       15      0       +9      Ctrl-Enter
+T       7       88      +       - set waypoint to the pointer location
+T       7       104     +9      is functionally equal to Enter + Ctrl-Enter
+T       15      0       +       Double Click                          Enter   Ctrl-Enter
+T       15      0       +9      Spacebar
+T       7       88      +       - exit Distance Mode
+
+T       7       0       463     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1),
+T       14      304     +                                  Spacebar    F1
+T       7       88      +9      Ship Info Screen (S)
+T       14      232     +                         S
+
+KEY     32      0
+KEY     115     $1000
+KEY     $3B00   10
+
+; *** Planet economy simulator
+
+PAGE    9
+
+F       0       0       0       479     479
+T       11      0       0       PLANET ECONOMY SIMULATOR
+L       11      0       +9      192     +
+
+T       15      0       40      ,
+T       7       72      +       - advance to previous (next) turn
+T       15      0       +9      Ctrl-,
+T       7       72      +       - advance previous 10 (next 10) turns
+T       15      0       +9      1, 2, 3
+T       7       72      +       - toggle colonist population, happiness, tax plot
+T       15      0       +9      4, 5, 6
+T       7       72      +       - toggle natives population, happiness, tax plot
+T       15      0       +9      7, 8
+T       7       72      +       - toggle supplies, funds plot
+T       15      0       +9      Tab
+T       7       72      +       - switch master plot
+
+T       15      0       +18     E
+T       7       72      +       - change race owning planet
+T       15      0       +9      R
+T       7       72      +       - change native race
+T       15      0       +9      G
+T       7       72      +       - change native race government
+T       15      0       +9      P
+T       7       72      +       - set native race population (in clans) [M.O.T.]
+T       15      0       +9      T
+T       7       72      +       - set tax level for natives [M.O.T.]
+T       15      0       +9      H
+T       7       72      +       - set native race happiness [M.O.T.]
+T       15      0       +9      O
+T       7       72      +       - set colonist population (in clans) [M.O.T.]
+T       15      0       +9      X
+T       7       72      +       - set tax level for colonists [M.O.T.]
+T       15      0       +9      Y
+T       7       72      +       - set colonists race happiness [M.O.T.]
+T       15      0       +9      A,M,D
+T       7       72      +       - set factories, mines, defense outposts [M.O.T.]
+T       15      0       +9      S
+T       7       72      +       - set number of supplies [M.O.T.]
+T       15      0       +9      F
+T       7       72      +       - set funds [M.O.T.]
+T       15      0       +9      N
+T       7       72      +       - set amount of neutronium [M.O.T.]
+T       15      0       +9      i
+T       7       72      +       - set amount of tritanium [M.O.T.]
+T       15      0       +9      u
+T       7       72      +       - set amount of duranium [M.O.T.]
+T       15      0       +9      l
+T       7       72      +       - set amount of molybdenum [M.O.T.]
+
+T       7       0       463     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1),
+T       14      304     +                                  Spacebar    F1
+T       7       88      +9      M.O.T. interface (M)
+T       14      232     +                         M
+
+KEY     32      0
+KEY     109     5
+KEY     $3B00   10
+
+; *** More general help
+
+PAGE    10
+
+F       0       0       0       479     479
+T       11      0       0       GENERAL HELP (CONTINUE)
+L       11      0       +9      182     +
+
+T       15      0       40      F1
+T       7       88      +       - show help screen (context-dependent)
+T       15      0       +9      Shift-F1
+T       7       88      +       - show minerals on current position next turn
+T       15      0       +9      F2
+T       7       88      +       - save data changes without leaving VPA
+T       15      0       +9      Shift-F2
+T       7       88      +       - show ships on current position next turn
+T       15      0       +9      F3
+T       7       88      +       - switch to message processor
+T       15      0       +9      Shift-F3
+T       7       88      +       - send selected object data to other player(s)
+T       15      0       +9      F4
+T       7       88      +       - print report (to printer or file)
+T       15      0       +9      F5
+T       7       88      +       - switch to combat simulator
+T       15      0       +9      F6
+T       7       88      +       - switch to planet economy simulator
+T       15      0       +9      F7,Shift-F7
+T       7       88      +       - find planet or ship by name or ID number
+T       15      0       +9      F9
+T       7       88      +       - draw a circle on the map
+T       15      0       +9      Shift-F9
+T       7       88      +       - calculate and draw a projected mine field
+T       15      0       +9      Alt-F9
+T       7       88      +       - calculate and draw a projected mine field
+T       7       106     +9        with given radius
+T       15      0       +9      F10
+T       7       88      +       - show game score and Power Graph
+T       15      0       +9      Shift-F10
+T       7       88      +       - mine field simulator
+T       15      0       +9      Ctrl-F10
+T       7       88      +       - resource statistics
+T       15      0       +9      Ctrl-F11
+T       7       88      +       - fleet report
+T       15      0       +9      Shift-F11
+T       7       88      +       - show common mistakes
+T       15      0       +9      Ctrl-Z
+T       7       88      +       - reset waypoint of all ships in the local 
+T       7       106     +9        warpwell and warp > 1
+T       15      0       +9      Ctrl-O
+T       7       88      +       - edit VPA config
+T       15      0       +9      Alt-A
+T       7       88      +       - next marker filter
+T       15      0       +9      Shift-R
+T       7       88      +       - display range of ships
+
+T       7       0       418     See also:
+L       7       0       +9      68      +
+T       7       88      418     General help (Spacebar), Credits screen (press C)
+T       14      200     +                     Spacebar                         C
+T       7       88      +9      Planet info screen (P), Starbase info screen (B),
+T       14      248     +                           P                         B
+T       7       88      +9      Ship info screen (S), Marker info screen (A),
+T       14      232     +                         S                       A
+T       7       88      +9      Construction yard (O), Combat simulator (F5),
+T       14      240     +                          O                     F5
+T       7       88      +9      Message editor (F3), Score screen (F10),
+T       14      216     +                       F3                 F10
+T       7       88      +9      Planet economy simulator (F6), Map legend (L)
+T       14      296     +                                 F6               L
+T       7       88      +9      Resource Statistics (Ctrl-F10)
+T       14      256     +                            Ctrl-F10
+
+KEY     32      0
+KEY     99      1
+KEY     108     2
+KEY     112     $0800
+KEY     98      $0801
+KEY     115     $1000
+KEY     97      $2800
+KEY     111     3
+KEY     $3F00   4
+KEY     $3D00   6
+KEY     $4400   7
+KEY     $4000   9
+KEY     $6700   11
+
+; *** Resource statistics screen
+
+PAGE    11
+
+F       0       0       0       479     479
+T       11      0       0       RESOURCE STATISTICS
+L       11      0       +9      152      +
+
+T       15      0       40      +,-
+T       7       72      +       - view next/previous turn scores
+T       15      0       +9      ,
+T       7       72      +       - switch between races (if data available)
+T       15      0       +9      Shift-F3
+T       7       72      +       - send current data table to other player(s)
+T       15      0       +14     C,
+T       7       72      +       - toggle display in history graph of colonists,
+T       14      368     +       c
+T       15      0       +9      N,M,A,D,
+T       7       88      +       natives, mines, factories, defense posts,
+T       14      88      +       n        m       a         d
+T       15      0       +9      S,F,E,R
+T       7       88      +       supplies, funds, neutronium, duranium,
+T       14      88      +       s         f       e           u
+T       15      0       +9      O,P,B,H
+T       7       88      +       molybdenium, planets, bases, ships
+T       14      96      +       o           p        b       h
+T       15      0       +14     Shift-C,
+T       7       72      +       - toggle display of production of colonists,
+T       15      0       +9      N,S,F,E,R,
+T       7       88      +       natives, supplies, funds, neutronium, tritanium,
+T       15      0       +9      U,O,P,B,H
+T       7       88      +       duranium, molybdenium, planets, bases, ships
+T       15      0       +14     Ctrl-E,
+T       7       72      +       - toggle display of reserve of neutronium,
+T       15      0       +9      R,U,O
+T       7       88      +       tritanium, duranium, molybdenium
+
+T       15      0       +14     Alt-C
+T       7       72      +       - clear graph
+T       15      0       +9      Esc
+T       7       72      +       - exit from statistics screen
+
+T       7       0       463     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1)
+T       14      304     +       Spacebar    F1
+
+KEY     32      0
+KEY     $3B00   10
+
+; *** Borgculator screen
+
+PAGE    12
+
+F       0       0       0       479     479
+T       11      0       0       BORGCULATOR
+L       11      0       +9      88      +
+
+T       15      0       40      ,
+T       7       72      +       - move one turn back/forward (append if necessary)
+T       15      0       +9      Del
+T       7       72      +       - remove last data row
+T       15      0       +9      O
+T       7       72      +       - set race owning the planet
+T       15      0       +9      G
+T       7       72      +       - use predefined strategy
+T       15      0       +9      Space
+T       7       72      +       - (re-)import currently locked planet
+T       15      0       +9      R
+T       7       72      +       - report to file
+T       15      0       +9      Alt-C
+T       7       72      +       - reset the Borgculator
+T       15      0       +9      Esc
+T       7       72      +       - exit Borgculator
+
+T       7       16      +18     Press one of the keys highlighted in the table
+T       7       16      +9      header to edit the respective value using the
+T       7       16      +9      M.O.T. interface.
+
+T       7       0       454     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1),
+T       14      304     +       Spacebar    F1
+T       7       88      +9      Planet info screen (P), M.O.T. interface (M)
+T       14      248     +                           P                     M
+
+KEY     32      0
+KEY     112     $0800
+KEY     109     5
+KEY     $3B00   10
+
+

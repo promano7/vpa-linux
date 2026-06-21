@@ -1,0 +1,186 @@
+Version 3.51e:
+- bugfixes (total 9);
+- minor changes (total 20);
+- for team games with Explore Map, VPA now writes the combined map (obtained
+  by merging XYPLANx.DAT maps of all team members) to a single XYPLAN.DAT file
+  in the game directory, to be used by other VGAP utilities (idea: J.Shepherd);
+- mine field info screen now shows how many torpedoes of each type can be
+  scooped from the field, or how many it might have taken to create the field.
+
+Version 3.51d:
+- bugfixes (total 1);
+- minor changes (total 3);
+
+Version 3.51c:
+- minor changes (total 2);
+
+Version 3.51b:
+- bugfixes (total 2);
+- minor changes (total 4);
+
+Version 3.51a:
+- bugfixes (total 2);
+- minor changes (total 16);
+- map redrawing procedure has been sped up;
+- VPA now accepts up to 11 player passwords from the command line ("/PW" key);
+- Dynamic Map support added! VPA now stores the starmap in its database. The
+  map may change from turn to turn, but VPA will always display it correctly;
+- Explore Map support added! VPA now supports individual starmaps (XYPLANn.DAT),
+  created by the EXPLMAP add-on;
+- new MAP.INI option: Explore=Yes/No (default is No). When this option is
+  enabled, VPA will use XYPLANn.DAT files rather than the main XYPLAN.DAT;
+- default value for "KeepWayPoints" setting in VPA.INI is changed to "Off";
+- new VPA.INI option: SmallFont=On/Off ([Interface] section, default is On).
+  When this option is enabled, VPA displays planet names and marker labels on
+  the map using built-in small nice font. However, on slow machines it may
+  cause substantial slowdown in screen redraw procedure, so you can turn it
+  Off to make VPA draw the map faster;
+- new VPA.INI option: DullMissions=On/Off ([Interface] section, default is Off).
+  When this option is enabled, the ship mission menu displays all possible
+  missions, including ones that are normally useless, like Lay Mines for a
+  freighter. Some add-ons might use these missions somehow;
+- new VPA.INI option: DullMessages=On/Off ([Interface] section, default is Off).
+  When this option is enabled, the message editor allows sending messages to
+  all races, including dead and unplayed, with zero score. Normally messages
+  to dead races can slow down Host operations, but PHOST and some add-ons can
+  wipe all scores on purpose, to hide the information on ship numbers, etc.;
+- new VPADATn.INI option: AcceptData0=Yes/No (default is No). This option
+  controls whether VPA will accept data transmission messages from unknown
+  senders or not;
+- report files are written into the game directory, not current directory
+  (from where you start VPA);
+- in the report: when a planet has resources to build a starbase, the "Base"
+  field in the "Planets" section contains a dot (idea: J.Schafer);
+- new hot key: Ctrl-Alt-X - exit without saving changes. I don't know why would
+  anybody need it, when UNDO is here, but still someone needs it.
+
+
+Version 3.51:
+- minor changes and bugfixes (total 65);
+- M.O.T. interface has been changed. Now you don't have to press Enter to
+  input a numeric value. Just type it in. When you press a digit key, VPA
+  will automatically activate the input routine. Press Enter to finish the
+  numeric input. Press Enter again when you want to leave M.O.T. session;
+- VPA now can store and later retrieve up to 10 player-defined map positions.
+  To store current map position, press Shift-Alt-<n>, where <n> is a numeric
+  key "0".."9". Later you can go directly to that position by pressing Alt-<n>
+  key. These map "bookmarks" are saved by VPA on exit and can be retrieved
+  during subsequent VPA sessions (idea: A.Babanov);
+- Center Map function is re-assigned to the "Z" key;
+- new VPA.INI option: BadVideoOrMouse=Yes/No ([System] section, default is No).
+  Some faulty video cards reportedly have problems with standard VGA video
+  mode switching. Also, some buggy mouse drivers don't provide correct support
+  for the standard 640x480 VGA video mode. If your screen goes blank or mouse
+  pointer disappears upon exit from the construction yard or combat simulator
+  screen, try setting BadVideoOrMouse=Yes. Although, in case of a bad mouse
+  driver it's better just to change the driver;
+- new VPA.INI option: LargePlanets=On/Off ([Interface] section, default is On).
+  Determines whether or not VPA should draw enlarged planet circles in zoom
+  map modes;
+- in VPA combat simulator: now it's possible to repeat the previous battles.
+  Press Shift-S instead of "S" key to go backwards through the sequence of
+  possible battles between the given pair of combatants;
+- VPA is now aware of Host 3.22.005 advanced cloakers (Resolute, Dark Wing);
+- UNDO FEATURE IS HERE! Now you can scrap mines, factories and defense posts
+  built during the current turn. Use Left arrow key (alone or with Ctrl, Alt
+  or Shift) to scrap planetary structures via the M.O.T. interface (press "M",
+  "A" or "D" key to enter the Structure Build mode);
+- undo feature in supply selling;
+- undo feature in base defense increment;
+- undo feature in torpedo/fighter building;
+- undo feature in tech level upgrading. Note: if you upgraded base tech level
+  and later built ship parts or torpedoes of the respective tech, you may not
+  downgrade the base tech level until you scrap all these parts or torpedoes;
+- undo feature in shipbuilding. When you cancel shipbuilding orders, VPA
+  automatically scraps ship parts built on the current turn. Using the "Minus"
+  key, you can scrap ship parts built with the "Plus" key;
+- undo feature in starbase construction (press "B" again to cancel the base);
+- ship's fly path and trace can be drawn in different colors now. New "FlyPath"
+  parameter has been added to VPA.INI color section;
+- if a ship is being towed, its path under tow is shown on the screen. New
+  "TowPath" parameter has been added to VPA.INI color section;
+- if a ship is going to travel through a Firecloud Chunnel, the Chunnel path
+  is shown on the screen using the "TowPath" color;
+- old planet data in the planet info screen (from "N turns ago") is shown in
+  a dark color now (idea: A.Shafir);
+- new "OldPlanetInfo" parameter has been added to VPA.INI color section;
+- report generation is re-assigned to F4 key (was F2);
+- you can now save all changes you made without leaving the program (F2 key);
+- no more confirmation on exit. With the UNDO feature it's not necessary;
+- VPA is more reliable now as it tries to save data changes when run-time
+  errors occur;
+- jettisoning colonists is now allowed (as in WinPlan);
+- map labels are now written with a smaller font;
+- planet names are shown on the map! (in 1:1 and stronger zoom modes);
+- new option in VPA.INI ("Interface" section): PlanetNames = On/Off (default
+  is "On") - if this option is disabled, VPA shows planet numbers rather than
+  names;
+- planet names/numbers on the map can be turned on/off with Shift-P key;
+- new marker type: a line between two user-defined map locations. Two line
+  styles are supported - solid and dashed;
+- in team mode: duplicate e-mail messages received by different players
+  (for instance, universal messages) are not displayed repeatedly any more;
+- anonymous messages are now recognized as e-mail (template: M.P.Castro);
+- added HULLFUNC.DAT support. If you have this file in the game directory,
+  VPA will use it;
+- if one-engine towing is disabled in HCONFIG, then VPA doesn't allow setting
+  Tow mission for such ships (idea: S.Bezgin). Generally, impossible missions
+  (like Lay Mines for a freighter) are not present in the mission menu now;
+- in the score screen it's now possible to compare the current turn score not
+  only with the previous turn, but with any turn in the game. Use Shift-+/-
+  keys to move in time the point of comparison (idea: F.Poiker);
+- added a feature for supply selling during planet-to-ship cargo transfer.
+  After all credits from the planet are loaded onto the ship, all further
+  money loading commands will automatically sell supplies from the planet and
+  load them as credits onto the ship. For example, you can press Shift-Left to
+  load all credits, then Shift-Left once again to sell and load all supplies;
+- in the Distance Mode with a locked ship you can double click on or near an
+  object on the map to set the ship's waypoint to that object's location. E.g.,
+  double click here is the same as click + Ctrl-click (idea: K.Tchernov);
+- when you set waypoint for a ship that has warp=0, its warp factor is
+  automatically set to match the engine tech level (idea: K.Tchernov);
+- in the Distance Mode you can now change the ship's warp by pressing numeric
+  keys ("0".."9"). Therefore, it's now possible to calculate multi-turn fly
+  routes with variable speed en route;
+- in the Distance Mode you can now activate/deactivate cloaking device of a
+  ship able to cloak by pressing "C" key. Therefore, it's now possible to
+  calculate multi-turn fly routes with variable cloaking status en route
+  (idea: Yu.Kozachenko);
+- Team Message. When playing in a team game (with all team member RSTs UNPACKed
+  into the same directory), you can now send a message to all your teammates.
+  Race selection menu in the message editor will display an option for that,
+  and a special header will be inserted automatically into the message;
+- message to host. Race selection menu in the message editor now has an option
+  for sending messages to game host. When Host program receives such a message,
+  it stores it in a file named HOSTMESS.TXT;
+- new WinPlan message compatibility added. VPA now can read and store new
+  format WinPlan messages. However, because of WinPlan software limitations,
+  VPA may not allow you to write long messages (to the bottom of the message
+  window) sometimes, if WinPlan message file (MESS35n.DAT) is present in the
+  game directory;
+- for a bidirectional wormhole VPA now draws a dashed line on the map between
+  the two ends (idea: S.Frey);
+- new VPA.INI option: AutoUseGravity=Yes/No ([Interface] section, default is
+  No). When this options is enabled, and planetary gravity is enabled in Host
+  configuration, then whenever you set your ship's waypoint to a planet, VPA
+  will automatically adjust the waypoint to the edge of the planetery gravity
+  well (idea: C.L.Mates), unless the ship is travelling on warp 1;
+- new VPA.INI option: KeepWayPoints=Yes/No ([Interface] section, default is
+  Yes). When this option is enabled, at the start of each turn VPA will
+  automatically restore waypoints for your ships that were set on the
+  previous turn, except for ships that ran out of fuel, were towed or
+  chunnelled. This feature uses planetary gravity, so if a ship had its
+  waypoint set to the edge of planetary warp well, the waypoint will be
+  cleared once the ship reaches the planet;
+- improved Extended Mission interface. Extended Missions are now chosen from
+  a separate menu, while the main mission selection menu now includes a special
+  item called "Ext. Misn." that is displayed when there are any Extended
+  Missions available. VPA now supports parameter names for Extended
+  Missions and displays these names during the mission setting. However, in
+  the ship info screen Extended Mission parameters are displayed under their
+  standard names "I" and "T";
+- VPA now displays beam sweeping rate and torpedo minelaying capacity in
+  the starbase construction yard screen (idea: A.Perovic);
+- added a feature for fast hyperjump circle drawing on the map (idea: S.Frey).
+  Press Ctrl-H to draw three circles - 340, 350 and 360 LYs - around the
+  current pointer location.

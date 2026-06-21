@@ -271,12 +271,33 @@ git switch -c port-linux
 
 ---
 
-## Seguimiento del progreso
+## 6. Receta de migración por fichero (patrones recurrentes)
+
+Aprendido al portar la primera unit (`UNIT/STRF.PAS`). Estos patrones se repetirán:
+
+1. **Directivas Borland de segmento/overlay** → eliminar. `{$C MOVEABLE PRELOAD PERMANENT}`
+   y similares no tienen sentido en Linux (FPC solo emite un *warning* "Illegal compiler
+   directive", pero conviene quitarlas).
+2. **`{$V-}` (var-string checks)** → añadir tras la declaración de unit. BP7 lo tenía global
+   en `BPC.CFG` (`/$V-`); sin él, FPC en modo TP da *"String types have to match exactly in
+   $V+ mode"* al pasar p.ej. un `string[20]` a un parámetro `var s:string`. No hay flag de
+   línea de comandos para `$V`, así que va como directiva en el fuente (parte del "prólogo"
+   estándar de cada fichero portado).
+3. **Ensamblador en línea de 16 bits** → reescribir en Pascal puro. El asm con registros de
+   16 bits y segmentos (`les`/`lds`, `ES:`/`DS:`, `AX/BX/SI/DI`, `jcxz`, `repne scasb`…) no
+   compila en x86-64. Se reescribe la rutina en Pascal y **se valida que el comportamiento
+   coincide** con un pequeño banco de pruebas (no basta con que compile).
+4. **Encoding** → preservar los bytes originales. Varios ficheros tienen tablas/textos en
+   codificación **DOS de un solo byte** (p.ej. `UChr`/`LChr` en STRF con acentos). No dejar
+   que el editor los convierta a UTF-8 o esas tablas se corrompen. Tocar solo las partes ASCII.
+
+> **Estado:** `UNIT/STRF.PAS` portado, compila limpio y validado funcionalmente
+> (`ItemPos`/`ItemStr` reescritas desde asm). Es la primera unit hoja verde del árbol.
 
 | Fase | Estado | Notas |
 |---|---|---|
 | 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Resuelto el caso `libXxf86dga` (AUR). Pendiente solo admin: `git init` + rama + licencia. |
-| 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya está OFF por defecto (`{.$DEFINE VPAMM}`): el build estándar no lo incluye. `fpc.cfg` generado. |
+| 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya OFF. `fpc.cfg` generado. **1ª unit portada: `UNIT/STRF.PAS`** (compila + validada). Receta de port en §6. |
 | 2 — Capa gráfica (`ptcgraph`) | ⬜ Pendiente | |
 | 3 — Entrada (ratón/teclado) | ⬜ Pendiente | |
 | 4 — Limpieza de bajo nivel | ⬜ Pendiente | |
