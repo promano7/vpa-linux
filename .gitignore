@@ -23,6 +23,7 @@ fpcmade.*
 *.bak
 *.dsk
 *.old
+*.orig
 
 # --- Editores / SO ---
 *~
