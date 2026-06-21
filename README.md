@@ -159,7 +159,7 @@ verificable al final de cada una.
 ### Fase 1 — Recorte y andamiaje de compilación
 - [x] **VPAMM ya está desactivado** por defecto (`{.$DEFINE VPAMM}` en `switches.inc`): el build estándar de `vpa.pas` no lo incluye. No hay que tocar el núcleo para sacarlo.
 - [ ] Excluir del build el directorio `VPAMM/` y las units DPMI de `UNIT/` (`DPMI`, `DPMITEST`, `MEMTEST`); opcionalmente moverlos a un `legacy/` para declutter.
-- [x] `fpc.cfg` para FPC en modo `{$MODE TP}` con las rutas de units del proyecto + ptcgraph (ruta Arch verificada). *(Sustituye a `BPC.CFG`.)*
+- [x] `vpa.cfg` para FPC en modo `{$MODE TP}` con las rutas de units del proyecto + ptcgraph (ruta Arch verificada). *(Sustituye a `BPC.CFG`.)*
 - [ ] Reescribir el `MAKEFILE` (era para Borland Make) como `Makefile` para FPC (se hará cuando valguemos el primer compilado de una unit hoja).
 - [ ] Decidir sobre `VPACC` (hoy ON) y `TASKS` (hoy OFF): mantener o desactivar `VPACC` al principio para reducir superficie.
 - [ ] **Limpieza global de directivas Borland** sin equivalente en Linux: `{$C MOVEABLE PRELOAD PERMANENT}` (atributos de segmento/overlay DOS), etc. — strip masivo.
@@ -342,8 +342,9 @@ categoría (esto es la hoja de ruta de las Fases 2–4):
 | Fase | Estado | Notas |
 |---|---|---|
 | 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Resuelto el caso `libXxf86dga` (AUR). Pendiente solo admin: `git init` + rama + licencia. |
-| 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya OFF. `fpc.cfg` generado. **Units portadas: `STRF`, `AUXF`** (compilan + validadas). Receta de port en §6. |
-| 2 — Capa gráfica (`ptcgraph`) | 🟡 En curso | **Verificado drop-in:** ptcgraph cubre toda la API BGI de VPA. `swapgraph.py` listo. Pendiente: aplicar swap + reescribir init de `VPAINIT`. |
+| 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya OFF. `vpa.cfg` generado. **Units portadas: `STRF`, `AUXF`** (compilan + validadas). Receta de port en §6. |
+| 2 — Capa gráfica (`ptcgraph`) | 🟡 En curso | Drop-in verificado; `swapgraph.py` aplicado a 26 ficheros; SVGA fuera. **El racimo compila en orden** (`VPA→AUXF→SCREEN→STRF→MOUSE`) hasta `MOUSE`. **Config renombrado `fpc.cfg`→`vpa.cfg`** (un `fpc.cfg` local eclipsaba el del sistema y se perdía la RTL). |
+| 3 — Entrada (ratón/teclado) | 🟡 Adelantada | `MOUSE.PAS` (INT 33h) es el bloqueante más bajo del racimo → se porta a `ptcmouse` a continuación. |
 | 3 — Entrada (ratón/teclado) | ⬜ Pendiente | |
 | 4 — Limpieza de bajo nivel | ⬜ Pendiente | |
 | 5 — E/S y portabilidad de datos | ⬜ Pendiente | |
