@@ -13,7 +13,7 @@
 
 { Define this if you want PCC stuff in VPA. This is mainly command
   message processing until now. }
-{$DEFINE VPACC}
+{.$DEFINE VPACC}
 
 { VPA "Mixed Mode" (real *and* protected mode, i.e. PCC graphics and
   DPMI kernel). }
