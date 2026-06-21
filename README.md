@@ -297,7 +297,7 @@ Aprendido al portar la primera unit (`UNIT/STRF.PAS`). Estos patrones se repetir
 | Fase | Estado | Notas |
 |---|---|---|
 | 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Resuelto el caso `libXxf86dga` (AUR). Pendiente solo admin: `git init` + rama + licencia. |
-| 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya OFF. `fpc.cfg` generado. **1ª unit portada: `UNIT/STRF.PAS`** (compila + validada). Receta de port en §6. |
+| 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya OFF. `fpc.cfg` generado. **Units portadas: `STRF`, `AUXF`** (compilan + validadas). Receta de port en §6. |
 | 2 — Capa gráfica (`ptcgraph`) | ⬜ Pendiente | |
 | 3 — Entrada (ratón/teclado) | ⬜ Pendiente | |
 | 4 — Limpieza de bajo nivel | ⬜ Pendiente | |
