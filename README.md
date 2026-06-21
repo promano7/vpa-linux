@@ -22,6 +22,15 @@ sustitución de la BGI de Borland.
 
 ## 1. Análisis de licencia
 
+> **Intención del proyecto (decisión del autor del port):** este port será **software
+> libre, open source y gratuito** para toda la comunidad de VGA Planets, publicado en
+> **GitHub**. Se acepta sin problema usar dependencias o referencias **GPL** si son la
+> mejor opción técnica. El objetivo de licencia es, por tanto, una licencia libre
+> **compatible con GPL** (previsiblemente la propia **GPL v2 o posterior**, que es
+> compatible con el PDK y con `ptcgraph`/FPC). El requisito es simple: **dejar clara la
+> licencia final y conservar todos los avisos de copyright** de cada autor (VPA original,
+> PHOST/PDK, PCC2…) cuando el repo se haga público.
+
 Antes de plantear redistribución conviene tener claro el estado real de la licencia,
 porque **lo que aparece en la ficha de SourceForge no coincide con lo que dice el código**.
 
@@ -85,17 +94,21 @@ formato de datos de hull-functions para una reimplementación autocontenida:
 | **PDK** (`pdk`, 2010) | `hullfunc.c`, `pconfig.c` (`hullHasSpecial`, `HullDoesAlchemy`, `HullCanHyperwarp`…) | **GPL v2 o posterior.** © 1995-2000 Andrew Sterian, Thomas Voigt, Steffen Pietsch (+ M. van Rees, S. Reuther). |
 | **cpluslib** (2025) | utilidades C++ (plantillas de contenedores) | **Dominio público.** |
 
-**Implicación de licencia (importante):** traducir de cerca el `hullfunc.c` del **PDK**
-haría esa porción **GPL** (copyleft), lo que —dada la licencia poco clara de VPA— conviene
-evitar (enlaza con la nota MPL 1.1 + GPL de arriba). Por eso, si se reimplementa la capa de
-hull-functions, la **referencia preferente es PCC2** (permisiva): basta conservar su aviso de
-copyright y marcar las modificaciones. La lógica concreta de qué casco tiene qué habilidad la
-determinan en gran parte los ficheros de datos del juego (`hullfunc.txt`, `shiplist.txt`,
-`auxdata.hst`), cuyo **formato son hechos**, no material protegible.
+**Implicación de licencia (a la luz de la intención del proyecto):** como el port será
+libre y se acepta la **GPL**, **ambas fuentes son utilizables**. El **PDK** (`hullfunc.c`,
+GPL v2+) puede usarse incluso como base de traducción directa; si se hace, esa porción
+—y por contagio el resultado combinado— quedaría **GPL**, lo cual es coherente con el
+objetivo (publicar bajo licencia libre compatible con GPL). La **PCC2** (permisiva tipo
+BSD) sigue siendo la opción más flexible (compatible con cualquier licencia final) y suele
+ser una referencia más legible/moderna en C++. En cualquier caso, se **conservan los avisos
+de copyright** de los autores (PHOST/PDK: Sterian, Voigt, Pietsch, van Rees, Reuther; PCC2:
+Reuther). Recordatorio práctico: la lógica de "qué casco tiene qué habilidad" la determinan
+en gran parte los datos del juego (`hullfunc.txt`, `shiplist.txt`, `auxdata.hst`), cuyo
+**formato son hechos** y no material protegible.
 
 **Plan:** de momento la capa `Enum*` queda como *stub* vacío (la pantalla de habilidades de
-nave saldrá vacía); se reimplementará en Pascal autocontenido tomando **PCC2** como referencia
-principal, conservando los avisos de copyright correspondientes.
+nave saldrá vacía); se reimplementará en Pascal autocontenido tomando el PDK/PCC2 como
+referencia, conservando los avisos de copyright correspondientes.
 
 *Aviso: este análisis es informativo, no asesoramiento legal.*
 
