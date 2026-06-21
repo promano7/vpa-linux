@@ -1,5 +1,6 @@
 Unit    StrF;           (* String Functions *)
-{$C MOVEABLE PRELOAD PERMANENT}
+{$V-}
+
 
 Interface
 
@@ -309,7 +310,7 @@ function PosInStr (var s1,s2: string) : byte;
     for i:=1 to ls2 do
       if UChr[byte(s2[i])]=c1 then
       begin
-	found:=True;
+	found:=True;
 	for j:=1 to ls1-1 do
 	  if UChr[byte(s2[i+j])]<>UChr[byte(s1[1+j])] then
 	    begin found:=False; Break end;
@@ -317,78 +318,45 @@ function PosInStr (var s1,s2: string) : byte;
       end;
   end;
 
-function ItemPos (var s1:string; var s) : word;	{ item no. is 0-based }
+function ItemPos (var s1:string; var s) : word; { item no. is 0-based }
   { s MUST be terminated with two spaces }
+  type TBuf = array[0..65535] of char;
+  var  sb : TBuf absolute s;
+       ls1, di, k, item : word;
   begin
-    asm
-	push	ds
-	cld
-	les	di,s
-	lds	si,s1
-	lodsb
-	xchg	al,ah		{ ah = ls1 }
-	mov	al,' '		{ al = ' ' }
-	xor	bx,bx		{ bx = item no. }
-	mov	dx,si		{ preserve s1[1] addr in dx }
-
-@@4:	mov	cl,ah
-	xor	ch,ch
-@@1:	cmp	es:[di],al
-	je	@@2
-	cmpsb
-	jne	@@2
-	loop	@@1
-@@2:    cmp	es:[di],al
-	jne	@@5
-	jcxz	@@3
-@@5:	mov	cx,$FFFF
-	repne	scasb		{ di -> next item }
-	mov	si,dx		{ si -> s1[1] }
-	inc	bx
-	cmp	es:[di],al	{ end of s ? }
-	jne	@@4
-
-@@3:	mov	@Result,bx	{ ItemPos:=bx }
-	pop	ds
-    end;
+    ls1 := Length(s1);
+    item := 0;
+    di := 0;
+    repeat
+      k := 1;
+      while (k <= ls1) and (sb[di] <> ' ') and (sb[di] = s1[k]) do
+        begin inc(di); inc(k); end;
+      if (k > ls1) and (sb[di] = ' ') then
+        begin ItemPos := item; Exit; end;
+      while sb[di] <> ' ' do inc(di);
+      inc(di);
+      inc(item);
+    until sb[di] = ' ';
+    ItemPos := item;
   end;
 
 procedure ItemStr (var s; n:word; var s1:string);
-  { item #n terminated by a space must exist in s }
-  { s1 must be big enough to store the item string }
-  { n is 0-based }
+  { item #n terminated by a space must exist in s; n is 0-based }
+  type TBuf = array[0..65535] of char;
+  var  sb : TBuf absolute s;
+       di, len : word;
   begin
-    asm
-	push	ds
-	cld
-	les	di,s
-	cmp	n,0
-	je	@@2
-	mov	al,' '
-	mov	cx,$FFFF
-@@1:	repne	scasb		{ find n-th occurrence of ' ' }
-	dec	n
-	jne	@@1
-@@2:	push	es
-	pop	ds
-	push	di
-	pop	si
-	les	di,s1
-	push	di		{ preserve s1[0] addr }
-	inc	di
-	xor	cx,cx
-@@3:	lodsb
-	cmp	al,' '
-	je	@@4
-	stosb
-	inc	cx
-	jmp	@@3
-@@4:	pop	di
-	xchg	al,cl
-	stosb
-
-	pop	ds
-    end;
+    di := 0;
+    while n > 0 do
+      begin
+        while sb[di] <> ' ' do inc(di);
+        inc(di);
+        dec(n);
+      end;
+    len := 0;
+    while sb[di] <> ' ' do
+      begin inc(len); s1[len] := sb[di]; inc(di); end;
+    s1[0] := Chr(len);
   end;
 
 End.
