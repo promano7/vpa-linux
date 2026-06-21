@@ -1,0 +1,23 @@
+# Normalizar finales de linea: el fuente original venia en CRLF (DOS).
+# Para el port nativo trabajamos en LF dentro del repositorio.
+* text=auto eol=lf
+
+# Codigo y textos: forzar LF
+*.pas  text eol=lf
+*.inc  text eol=lf
+*.pp   text eol=lf
+*.txt  text eol=lf
+*.cfg  text eol=lf
+*.ini  text eol=lf
+*.md   text eol=lf
+*.sh   text eol=lf
+
+# Binarios: que git no los toque
+*.obj  binary
+*.bgi  binary
+*.chr  binary
+*.fnt  binary
+*.rzg  binary
+*.dat  binary
+*.msg  binary
+*.zip  binary

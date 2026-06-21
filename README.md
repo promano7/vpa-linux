@@ -157,11 +157,13 @@ verificable al final de cada una.
 - [ ] Convertir finales de línea CRLF→LF (lo gestiona `.gitattributes`) y documentar codificación de los textos.
 
 ### Fase 1 — Recorte y andamiaje de compilación
-- [ ] Eliminar/aislar el subsistema **VPAMM** completo (modo mixto, DPMI, VESA, kernel propio).
-- [ ] Ajustar `switches.inc`: quitar `VPAMM` y `DPMISupport`; decidir sobre `VPACC` y `TASKS` (desactivar al principio para reducir superficie).
-- [ ] Sustituir `bpc.cfg` (config de Borland) por un `fpc.cfg`/parámetros FPC en modo `{$MODE TP}`.
-- [ ] Reescribir el `MAKEFILE` (era para Borland Make) como `Makefile` o `fpmake` para FPC.
-- [ ] Primera compilación de tanteo en `{$MODE TP}`: **recoger la lista de errores** (todavía no se espera que compile).
+- [x] **VPAMM ya está desactivado** por defecto (`{.$DEFINE VPAMM}` en `switches.inc`): el build estándar de `vpa.pas` no lo incluye. No hay que tocar el núcleo para sacarlo.
+- [ ] Excluir del build el directorio `VPAMM/` y las units DPMI de `UNIT/` (`DPMI`, `DPMITEST`, `MEMTEST`); opcionalmente moverlos a un `legacy/` para declutter.
+- [x] `fpc.cfg` para FPC en modo `{$MODE TP}` con las rutas de units del proyecto + ptcgraph (ruta Arch verificada). *(Sustituye a `BPC.CFG`.)*
+- [ ] Reescribir el `MAKEFILE` (era para Borland Make) como `Makefile` para FPC (se hará cuando valguemos el primer compilado de una unit hoja).
+- [ ] Decidir sobre `VPACC` (hoy ON) y `TASKS` (hoy OFF): mantener o desactivar `VPACC` al principio para reducir superficie.
+- [ ] **Limpieza global de directivas Borland** sin equivalente en Linux: `{$C MOVEABLE PRELOAD PERMANENT}` (atributos de segmento/overlay DOS), etc. — strip masivo.
+- [ ] Primer compilado de tanteo (bottom-up, empezando por una unit hoja como `STRF`): **recoger la lista de errores reales**.
 
 ### Fase 2 — Capa gráfica (`ptcgraph`)
 - [ ] Eliminar `SVGA.PAS`/`SVGA.OBJ` y la dependencia de la unit `SVGA`.
@@ -200,6 +202,7 @@ verificable al final de cada una.
 - [ ] Empaquetar (binario + ficheros de soporte: `vpa.hlp`, `vpa.msg`, recursos).
 - [ ] Cerrar el tema de licencia si se publica.
 - [ ] *(Opcional, fase posterior)* Evaluar 256 colores / resoluciones mayores, o un backend SDL para modernización real.
+- [ ] **Eliminar la dependencia de `libXxf86dga`** recompilando `ptcgraph` sin DGA (comentar `ENABLE_X11_EXTENSION_XF86DGA1`/`_XF86DGA2` en `x11extensions.inc`), para que el binario distribuible no requiera una librería retirada de los repos.
 
 ---
 
@@ -217,6 +220,16 @@ Comprobado de forma efectiva sobre FPC **3.2.2** en Ubuntu 24.04 (x86_64).
   `sudo pacman -S --needed fpc libx11`.
 - En tiempo de ejecución el binario depende de **libX11** (aplicación X11; en Wayland
   funciona vía XWayland, normalmente ya presente).
+- **Dependencias de enlazado (X) y `gcc`:** al enlazar, FPC pasa `-lX11 -lXext -lXfixes
+  -lXi -lXrandr -lXxf86dga -lXxf86vm`, y necesita los objetos `crt*.o` de **gcc**. En
+  distros minimalistas (Arch) hay que instalarlas explícitamente.
+- **Aviso Arch — `libXxf86dga`:** Arch **retiró `libxxf86dga`** de los repos oficiales en
+  2019 (limpieza de Xorg), pero `ptcgraph` de FPC 3.2.2 aún la enlaza. Solución rápida:
+  instalarla desde el Arch Linux Archive
+  (`sudo pacman -U https://archive.archlinux.org/packages/l/libxxf86dga/libxxf86dga-1.1.5-1-x86_64.pkg.tar.zst`).
+  Solución limpia para el port final (ver Fase 7): **recompilar `ptcgraph` sin DGA**
+  comentando `ENABLE_X11_EXTENSION_XF86DGA1`/`_XF86DGA2` en `ptc/src/x11/x11extensions.inc`,
+  con lo que el binario deja de depender de esa librería obsoleta.
 
 > **Nota:** en Linux **no existe la unit `graph`** de Borland; `ptcgraph` *es* el
 > reemplazo compatible con BGI. Al migrar, los `uses Graph` pasarán a `uses ptcgraph, ptccrt`.
@@ -262,8 +275,8 @@ git switch -c port-linux
 
 | Fase | Estado | Notas |
 |---|---|---|
-| 0 — Preparación del entorno | 🟡 En curso | FPC 3.2.2 verificado; entregables generados. Falta git + licencia. |
-| 1 — Recorte y andamiaje | ⬜ Pendiente | |
+| 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Resuelto el caso `libXxf86dga` (AUR). Pendiente solo admin: `git init` + rama + licencia. |
+| 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya está OFF por defecto (`{.$DEFINE VPAMM}`): el build estándar no lo incluye. `fpc.cfg` generado. |
 | 2 — Capa gráfica (`ptcgraph`) | ⬜ Pendiente | |
 | 3 — Entrada (ratón/teclado) | ⬜ Pendiente | |
 | 4 — Limpieza de bajo nivel | ⬜ Pendiente | |
