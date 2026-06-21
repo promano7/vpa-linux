@@ -71,6 +71,32 @@ en el código, lo limpio es:
 > (con excepción de enlazado), que no impone obligaciones tipo GPL. Solo sería relevante
 > si en el futuro se incorporase código estrictamente GPL.
 
+### Fuentes de referencia externas (PCC2 / PDK)
+
+Para resolver el bloqueo de hull-functions (la API `EnumHullfuncs` que el núcleo
+necesita y que en VPA vive en `CC/HULLFUNC.PAS`, con dependencias ausentes del
+ecosistema PCC 1.x) se dispone del código de Stefan Reuther como **referencia**.
+Son C/C++, **no contienen units Pascal** drop-in, pero documentan la lógica y el
+formato de datos de hull-functions para una reimplementación autocontenida:
+
+| Fuente | Contenido útil | Licencia |
+|---|---|---|
+| **PCC2** (`pcc-v2`, 2025) | `game/hullfunc.cc/.h` (lógica hull-functions en C++) | **Permisiva tipo BSD** ("PCC II License Terms": retener copyright, marcar modificaciones). © 2001-2024 Stefan Reuther & contributors. **No es GPL.** |
+| **PDK** (`pdk`, 2010) | `hullfunc.c`, `pconfig.c` (`hullHasSpecial`, `HullDoesAlchemy`, `HullCanHyperwarp`…) | **GPL v2 o posterior.** © 1995-2000 Andrew Sterian, Thomas Voigt, Steffen Pietsch (+ M. van Rees, S. Reuther). |
+| **cpluslib** (2025) | utilidades C++ (plantillas de contenedores) | **Dominio público.** |
+
+**Implicación de licencia (importante):** traducir de cerca el `hullfunc.c` del **PDK**
+haría esa porción **GPL** (copyleft), lo que —dada la licencia poco clara de VPA— conviene
+evitar (enlaza con la nota MPL 1.1 + GPL de arriba). Por eso, si se reimplementa la capa de
+hull-functions, la **referencia preferente es PCC2** (permisiva): basta conservar su aviso de
+copyright y marcar las modificaciones. La lógica concreta de qué casco tiene qué habilidad la
+determinan en gran parte los ficheros de datos del juego (`hullfunc.txt`, `shiplist.txt`,
+`auxdata.hst`), cuyo **formato son hechos**, no material protegible.
+
+**Plan:** de momento la capa `Enum*` queda como *stub* vacío (la pantalla de habilidades de
+nave saldrá vacía); se reimplementará en Pascal autocontenido tomando **PCC2** como referencia
+principal, conservando los avisos de copyright correspondientes.
+
 *Aviso: este análisis es informativo, no asesoramiento legal.*
 
 ---
@@ -344,7 +370,7 @@ categoría (esto es la hoja de ruta de las Fases 2–4):
 | 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Resuelto el caso `libXxf86dga` (AUR). Pendiente solo admin: `git init` + rama + licencia. |
 | 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya OFF. `vpa.cfg` generado. **Units portadas: `STRF`, `AUXF`** (compilan + validadas). Receta de port en §6. |
 | 2 — Capa gráfica (`ptcgraph`) | 🟡 En curso | Swap aplicado; SVGA fuera; `vpa.cfg`. **`SCREEN.PAS` portado y compila** (asm BIOS→Pascal: `CloseGraphics`, `WaitRetrace`, `WriteXY`/`WriteXYAttr` a bitmap-font Pascal, `MouseHandler`, stubs de `.obj`, `MaxAvail`/`MemAvail`). **Geometría/atributos de texto: a afinar viendo el binario.** Frente actual: asm de `TCOMBAT.PAS`. |
-| — Hallazgo VPACC/HULLFUNC | ⚠️ Bloqueo arquitectónico | El núcleo usa la API de hull-functions (`THullFuncQueryResult`, `EnumHullfuncs`) que vive en `CC/HULLFUNC.PAS`, y este depende de units **ausentes** (`phost`, `pconfig`, `lowlevel`, `global`, `swapper`, `ui`…, del proyecto PCC2). VPACC completo **no es construible**. Plan: capa de compatibilidad en `VPADATA` (definir datos del núcleo siempre + stub vacío de `Enum*`) y portar `HULLFUNC` real más tarde. `iColo/iDefense/iRace` ya añadidas (compat). |
+| — Hallazgo VPACC/HULLFUNC | ⚠️ Bloqueo arquitectónico | El núcleo usa la API de hull-functions (`THullFuncQueryResult`, `EnumHullfuncs`) que vive en `CC/HULLFUNC.PAS`, y este depende de units **ausentes** (`phost`, `pconfig`, `lowlevel`, `global`, `swapper`, `ui`…, del proyecto PCC2). VPACC completo **no es construible**. Plan: capa de compatibilidad en `VPADATA` (datos del núcleo siempre + stub vacío de `Enum*`), y reimplementar `HULLFUNC` autocontenido usando **PCC2 como referencia** (permisiva; ver §1). `iColo/iDefense/iRace` ya añadidas (compat). |
 | 3 — Entrada (ratón/teclado) | 🟡 En curso | **`MOUSE`→`ptcmouse` y `KEYBOARD`→`ptccrt` portados y validados.** `KbdFlags` (Shift/Ctrl) queda como `0` (ptccrt no lo expone) — TODO. Pendiente: llamar a `PollMouse` desde el bucle de entrada. |
 | 3 — Entrada (ratón/teclado) | ⬜ Pendiente | |
 | 4 — Limpieza de bajo nivel | ⬜ Pendiente | |
