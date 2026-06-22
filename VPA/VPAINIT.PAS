@@ -29,7 +29,7 @@ function  StartVPA : boolean;
 Implementation
 
 uses
-  StrF,ptcgraph,Screen,Mouse,Keyboard,Config,MsgRead,Messages,Report,ExtFeat,Ini,
+  StrF,ptcgraph,{$IFDEF UNIX}xfocus,{$ENDIF}Screen,Mouse,Keyboard,Config,MsgRead,Messages,Report,ExtFeat,Ini,
 {$IFDEF VPACC}
         PHostM,Hullfunc,
 {$ENDIF}
@@ -1719,6 +1719,7 @@ function StartVPA : boolean;
       InitHelp;
       { (apagaba CapsLock via BIOS; no aplica en Linux) }
       OpenGraph;
+      {$IFDEF UNIX}GrabInputFocus;{$ENDIF}   { reclamar foco de teclado para la ventana ptcgraph }
       InitMouse;
       if NewTurn then CheckOutMap;
     end;
