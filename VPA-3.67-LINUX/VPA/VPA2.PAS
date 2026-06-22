@@ -10,6 +10,7 @@
 
 {$I switches.inc}
 Unit    VPA2;           (* VPA Main Part - Display *)
+{$V-}
 {DEFINE DEBUG}  (* include TurnsInMemory *)
 
 Interface
@@ -62,7 +63,7 @@ procedure Main;
 
 Implementation
 
-uses    Graph,Screen,Mouse,StrF,Keyboard,VPA3,
+uses    ptcgraph,Screen,Mouse,StrF,Keyboard,VPA3,
 {$IFDEF TASKS}
         Tasks,
 {$ENDIF}
@@ -140,43 +141,10 @@ procedure DrawWLine (x1,y1,x2,y2:int; FindMin:boolean);
     var p1,p2   : byte;
         outta   : boolean;
     begin
-      asm
-        mov     outta,Yes
-        xor     cx,cx           { cx = 0 }
-        mov     dx,479          { dx = 479 }
-
-        mov     ax,x1           { ax = Min(x1,x2) }
-        mov     bx,x2           { bx = Max(x1,x2) }
-        cmp     ax,bx
-        jle     @@1
-        xchg    ax,bx
-@@1:    cmp     ax,cx           { ax = Max(ax,0) }
-        jge     @@2
-        mov     ax,cx
-@@2:    cmp     bx,dx           { bx = Min(bx,479) }
-        jle     @@3
-        mov     bx,dx
-@@3:    cmp     ax,bx           { if ax>bx then outta }
-        jg      @@9
-
-        mov     ax,y1           { ax = Min(y1,y2) }
-        mov     bx,y2           { bx = Max(y1,y2) }
-        cmp     ax,bx
-        jle     @@4
-        xchg    ax,bx
-@@4:    cmp     ax,cx           { ax = Max(ax,0) }
-        jge     @@5
-        mov     ax,cx
-@@5:    cmp     bx,dx           { bx = Min(bx,479) }
-        jle     @@6
-        mov     bx,dx
-@@6:    cmp     ax,bx           { if ax>bx then outta }
-        jg      @@9
-
-        mov     outta,No
-
-@@9:
-      end;
+      { outta = caja de la linea completamente fuera de [0,479]x[0,479]
+        (se calcula como en el asm original; el Exit que lo usaba esta comentado) }
+      outta := (Max(Min(x1,x2),0) > Min(Max(x1,x2),479))
+            or (Max(Min(y1,y2),0) > Min(Max(y1,y2),479));
       {if outta then Exit;}
       p1:=GetPixel(x1,y1); p2:=GetPixel(x2,y2);
       Line(x1,y1,x2,y2);
@@ -3679,13 +3647,7 @@ end;
 procedure ResetMouseAndVideo;
   begin
     MouseMove;
-    if not useSVGA then
-        asm
-            mov ax,3
-            int 10h
-            mov ax,12h
-            int 10h
-        end;
+    { (en DOS aqui se reseteaba el modo de video por BIOS; ptcgraph lo mantiene) }
     ResetMouse;
     DrawRightScreen;
     DrawMap(Yes);
