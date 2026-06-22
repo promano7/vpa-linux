@@ -1,5 +1,6 @@
 {$I switches.inc}
 Unit    Config;         { INI maintenance unit }
+{$V-}
 
 {       Format:
                         ; This is a comment. Next line is empty. Ignored.
@@ -56,7 +57,7 @@ const ModeLine:array[1..8] of integer = (
 
 Implementation
 
-uses    Screen,Graph,VPAData,Messages,VPAInit,RST_TRN,ExtFeat
+uses    Screen,ptcgraph,VPAData,Messages,VPAInit,RST_TRN,ExtFeat
 {$IFDEF VPACC},
         Hullfunc
 {$ENDIF};
@@ -513,7 +514,7 @@ function ReadConfigFile (fnm:str79; sec:cfgSec) : boolean;
                 kMineDecay      : MineDecayRate:=Value(s);
                 kWebDecay       : WebMineDecayRate:=Value(s);
                 kVPAExtra       : VPAExtra:=YesNo;
-                kFF1..kFF11     : FreeFighters[byte(key)-byte(kFF1)+1]:=Value(s);
+                kFF1..kFF11     : FreeFighters[ord(key)-ord(kFF1)+1]:=Value(s);
                           end;
       sPHOST    : case key of
                 kpIsMines       : IsMines:=YesNo;
@@ -699,7 +700,7 @@ procedure WriteHConfig;
         kMineDecay      : Str(MineDecayRate,s);
         kWebDecay       : Str(WebMineDecayRate,s);
         kVPAExtra       : s:=YNStr[VPAExtra];
-        kFF1..kFF11     : Str(FreeFighters[byte(key)-byte(kFF1)+1],s);
+        kFF1..kFF11     : Str(FreeFighters[ord(key)-ord(kFF1)+1],s);
       end;
       if (length(s)>0) then
       begin

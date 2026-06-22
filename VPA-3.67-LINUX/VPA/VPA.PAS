@@ -40,9 +40,9 @@ procedure Terminate; far;
       Writeln(#7'Error ',ExitCode,' has occurred. Please report to author.');
     if ErrorAddr<>nil then begin
       Write('Error address is ');
-      WriteHex(long(ErrorAddr) shr 16);
+      WriteHex(PtrUInt(ErrorAddr) shr 16);
       Write(':');
-      WriteHex(long(ErrorAddr) and 65535);
+      WriteHex(PtrUInt(ErrorAddr) and 65535);
       Writeln('.');
     end;
     if not Fault and not (ExitCode in [249,251..254]) then

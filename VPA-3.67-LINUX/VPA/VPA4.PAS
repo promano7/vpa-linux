@@ -10,10 +10,11 @@
 
 {$I switches.inc}
 unit VPA4;
+{$V-}
 
 interface
 
-uses Graph, VPAData, AuxF, Building;
+uses ptcgraph, VPAData, AuxF, Building;
 
 procedure SetTaxes (nat:boolean; var tax:int);                  { M.O.T. }
 procedure WriteMiningRate;
@@ -1622,7 +1623,7 @@ function MyGetNum(xa,ya:int):string;
                       ls:=length(mych);
                       end;
                     end;
-{DEL}  chr($5300)                           :begin
+{DEL}  chr(0)  { era chr($5300): el byte alto (scancode) se trunca; todas las teclas extendidas caen aqui, igual que en DOS }                           :begin
                     mych:=''; mynum:=0; op:=chr(0); forced:=char(0); var1:=0; var2:=0;
                     bar(xa,ya,xa+dx,ya+dy); 
                     ls:=0;
