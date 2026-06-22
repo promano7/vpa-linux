@@ -29,6 +29,8 @@ procedure Delay (ms:word);
 procedure Sound (hz:word);
 procedure NoSound;
 function  Timer : long;
+function  MaxAvail : long;   { heap: no existe en FPC/Linux; ver implementacion }
+function  MemAvail : long;
 (* procedure RealModeInt (n:byte;_ds,_es,_ax,_cx,_dx,_bx,_bp,_si,_di:word); *)
 
 Implementation
@@ -78,5 +80,15 @@ procedure NoSound;
 function Timer : long;
   { ticks ~18.2 Hz como la cuenta de la BIOS (1 tick ~ 55 ms) }
   begin Timer := long(GetTickCount64 div 55); end;
+
+{ MaxAvail/MemAvail eran funciones de heap de Turbo Pascal (memoria libre del
+  montón DOS). FPC/Linux no las provee: en Linux la memoria es amplia y dinamica,
+  asi que devolvemos un valor grande para que las comprobaciones del tipo
+  "¿hay memoria suficiente?" del codigo original pasen siempre. }
+function MaxAvail : long;
+  begin MaxAvail := $7FFFFFFF; end;
+
+function MemAvail : long;
+  begin MemAvail := $7FFFFFFF; end;
 
 End.

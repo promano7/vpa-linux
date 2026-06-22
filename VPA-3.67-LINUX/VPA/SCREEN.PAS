@@ -234,11 +234,6 @@ uses    Keyboard,VHLP,dos
         Hullfunc
 {$ENDIF};
 
-{ MaxAvail/MemAvail no existen en FPC/Linux. En Linux la memoria es amplia:
-  devolvemos un valor grande para que las comprobaciones de memoria pasen. }
-function MaxAvail: longint; begin MaxAvail := $7FFFFFFF; end;
-function MemAvail: longint; begin MemAvail := $7FFFFFFF; end;
-
 
 Type
         Font16 = Array [char,0..15] of byte;
