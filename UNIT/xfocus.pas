@@ -1,7 +1,10 @@
 {$MODE OBJFPC}{$H+}
-{ xfocus - pide al servidor X / gestor de ventanas el foco de teclado para
-  nuestra ventana ptcgraph. ptcgraph hace XMapRaised pero NO XSetInputFocus,
-  asi que bajo gestores como Cinnamon la ventana no recibe el teclado al abrir. }
+{ xfocus - integra la ventana ptcgraph con el escritorio X:
+    * pide el foco de teclado (ptcgraph hace XMapRaised pero NO XSetInputFocus,
+      asi que bajo gestores como Cinnamon la ventana no recibe el teclado).
+    * OCULTA el puntero del sistema sobre la ventana (cursor en blanco), para que
+      solo se vea el cursor propio de VPA (la "diana"), como en DOS a pantalla
+      completa, donde cada programa pintaba su propio raton. }
 unit xfocus;
 interface
 procedure GrabInputFocus;
@@ -56,6 +59,21 @@ begin
   FindByTitle := res;
 end;
 
+{ pone un cursor invisible (8x8 vacio) en la ventana -> oculta la flecha de Linux }
+procedure HideSystemCursor(dpy:PDisplay; win:TWindow);
+const blank: array[0..7] of char = (#0,#0,#0,#0,#0,#0,#0,#0);
+var pm: TPixmap; cur: TCursor; black: TXColor;
+begin
+  FillChar(black, sizeof(black), 0);
+  pm := XCreateBitmapFromData(dpy, win, @blank, 8, 8);
+  if pm <> None then
+  begin
+    cur := XCreatePixmapCursor(dpy, pm, pm, @black, @black, 0, 0);
+    XDefineCursor(dpy, win, cur);    { atributo de la ventana: persiste }
+    XFreePixmap(dpy, pm);
+  end;
+end;
+
 procedure GrabInputFocus;
 var
   dpy: PDisplay; root, win: TWindow; want: string; tries: integer;
@@ -77,9 +95,10 @@ begin
   end;
   if win <> 0 then
   begin
+    HideSystemCursor(dpy, win);          { <-- oculta la flecha del sistema }
     XRaiseWindow(dpy, win);
     XSetInputFocus(dpy, win, RevertToParent, CurrentTime);
-    netActive := XInternAtom(dpy, '_NET_ACTIVE_WINDOW', 1);   { via EWMH si hay gestor }
+    netActive := XInternAtom(dpy, '_NET_ACTIVE_WINDOW', 1);
     if netActive <> 0 then
     begin
       FillChar(ev, sizeof(ev), 0);
@@ -87,7 +106,7 @@ begin
       ev.xclient.window := win;
       ev.xclient.message_type := netActive;
       ev.xclient.format := 32;
-      ev.xclient.data.l[0] := 1;            { fuente = aplicacion }
+      ev.xclient.data.l[0] := 1;
       ev.xclient.data.l[1] := CurrentTime;
       XSendEvent(dpy, root, 0, SubstructureRedirectMask or SubstructureNotifyMask, @ev);
     end;
