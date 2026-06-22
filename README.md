@@ -201,7 +201,7 @@ verificable al final de cada una.
 - [x] **VPAMM ya está desactivado** por defecto (`{.$DEFINE VPAMM}` en `switches.inc`): el build estándar de `vpa.pas` no lo incluye. No hay que tocar el núcleo para sacarlo.
 - [ ] Excluir del build el directorio `VPAMM/` y las units DPMI de `UNIT/` (`DPMI`, `DPMITEST`, `MEMTEST`); opcionalmente moverlos a un `legacy/` para declutter.
 - [x] `vpa.cfg` para FPC en modo `{$MODE TP}` con las rutas de units del proyecto + ptcgraph (ruta Arch verificada). *(Sustituye a `BPC.CFG`.)*
-- [ ] Reescribir el `MAKEFILE` (era para Borland Make) como `Makefile` para FPC (se hará cuando valguemos el primer compilado de una unit hoja).
+- [x] **`Makefile` para FPC** (sustituye al de Borland Make): objetivos `build`/`clean`/`run`/`help`. Build con `fpc @vpa.cfg VPA/VPA.PAS`. Instrucciones completas de compilación y ejecución en **[`BUILD.md`](BUILD.md)** (dependencias en Arch, ejecución con una partida, solución de problemas).
 - [ ] Decidir sobre `VPACC` (hoy ON) y `TASKS` (hoy OFF): mantener o desactivar `VPACC` al principio para reducir superficie.
 - [ ] **Limpieza global de directivas Borland** sin equivalente en Linux: `{$C MOVEABLE PRELOAD PERMANENT}` (atributos de segmento/overlay DOS), etc. — strip masivo.
 - [ ] Primer compilado de tanteo (bottom-up, empezando por una unit hoja como `STRF`): **recoger la lista de errores reales**.
