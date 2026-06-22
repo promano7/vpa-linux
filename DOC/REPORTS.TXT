@@ -1,0 +1,396 @@
+
+VPA report generator
+====================
+
+
+VPA has its own built-in report generator that allows user to obtain any form
+of report he/she would like to see using game data from two recent turns. The
+user can define his/her own report format with the special language. VPA
+Report Language (VRL) provides access to all useful game data adding also its
+own generic functions including data summing and search for differences. All
+the data from the game can be accessed via different VRL keywords. For example,
+keyword "FuelToMove" in section "SHIPS" provides an amount of fuel required
+for the given ship to reach its destination point with its current warp factor.
+User is absolutely free to place all data fields anywhere in report generator
+output lines.
+
+
+
+VRL report form file
+--------------------
+
+In order to create a report user must press F4 key to activate the report
+generator, then choose a report form from list. Each report form is stored
+in a file with extension ".FRM". Sample report form file COMPLETE.FRM is
+included with this version of VPA.
+
+FRM-file defines a report format in VRL. VRL is very simple language, and,
+I hope, any Planets player can easily understand its principles. Let's look
+into the file COMPLETE.FRM. It consists of text lines. Some of them begin
+with "~" character. These are VRL control lines.
+
+
+
+VRL control lines and report sections
+-------------------------------------
+
+Here are all possible VRL control lines:
+   ~FORMAT
+   ~PRINT
+   ~CYCLE
+   ~GENERAL
+   ~SCORES
+   ~PLANETS
+   ~BASES
+   ~SHIPS
+   ~FLEET
+   ~ENEMIES
+
+Letter case does not matter in VRL.
+
+~FORMAT, ~PRINT and ~CYCLE are the only VRL operators. They make the
+generator work. We'll see them later.
+
+Other control lines are used to determine what kind of game data should be
+processed. The VPA report generator can create several sections in the report:
+general information, game score, reports on your planets, bases, ships, your
+fleet review, enemy ship scan results. Each section must begin with a
+corresponding control line. For example, the line "~PLANETS" means that below
+is your planets report.
+
+An order of sections in the report does not matter. Moreover, there may be
+any number of sections, they may repeat.
+
+Control lines will not appear in the generated report. Also, lines immediately
+following the VRL operators (~FORMAT, ~PRINT and ~CYCLE) will not be printed.
+All other lines from the FRM-file will be copied into the report, so one can
+write anything there.
+
+
+
+~FORMAT operator
+----------------
+
+Now let's look at the VRL operators. Sample form file COMPLETE.FRM begins with
+the following lines:
+
+~GENERAL
+
+~FORMAT
+TURN NUMBER: ###
+~PRINT
+Turn
+~FORMAT
+REPORT FOR:  ##############################
+~PRINT
+Race
+
+As we already know, "~GENERAL" declares the beginning of the general info
+section. Following is the blank line that will be just copied into the report.
+
+~FORMAT operator tells the generator to store next line as a pattern for data
+output. "#" characters denote the placement of some data value. This line
+("TURN NUMBER: ###") will be printed into the report when we specify which
+data value will be used instead of "###". Also, whatever we specify, there
+will be only 3 characters printed (because there is 3 "#" characters in the
+pattern).
+
+
+
+~PRINT operator and VRL keywords
+--------------------------------
+
+Following is the ~PRINT operator. It states that the next line contains values
+to be printed instead of "#" characters in the pattern line (defined with
+the ~FORMAT operator). All game data must be referenced by VRL keywords.
+Each report section uses its own set of keywords. The complete list of VRL
+keywords can be found in the Appendix B. The GENERAL section has only 2
+keywords: "Turn" and "Race" with obvious meanings. In the example above,
+the ~PRINT operator will print "TURN NUMBER: 11" (if there is 11th turn
+currently in the game).
+
+Next pair of ~FORMAT and ~PRINT operators will print the race name. Thus, the
+example above will generate the following text (for Fed player, 11th turn):
+
+TURN NUMBER: 11
+REPORT FOR:  The Solar Federation
+
+
+
+~CYCLE operator
+---------------
+
+And finally let's look at the rest of the FRM sample. It consists of several
+sections like this:
+
+~SCORES
+                          G A M E   S C O R E S
+
+------------+-----------+--------+--------+---------+----------+---------+-------
+    Race    |   Score   |Planets | Bases  |War ships|Freighters|All ships|P.B.P.
+------------+-----------+--------+--------+---------+----------+---------+-------
+~FORMAT
+############|#####(####)|###(###)|###(###)|### (###)| ### (###)|### (###)|##(###)
+~CYCLE
+Race,Score,+Score,Planets,+Planets,Bases,+Bases,CapShips,+CapShips,FrShips,+FrShips,AllShips,+AllShips,PBP,+PBP
+------------+-----------+--------+--------+---------+----------+---------+-------
+~FORMAT
+T O T A L   |#####(####)|###(###)|###(###)|### (###)| ### (###)|### (###)
+~PRINT
+*Score,*+Score,*Planets,*+Planets,*Bases,*+Bases,*CapShips,*+CapShips,*FrShips,*+FrShips,*AllShips,*+AllShips
+------------+-----------+--------+--------+---------+----------+-----------------
+
+The pattern lines (right after ~FORMAT operators) here contain multiple data
+fields denoted by "#" characters. Corresponding VRL keywords (right after
+~CYCLE and ~PRINT operators) are delimited by commas. There may be any number
+of blanks and tabs between the keywords (for better readability).
+
+~CYCLE operator is similar to ~PRINT but it generates multiple output lines
+instead of one. When the report generator processes ~CYCLE, it searches all
+the game data and performes the same action as ~PRINT with every object in
+current section. Objects are (by sections):
+   GENERAL    -    N/A
+   SCORES     -    races (ranked by game score)
+   PLANETS    -    your planets (ID order)
+   BASES      -    your bases (ID order)
+   SHIPS      -    your ships (ID order)
+   FLEET      -    hull types (hull IDs 1..105)
+   ENEMIES    -    enemy ships (sorted by races, then ID order)
+
+
+
+Keyword prefixes
+----------------
+
+VRL provides a way to track situation changes from previous turn. For this
+purpose, prefixes "+" and "*" may be added to any VRL keyword.
+
+"+" prefix is used to obtain a difference between current and previous values
+of the game data. For example, keyword "+AllShips" in section SCORES means
+the number of ships added to the race's fleet (or lost by the race) at this
+turn rather than the fleet strength.
+
+"*" prefix is used to calculate a sum of the data values for all objects in
+current section. For instance, keyword "*MM" in section PLANETS will provide
+an overall Molybdenum production of all your planets.
+
+"+" and "*" prefixes can be combined. The order of prefixes does not matter.
+For example, "+*Bases" or "*+Bases" keyword may be used in section SCORES to
+obtain a number of starbases constructed in the galaxy on the most recent turn.
+
+"+" and "*" prefixes should be used only with numeric data values. Otherwise
+the keyword will be ignored.
+
+
+
+*COUNT keyword
+--------------
+
+There is also a special keyword "*Count" that provides the number of objects
+(planets, ships, etc.) in current section.
+
+
+
+Printout alignment
+------------------
+
+"#" characters in pattern lines (~FORMAT operator) denote width of
+corresponding data output field. If the actual data string is longer than
+the "###...#" field, the string is cut, otherwise it is aligned. Numeric
+value that doesn't fit the output field is replaced by its sign. For example,
+value of 100 printed in "##" field will look like "++" (this may be useful).
+
+String values (names, hull types, etc.) are aligned to the left edge of the
+output field. Numeric values are right-aligned.
+
+Values obtained via keywords with "+" prefix are printed as signed integers,
+e.g. with "+" or "-" sign.
+
+
+
+Printout filtering
+------------------
+
+For better readability of the report, VPA report generator performs printout
+filtering to exclude blank and zero fields from being printed. It also erases
+some delimiter characters around those fields. For example, in section
+PLANETS of the sample report form (COMPLETE.FRM) there are following field
+definitions:
+
+                ... +------+------+------+------
+                ... |  Extraction / Density
+                ... |Neutrn|Tritan|Duranm|Molybd
+                ... +------+------+------+------
+~FORMAT
+                ... |###/##|###/##|###/##|###/##
+~CYCLE
+                ...   MN,DN, MT,DT, MD,DD, MM,DM
+
+If the given planet has no Duranium the printout will be like this:
+
+                ... +------+------+------+------
+                ... |  Extraction / Density
+                ... |Neutrn|Tritan|Duranm|Molybd
+                ... +------+------+------+------
+                ... | 44/88| 28/56|      | 45/90
+
+
+
+
+
+Complete VRL keyword list
+=========================
+
+Below is the complete VRL keyword list. Each section contains its keywords in
+alphabetical order. Letter case does not matter.
+
+
+Object count keyword
+--------------------
+
+*COUNT          - number of objects (planets, ships, etc.) in current section
+
+
+GENERAL section keywords
+------------------------
+
+RACE            - player's race name (long)
+TURN            - current turn number
+
+
+SCORES section keywords
+-----------------------
+
+ALLSHIPS        - overall race's fleet strength
+BASES           - number of bases
+CAPSHIPS        - number of capital ships
+FRSHIPS         - number of freighters
+PLANETS         - number of planets
+RACE            - race name (short)
+SCORE           - score
+PBP             - priority build points
+
+
+PLANETS section keywords
+------------------------
+
+BASE            - is there starbase?
+CD              - amount of Duranium in core
+CLIMATE         - climate type
+CM              - amount of Molybdenum in core
+CN              - amount of Neutronium in core
+CT              - amount of Tritanium in core
+D               - amount of Duranium at surface
+DD              - Duranium density
+DEF             - number of defense outposts
+DM              - Molybdenum density
+DN              - Neutronium density
+DT              - Tritanium density
+FACT            - number of factories
+FCODE           - friendly code
+FUNDS           - amount of money
+HAPPY           - happy colonists per 100
+ID              - planet ID number
+INCOME          - planetary income
+M               - amount of Molybdenum at surface
+MAXDEF          - maximum possible number of defense outposts
+MAXFACT         - maximum possible number of factories
+MAXMINES        - maximum possible number of mineral mines
+MD              - Duranium mining rate
+MINES           - number of mineral mines
+MM              - Molybdenum mining rate
+MN              - Neutronium mining rate
+MT              - Tritanium mining rate
+N               - amount of Neutronium at surface
+NAME            - planet name
+NHAPPY          - happy natives per 100
+NPOP            - native population
+NRACE           - native race
+NRATIO          - native government tax ratio
+NTAXES          - native tax rate
+POP             - colonist population
+SUPP            - amount of supply units
+T               - amount of Tritanium at surface
+TAXES           - colonist tax rate
+TEMP            - planetside temperature
+
+
+BASES section keywords
+----------------------
+
+BLDEL           - engine tech level of ship being constructed
+BLDHULL         - hull type of ship being constructed
+BLDTL           - torpedo tech level of ship being constructed
+BLDTNAME        - torpedo type of ship being constructed
+BLDTUBES        - number of torpedo tubes on ship being constructed
+BLDWEAPONS      - number of beam weapons on ship being constructed
+BLDWL           - beam weapon tech level of ship being constructed
+BLDWNAME        - beam weapon type of ship being constructed
+DEFENSE         - defense strength
+DAMAGE          - damage level
+EL              - engine tech level
+FIGHTERS        - number of fighters
+FIXREC          - fix or recycle order
+ID              - base ID number
+HL              - hull tech level
+NAME            - planet name
+ORDER           - primary order
+TL              - torpedo tech level
+WL              - beam weapon tech level
+
+
+SHIPS section keywords
+----------------------
+
+BAYS            - number of fighter bays
+CLANS           - colonist clans onboard
+CREW            - crew strength
+D               - Duranium cargo
+DAMAGE          - damage level
+DISTANCE        - distance between the current location and waypoint
+EL              - engine tech level
+ENEMY           - primary enemy
+FCODE           - friendly code
+FISH            - torpedo or fighter load
+FUEL            - ship's fuel load
+FUELTOMOVE      - amount of fuel required to reach ship's destination
+ID              - ship ID number
+HULL            - hull type
+LOCATION        - current location
+M               - Molybdenum cargo
+MASS            - ship mass
+MAXFUEL         - maximum fuel tank capacity
+MISSION         - ship mission
+MONEY           - cash amount onboard
+NAME            - ship name
+SUPP            - supply units cargo
+T               - Tritanium cargo
+TIME            - number of turns required to reach ship's destination
+TL              - torpedo tech level
+TNAME           - torpedo type
+TUBES           - number of torpedo tubes
+WARP            - warp factor
+WAYPOINT        - destination waypoint
+WEAPONS         - number of beam weapons
+WL              - beam weapon tech level
+WNAME           - beam weapon type
+
+
+FLEET section keywords
+----------------------
+
+HULL            - hull type
+NUMBER          - number of such ships in player's fleet
+
+
+ENEMIES section keywords
+------------------------
+
+ID              - ship ID number
+HULL            - hull type
+LOAD            - fuel+cargo load
+LOCATION        - current location
+MASS            - ship mass
+NAME            - ship name
+RACE            - ship owner
+WARP            - warp factor

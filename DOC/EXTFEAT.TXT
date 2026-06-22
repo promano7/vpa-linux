@@ -1,0 +1,248 @@
+                        Extended Features for VPA
+                        =========================
+                          Feature Descriptions
+                            2004 by C.Graefe
+
+
+The features documented here originate from an extension to VPA formerly known
+to only a few people as 'CGExt'. They have been merged with the main source
+tree under the term 'Extended Features' and will no longer be maintained
+separately.
+
+
+==============
+Major Features
+==============
+
+Quality Assurance
+-----------------
+The idea behind the QA-Feature is basically the as the 'actual list' implemented
+by Andrew Andrienko -- only he was quicker to integrate his version into the
+main VPA code. Still, there are a few aspects to the QA that the actual list is
+missing, so I made it into an additional front-end to the actual list.
+
+The QA-Feature was designed to help you organize your work when playing your
+turn and to prevent you from overlooking any of your units in the process.
+Basically, all of your ships, planets, and starbases have been extended with a
+new approval flag which indicates whether you have already given them the
+commands you want them to perform, i.e. if you approve its current status.
+When you have entered your commands on an object, just press ctrl-a to approve
+its status. Approved objects will display a small yellow check mark close to
+their name when they are selected and also left to their name in the object
+list. Press ctrl-d to disapprove the selected object again. Objects will be
+disapproved automatically if they are changed in any way.
+(NEW: Auto-disapproving will only occur if the parameter AutoDisapprove is set
+to Yes in the [Interface] section of your VPA.INI config file. Furthermore,
+the parameter ShowCheckMark may be used to disable the display of the check
+marks.)
+
+To help you find the units you haven't handled yet an overview list is provided.
+Press '#' (hash) to open it on the right hand side. First, all your planets and
+their starbases (if they've got one) will be displayed, followed by you ships.
+In addition to it's type, id, and name some auxiliary information on each object
+will be displayed. Planets are displayed in green, starbases in blue, and ships
+in turquoise. But any object you have already approved will be displayed in dark
+gray which makes it easy to find those you still need to have a look at. While
+you navigate through the list the object currently selected will be centered on
+the map. Use the following keys to work on the QA-list:
+
+up/down         Move the list cursor up or down one object.
+page up/down    Move the list cursor up or down 14 objects.
+home/end        Move the list cursor to the beginning or the end of the list.
+ctrl-a          Approve the item currently selected.
+ctrl-d          Disapprove the item currently selected.
+'/'             Toggle the status of the item currently selected.
+Esc             Close the QA-list.
+Enter           Close the QA-list and jump to the item currently selected.
+
+
+The Borgculator
+---------------
+This is a feature I implemented when I was playing the Borg and was continuously
+forced to decide how to get the max out of my natives before they were all gone.
+The Borgculator is a prediction and planning tool for planets that has already
+proven useful to all other races, too.
+
+Select a planet on the map and press ctrl-b to activate the Borgculator screen.
+At the top of the screen name, id and owner of the planet are displayed. If
+the planet is unowned set the owning race by pressing 'o' before you continue or
+the predictions might not be accurate. If you have openend the Borgculator
+before, the last planet you selected will still be displayed. Press space to
+import the data from a newly selected planet.
+
+The easiest way to use the Borgculator is to select one of the predefined
+strategies by pressing 'g'. Currently, there are four such strategies:
+
+* Growth Optimized - This will tax your colonists and natives in intervalls to
+  maximize both income and population growth.
+* Constant Tax     - This will tax your colonists and natives down to a
+  happiness of 70% and keep it there by imposing a constant tax rate.
+* Borg Growth Optimized & Borg Constant Tax - Same as above for your colonists
+  but your natives will be taxed to maximize your income before they are
+  assimilated.
+
+Alternatively, you can develop your own strategy for your planet. Use the
+following keys to operate on the prediction table.
+
+up              Move back one turn.
+down            Move forward one turn and add data row if necessary.
+del             Remove last data row.
+enhtumadscpx    Press one of these keys (You'll find them highlighted in the
+                table header.) to alter one of the values of the data row
+                currently selected.
+
+In addition, you may press alt-c to reset the Borgculator, 'r' to write the
+current data to a text file, and 'Esc' to exit the Borgculator screen.
+
+
+Object Notes
+------------
+Little notes to assist your memory may be associated with ships, planets, and
+starbases. When you have selected one of these objects, press ctrl-n to display
+the note on the right hand side. You may use '-' and '+' to switch turns and view
+older versions of the note if you have changed it at some point. Now press 'e'
+to edit the note and press 'Esc' when you are done editing. Press 'Esc' again
+to exit the note-mode or press 'c' to clear the note.
+
+
+Resource Statistics
+-------------------
+This feature was designed to provide an overview of your resources. Press
+ctrl-F10 on the main screen to enter the resource stats screen. (Please be
+patient: the statistics are calculated at this point so this might take a
+while on slower machines.) At the top of the screen a table is displayed
+showing the total amount of resources you have at your command. The first
+column shows the amount of each resource that are currently ready, e.g. ships
+and planets you own and minerals on the surface of your planets or on board of
+your ships. The second column indicates by how much the resource will increase
+next turn if this can be determined. The third column shows how many minerals
+are still under the surface of your planets.
+
+Press the letters highlighted in the table to add the resource to the graph
+at the bottom of the screen and press it again to remove the resource. Hold down
+shift or ctrl when pressing the key to add the second or third column of that
+resource, respectively. Note: You must have data for at least two turns in your
+VPA database to display the graph.
+
+Press ctrl-F3 to send your stats of the turn currently selected to an ally by
+planets mail. Press +/- to switch between turns or press cursor left/right to
+switch between races if you have received data from an ally.
+
+Press Esc to exit the stats screen.
+
+
+Fleet Report
+------------
+Press ctrl-F11 on the main screen to enter the fleet report screen. This screen
+will give you an overview of the number and types of ships you own. In addition
+to information on engines, beams, and launchers it will also display the amount
+of AutoScore points a ship or class of ships earns you. Use cursor up/down, page
+up/down, home, and end to navigate the ship list.
+
+
+==============
+Minor Features
+==============
+
+Inter-Planetary Connections
+---------------------------
+Press shift-l when you are on the main screen to toggle the display of inter-
+planetary connections. When switched on, all planets that can be reached in one
+turn using transwarp engines will be connected with slim gray lines. Planetary
+warp wells are taken into account automatically. While this might look confusing
+at first to those already accustomed to VPA, give it a chance -- I'm sure you
+won't want to miss it once you have gotten used to it. Some of the advantages:
+
+- At one short glance you can see which routes you may travel without beeing
+  seen.
+- Get an overview of the "natural borders" of your territory. This will help you
+  to predict the direction of potential attacks and to protect your borders.
+- The connections make it easier to orientate yourself in the Echocluster, esp.
+  if you're new to VGAP.
+- Communication about areas of the Echocluster will also be easier -- at least
+  to my experience. My ally and I have invented names for all those
+  constellations that appear when this feature is turned on. Our discussions
+  on strategies now involve sentences like "By turn 40 we should have conquered
+  most of the Stag so that we can move on to attack the Hummingbird from the
+  east." (If you like, try to find these constellations on the standard
+  Echocluster map: The Stag, The Hummingbird, The Diver, The Caterpillar,
+  Jumping Jack, The Peacock :-)
+
+The distance of 81ly mentioned above is the default value. It may be changed in
+VPA.INI using the ConnectionDist parameter in the [Interface] section if you
+need that (maybe for a shareware game?). Values smaller than 10 will be
+interpreted as warp speeds while those of 10 or greater are taken as lightyears.
+In addition, you can draw temporary connections by pressing ctrl-l on the main
+screen.
+
+
+Ion Storm Waypoint Prediction
+-----------------------------
+This feature will help you to navigate your ships through class 4 and 5 ion
+storms that will drag your ships along. Note: Movement of ion storms is not
+entirely predictable. So I should say this feature merely helps you to guess
+where to move your ships.
+If one of your ships is under the influence of a dragging ion storm, press space
+and move the cursor to the location you want to go (or where you want to stay).
+Now press alt-i: The cursor will be moved to the location you should send your
+ship to so that you'll have a chance to end up where you wanted to go in the
+first place. However, as stated above this is not guaranteed. An arc of dots on
+the map indicates all the coordinates that your ship might be dragged to.
+
+
+Population Growth Prediction
+----------------------------
+When you have selected one of your planets, the predicted colonist population
+for the next turn is displayed below the current one. The same would be
+possible for native clans of course, but unfortunately there was no more room
+for that number.
+Even worse, the place for this useful figure was taken by some other data
+before I could merge my changes with the main VPA code. So, you will have to
+set the parameter ShowColonistPrediction in the [Interface] section of your
+VPA.INI to Yes if you prefer to see the popuplation prediction. Or you may
+press shift-j to toggle the display for the current session.
+
+
+Disable Map Border
+------------------
+You can now disable the dashed edge markings VPA displays in games with a
+map that wraps-around. Add the following parameter to the [Interface] section
+of your VPA.INI if you are irritated by those lines:
+ShowMapBorder = Off
+
+
+Data Exchange Subscription
+--------------------------
+This feature allows you to regularly send the data of certain planets to your
+allies automatically.
+Create a file names VPADXCxy.INI in your game directory where x is the id of
+your own race (1..B) and y the id of the receiving race (e.g. VPADXC9A.INI if
+you are the Robot and want data to be sent to the Rebel). Create a section
+within the file and add object ids to subscribe to:
+
+[planets]
+237
+483
+102
+
+This will create messages to the receiver (y, see above) containing the data
+for planets 237, 483, and 102 every time you unpack your new RST file.
+
+
+Score Prediction
+--------------------
+When you are on the build screen of one of your starbases, the potential
+score value of the ship you are about to build is displayed at the bottom
+of the hull list. For torpedo ships and fighter carriers the maximum value is
+displayed in parentheses. The scoring system you would like to use may be
+configured in the [Interface] section of your VPA.INI by the ScoringMethod
+parameter. Supported values are currently: AutoScore, PTScore, and None.
+AutoScore is the default value.
+
+
+Territory Overview (experimental!)
+------------------
+Press ctrl-e on the main screen to temporarily draw areas of influence on the
+map.
+
+

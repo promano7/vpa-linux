@@ -1,0 +1,1018 @@
+
+Frequently asked questions about VGA Planets Assistant
+======================================================
+
+
+
+Contents (new or updated topics are marked with an asterisk):
+
+- What is VPA?
+- VPA author's mail address and WWW home page
+- Running VPA
+- Custom game parameters
+- VPA keys
+- On-line help system
+- Setting ship waypoints
+- Calculating hyper-jumps
+- Entering names/IDs while searching for planet/ship
+- Using alternative picture sets
+- Using VPA with WinPlan
+- Troubles with some videocards
+- Ghost enemy ships in PHOST games
+- 'Strange PLANETS.EXE' message
+- Playing in team games
+- Playing on wrapped map
+- Playing on custom-sized map
+- Playing with dynamic map and Explore Map
+- Using planetary gravity
+- Custom VPA configurations and new versions of VPA
+- Using extended missions
+- Using map bookmarks
+- Creating custom reports in VPA
+- Customizing message templates
+- Customizing display colors in VPA
+- Using VPA data transmissions
+- Using the KeepWayPoints mode
+- Dull ship missions
+- Dull messages
+- Hull functions
+- How to speed up VPA
+- Mouse problems under Windows NT
+- Where do I get RTM.EXE?
+- What happened to the F8 (search ship) function?
+- VPA's Maketurn / Unpack
+- VPA on Windows 2000 / XP / Laptop
+- How does next turn mineral prediction function work?
+- Ship list sorting extra information
+- Actual list
+- What does OptimizeFuel do?
+- What does AutoAdjustWarp do?
+- VPA Versions
+- Windows version
+
+------------------------------------------------------------------------
+
+Q: What is VPA?
+
+A: VGA Planets Assistant (VPA) is an alternative VGA Planets client program
+   for MS-DOS. It was designed 3 years ago and used by the author and
+   hundreds of players in numerous VGAP games. Suggestions from many
+   experienced players were used in the program design. VPA implements
+   a number of unique features that are unlikely to be ever seen in other
+   VGAP utilities.
+
+   VPA works with great performance even on a 286 PC under MS-DOS with plain
+   VGA video adapter and doesn't require you to buy an expensive Pentium/SVGA
+   workstation or mess with MS Windows. VPA is an add-on to DOS PLANETS.EXE,
+   though you'll never have to start PLANETS.EXE any more. And I bet you'll
+   never want to... <g>
+
+   VPA will keep your PLANETS registration - if you were registered all tech
+   levels and friendly codes will be available to you, if you were using
+   shareware PLANETS.EXE all the limitations will remain. But in any case
+   your play will be amazingly enhanced and simplified.
+
+   VPA is not intended to compete with WinPlan, it doesn't have neither the
+   Windows look and feel nor graphics and sounds. The public release of VPA
+   was intentionally delayed for approximately 1 year in order to avoid any
+   harm to WinPlan sales and other Tim Wisseman businesses. However, VPA is
+   compatible with WinPlan data files and can be run under MS Windows.
+
+   VPA was initially written and maintained by Alex Ivlev in 1993 to 1996.
+   Versions up to v3.58 were his creation. Since early 2002, VPA
+   development is continued by a group of volunteers. VPA is open source
+   under the Mozilla license. The first release from this group was 3.60.
+
+                THANK MR. WISSEMAN FOR THIS WONDERFUL GAME
+          AND DON'T FORGET TO REGISTER YOUR COPY OF VGA PLANETS
+
+------------------------------------------------------------------------
+
+* VPA author's mail address and WWW home page
+
+Q: How can I reach the author of VPA and download the latest version?
+
+A: The Internet home page of VPA is:
+      http://vpa.sourceforge.net/
+   The email addresses of the current authors are listed on the
+   Sourceforge project page for VPA
+      http://sourceforge.net/projects/vpa/
+
+------------------------------------------------------------------------
+
+* Running VPA
+
+Q: How do I run VPA?
+
+A: Place VPA files into the same directory as PLANETS.EXE.
+   The standard command line to run VPA is
+
+   VPA race_number [game_directory]
+
+   For example, if you are playing Feds and your Planets directory is
+   C:\PLANETS and your current game data files were UNPACKed into
+   C:\PLANETS\PLAY_FED (using "UNPACK play_fed" command), then the command
+   line to run VPA is:
+
+                      VPA 1 play_fed
+
+   There also exist several optional command line switches for VPA that
+   can be added at the end of the command line. You can run "VPA /?" to
+   obtain a description of VPA command line parameters. They are:
+
+   /B            - runs VPA in batch mode. VPA starts, processes data
+                   and then terminates without entering interactive mode
+
+   /K            - runs VPA in keyboard-only mode. VPA does not use
+                   mouse, even if it is present
+
+   /M            - enforces incoming message processing. Usually VPA reads
+                   and analyses incoming messages only once per turn.
+                   This switch causes VPA to re-read messages
+
+   /O            - tells VPA to read the specified race data only. If there
+                   are several RST files unpacked into the same directory
+                   (as in team games), VPA automatically reads and combines
+                   all races' data. This switch disables it
+
+   /P            - tells VPA to pause before switching to graphics, so you
+                   can read what VPA writes on startup
+
+   /PW:pwd       - allows you to specify player password from the command
+                   line instead of typing it on request. You can specify up
+                   to 11 different passwords by using additional /PW switches.
+                   Example:  /PW:secret /PW:mypassword
+
+   /R            - runs VPA in read-only mode. No data is changed
+
+   /REP:frm,rep  - generates a report file "rep" using report form "frm".
+                   Maybe very useful together with the /B switch.
+                   Example:  /REP:complete.frm,myreport.txt
+
+   /S            - run VPA in SVGA mode (256 colors). This does not
+                   increase the resolution, but it allows you to use
+                   higher refresh rates than the standard 60 Hz.
+
+------------------------------------------------------------------------
+
+* Custom game parameters
+
+Q: I'm playing in games with custom maps, race names, ship lists, weapon
+   sets, engine types, etc. Do I have to copy VPA together with .DAT-files
+   into a separate directory for each game (like I do with PLANETS.EXE)?
+
+A: No. When using custom map, ship list, race names or other non-standard
+   game parameters, it's not necessary to replace standard data files in
+   your Planets directory with the new ones or to copy all files into a
+   separate directory. Just place custom data files into the current game
+   directory (this directory is specified as the 2nd command line parameter
+   for VPA). VPA first searches for data files in this directory, then in
+   the current directory.
+
+   After finishing a game where you were using custom data files (like
+   XYPLAN.DAT, HULLSPEC.DAT, HULLFUNC.DAT, etc.) don't forget to delete
+   these files from the game directory before starting another game in
+   the same directory with different parameters, otherwise you can confuse
+   yourself and VPA about correct game settings. Even better, always create
+   a new directory for a new game.
+
+Q: I'm playing in a game with custom race names (planet names, starmap).
+   What do I do to make VPA work properly with it?
+
+A: As it was stated in the previous answer, you just have to copy some
+   files from your Host to the game directory. For custom race names you
+   need RACE.NM. For planet names - PLANET.NM. For starmap - XYPLAN.DAT.
+
+   !!! Attention game masters !!!
+   If you are hosting a game with custom starmap, and the rules are so, that
+   players should not know the locations of all homeworlds, then be sure to
+   make a copy of the custom XYPLAN.DAT *BEFORE* you run MASTER.EXE and send
+   this file to your players. MASTER.EXE marks initial planets directly in
+   XYPLAN.DAT, and anyone smart enough to read binary data can learn about
+   all homeworlds from that file. *NEVER* give away XYPLAN.DAT from the host
+   directory!!!
+
+------------------------------------------------------------------------
+
+* VPA keys
+
+Q: Where can I find a list of all keys used in VPA?
+
+A: See KEYS.DOC for the complete list of all VPA keys.
+
+------------------------------------------------------------------------
+
+* On-line help system
+
+Q: How to use VPA on-line help system?
+
+A: You can press F1 key in any screen and VPA will display some helpful
+   information applicable to this screen. There are lots of hot keys used
+   everywhere in VPA, but don't panic. Whenever you press F1, you get a
+   complete list of hot keys specific to the current screen. Also there
+   are some common keys active in most of VPA screens. They are listed in
+   the General Help screen that is available from any other help screen
+   via pressing Spacebar. Most of hot keys are highlighted on the screen
+   with a bright colour (usually White or Yellow). Each help page in VPA
+   contains a list of related help topics at the bottom of the screen.
+   You can press one of highlighted keys to read another help page or
+   Esc to exit the help mode.
+
+------------------------------------------------------------------------
+
+* Setting ship waypoints
+
+Q: How do I set ship waypoints?
+
+A: To order your ship to move towards the chosen destination:
+   (a) enter the ship's control screen (click on it with mouse or choose it
+       from the object list),
+   (b) enter Distance Mode (press spacebar or click right mouse button),
+   (c) move mouse pointer to the destination point (you will see a color
+       line following the pointer, also the time/fuel table will appear in
+       the lower-right corner of the screen),
+   (d) press Ctrl-Enter (or Ctrl-click).
+   You may wish to adjust the waypoint to the edge of a planetary warp well
+   in order to spare some fuel. To do this, click on the planet during
+   the (c) phase of the above described sequence, then press "G".
+
+   For movement over small distances, it might help to zoom into the map
+   (Tab key).
+
+------------------------------------------------------------------------
+
+* Calculating hyper-jumps
+
+Q: How do I calculate hyper-jumps in VPA?
+
+A: VPA doesn't have a hyper-jump calculator, because hyper-jumps are very
+   easily planned with VPA circle-drawing feature (F9 key). You can draw
+   a 350 LY radius circle to see all possible destinations.
+
+   To plan a two-jump HYP route, just draw 2 circles at the origin and
+   destination points. Any of the 2 intersection points can be used as
+   a waypoint.
+
+   If the distance is greater than 700 LY (three-jump route), you can choose
+   any point on the circle around the origin that is within 350 LY from the
+   circle around the destination, set a marker at this point (Ins key) and
+   draw a circle around this point. This will be the 1st waypoint, and any
+   of the 2 new intersection points can be chosen as the 2nd waypoint (set
+   a marker there too).
+
+   By pressing Ctrl-H you can instantly draw 3 circles around the current
+   pointer location - 340, 350 and 360 LY in radius.
+
+------------------------------------------------------------------------
+
+* Entering names/IDs while searching for planet/ship
+
+Q: What do I type when I press F7 or Shift-F7 to find a planet or ship?
+
+A: You have to enter the name of the planet or ship you want to find.
+   You can type either first few letters of the name required or the
+   ID number.
+
+------------------------------------------------------------------------
+
+* Using alternative picture sets
+
+Q: I don't like the original ship pictures supplied with VGA Planets.
+   But there are talks about alternative picture sets. If I download it,
+   can I use it with VPA? And what pictures are the best?
+
+A: Yes, surely. You can use it in 2 different ways:
+   1) you can overwrite RESOURCE.PLN file in your Planets directory;
+   2) you can rename it and specify the new name in [System] section
+      of VPA.INI file (that can be created in the current game directory
+      if you want to use that new picture set in this game only).
+   VPA will use pictures from the new resource file in its combat simulator
+   and construction yard.
+
+   The VPA author's choice is ALTPLN by Mike Arrowood. It's a masterpiece!
+
+------------------------------------------------------------------------
+
+* Using VPA with WinPlan
+
+Q: Can I use VPA with WinPlan?
+
+A: Yes. As much as it's possible to use DOS-based programs together with
+   Windows-based ones. VPA understands WinPlan data format and can be
+   used to play WinPlan games. VPA also distinguishes between shareware
+   and registered versions of WinPlan and maintains the shareware tech
+   limitations.
+
+   However, VPA currently does not support extended features provided by
+   WinPlan (like notepads, multiple waypoints, etc.)
+
+   !!! Important !!!
+   If you are registered WinPlan user, but don't have a registered PLANETS.EXE
+   file, you should unpack your RSTs with WinPlan, not with any DOS unpacker
+   programs. When you unpack your RST with WinPlan for the first time in the
+   game, make a little change (like change an fcode on one planet) before
+   exiting WinPlan. Otherwise VPA might not recognize your registration.
+
+   Also, the DOS picture set file (RESOURCE.PLN) must be present in the
+   directory where you start VPA, or path to it must be specified in [System]
+   section of VPA.INI.
+
+   VPA can be run in a DOS-box while WinPlan is running. But you can only
+   view the game data in this case. Any changes will be overwritten by
+   WinPlan on exit.
+
+   Another important issue is writing player messages in VPA for a WinPlan
+   game. WinPlan has a message size limit of 600 bytes, i.e., it cannot
+   handle messages longer than 600 bytes, that is approximately 14 full
+   lines of text. DOS PLANETS.EXE and VPA can usually handle larger messages.
+   But when VPA detects presence of WinPlan message file (MESS35n.DAT) in
+   the game directory, it limits its messaging capability to 600 bytes for
+   compatibility with WinPlan. In that case you will not always be able to
+   write a message to the bottom of the VPA message window.
+
+   Also, the current version of WinPlan (3.52.003 on the moment of VPA 3.51
+   release) can produce some unpredicable and unexplanable changes of message
+   contents. That's why it is recommended that you check your messages
+   written in VPA before packing your TRN in WinPlan. Hopefully, all side
+   effects in WinPlan messaging system will be eliminated by its author
+   sooner or later, therefore, VPA does not perform any special actions
+   to avoid these side effects.
+
+   Generally, if you are not using VPA with WinPlan, avoid UNPACKing your
+   RST files into a directory that contains old WinPlan data. This will
+   reduce data processing time and remove software limitations imposed for
+   compatibility with WinPlan.
+
+------------------------------------------------------------------------
+
+* Troubles with some videocards
+
+Q: When I leave the construction yard or combat simulator my screen goes
+   black and I can't see anything, although VPA seems to be working and I
+   can blindly press Alt-X to exit...
+
+A: You have a faulty video card that does not correctly switch standard VGA
+   video modes (for instance, some ALI video cards reportedly have this
+   problem). Set BadVideoOrMouse parameter to "Yes" in VPA.INI file
+   ([System] section). This will add some flickering when switching VPA
+   screens, but will hopefully eliminate the problem.
+
+------------------------------------------------------------------------
+
+* Ghost enemy ships in PHOST games
+
+Q: I'm playing in a PHOST game and sometimes VPA shows enemy ships that are
+   not actually there.
+
+A: You are/were using PHOST BigTargets feature and unpacked your RST file
+   with VPUNPACK program. VPUNPACK creates a file named TARGETn.EXT in your
+   game directory. When your scanners show more than 50 enemy ships, this
+   file contains information about 'excessive' targets. VPA reads this file.
+   By some reason you switched back to Tim Wisseman's UNPACK program or
+   WinPlan and unpacked your new RST with it. But the old TARGETn.EXT file
+   is still there and it causes VPA to show the 'ghost' enemy ships. You
+   should delete the TARGETn.DAT file whenever you switch from VPUNPACK to
+   UNPACK. Ghost ships will disappear on the next turn after you delete old
+   TARGETn.EXT file.
+
+------------------------------------------------------------------------
+
+* 'Strange PLANETS.EXE' message
+
+Q: VPA doesn't recognize my registered PLANETS.EXE file and displays a
+   message about this file being 'strange'.
+
+A: Starting with version 3.50, VPA actively discourages using of modified
+   or hacked copies of registered PLANETS.EXE file. If your legal registered
+   copy of the game is not recognized by VPA, then try re-installing it from
+   the distributive. If VPA still does not recognize it, then please report
+   this to the author of VPA (not to Tim Wisseman! please don't bother Tim
+   with others' bugs).
+
+------------------------------------------------------------------------
+
+* Playing in team games
+
+Q: I'm playing in a team game where I have RSTs of my teammates.
+   Do I have to run VPA for every race to see the whole situation?
+
+A: No! Just unpack all your team RST files into the same directory and
+   run VPA for your race. VPA will automatically read all data for the whole
+   team and combine it into the complete picture. You can also see combat
+   recordings for all races of your team and read all player-to-player
+   messages received by all members of the team. Duplicate messages are
+   eliminated, so if you send a universal message, next turn you will see
+   only 1 copy of if.
+
+   VPA message editor also has a special feature for team game players -
+   Team Message. When you select this option from the addressee menu,
+   VPA sends a copy of the message to all players on your team.
+
+   If some of your teammates have passwords, you should specify them
+   in the command line using one or more /PW switches (see "Running VPA").
+
+------------------------------------------------------------------------
+
+* Playing on wrapped map
+
+Q: I'm playing in a game with an add-on that 'wraps' the map so that ships
+   travelling beyond one edge of the map appear from the opposite edge.
+   Can VPA help me to plan operations spanning across the edge of the map?
+
+A: Yes! VPA supports thoroidal map model, e.g. a square map where ships
+   going beyond the right edge arrive from the left edge, and ships going
+   beyond the top of the map arrive from the bottom. In this case VPA
+   displays the map as an infinite star field, where you can scroll endlessly
+   in any direction only to see the same areas again and again. Objects from
+   the far left side of the map are drawn beyond the wrap line at the right
+   edge and vice versa, and the same for top and bottom. You can see the real
+   picture created by the wrapping, you can measure distances and set ship
+   waypoints.
+
+   To let VPA know about the wrapping, you should create a file named MAP.INI
+   in the game directory and type there: "Wrap = Yes".
+
+   By default, VPA assumes that the map wraps exactly at its edge (X and Y =
+   1000 and 3000), e.g., a ship going to (950,950) will arrive at (2950,2950).
+   Default size of the map is 2000 LYs (the distance from X=1000 to X=3000).
+   However, the wrap edge is often set by gamemasters not exactly at the edge
+   of the map, but say 50 LYs off the map (e.g., at X and Y = 950 and 3050).
+   In this case you should let VPA know that the actual size of unwrapped map
+   is changed, it is now 2100 (3050 - 950 = 2100). You should add another
+   line to MAP.INI: "Size = 2100"
+
+   VPA supports only square wrapped maps. Cirle wrapping is not supported,
+   because it requires some serious trigonometrical calculations that would
+   be very slow (especially on PCs without math co-processor), and, the most
+   important, the author does not see any strategical difference between
+   playing on square or circle wrapped map.
+
+   As of July 1, 2012, VPA also reads PCONFIG.SRC for PHost's wrap parameters.
+   It will warn you if those do not match a map geometry supported by VPA.
+   Changing these parameters in mid-game (i.e. through a UTIL.DAT file
+   transfer) is not supported; you should install the correct PCONFIG.SRC
+   file at the beginning of the game.
+
+------------------------------------------------------------------------
+
+* Playing on custom-sized map
+
+Q: I'm playing in a game with a map larger (smaller) than the default.
+   Can I see the whole map in VPA?
+
+A: Yes. VPA supports custom-sized maps satisfying the following conditions:
+   1) the map must be square (horizontal size = vertical size)
+   2) linear size of the map (from edge to edge) must be 4000 or less
+   3) point (2000,2000) must be the centre of the map
+   To let VPA know about the custom map size, you should create a file
+   named MAP.INI in the game directory and type there: "Size = NNNN",
+   where "NNNN" is the actual linear size of the map (from edge to edge).
+   For example, if the map starts at (800,800) and ends at (3200,3200),
+   then the size is 2400 (3200 - 800 = 2400).
+
+------------------------------------------------------------------------
+
+* Playing with dynamic map and Explore Map
+
+Q: I'm playing in a game with the Explore Map add-on, where the map is
+   initially unknown and is actually uncovered as my ships move across
+   the space, that is, the map changes every turn, new planets arrive.
+   Can VPA help me?
+
+A: Yes! VPA provides full support for Explore Map. It automatically reads
+   changing maps from XYPLANn.DAT files and uses them instead of the main
+   XYPLAN.DAT map. Every turn the map is stored in VPA database, so you can
+   later review the game turn by turn and VPA will always show the map
+   exactly as it was on each turn. If you are playing in a team and have
+   other players' RST files unpacked into the same directory (as well as
+   their XYPLANn.DAT files), VPA will read all partial maps and combine
+   them into a single picture.
+
+   To let VPA know that you are using Explore Map in your game (e.g., that
+   XYPLANn.DAT files must be used instead of the main XYPLAN.DAT), you
+   should set "Explore = Yes" in the MAP.INI file in your game directory
+   (create this file if it does not exist yet).
+
+   To let you see the whole map in PLANETS.EXE, WinPlan or any other VGAP
+   utility, VPA writes the complete map (obtanied by merging all partial
+   maps from XYPLANx.DAt files) to a single XYPLAN.DAT file in the game
+   directory.
+
+   Also, if you are using any other add-on that changes the map turn by
+   turn, VPA will provide the same support for it. If all players have
+   the same changing map, you don't have to do anything - VPA will take
+   care of it by itself. If each player has an individual changing map
+   in XYPLANn.DAT (as in Explore Map), just set "Explore = Yes" in MAP.INI.
+
+------------------------------------------------------------------------
+
+* Using planetary gravity
+
+Q: Using planetary gravity, my ships can spare fuel and time in movement.
+   However, setting ship waypoints to the edge of planetary gravity well
+   is not easy, and a 1 LY mistake can spoil the whole operation.
+   Can VPA help me?
+
+A: Yes. When you are in the Distance Mode setting waypoint for your ship,
+   you can lock the pointer on a planet (by clicking mouse or pressing
+   Enter key near it) and then press "G". VPA will set the pointer to the
+   edge point of the planet's gravity well closest to the ship. You can
+   then press Ctrl-Enter (or Ctrl-click) to set the ship's waypoint there.
+
+   If you are using planetary gravity all the time (as most of experienced
+   players do), you can edit your VPA.INI file and set "AutoUseGravity"
+   option in "Interface" section to "On". When this option is enabled,
+   VPA will automatically adjust ship waypoints for you.
+
+   However, sometimes you may still need to set your ship waypoint precisely
+   to a planet. You can do it without turning the AutoUseGravity mode on
+   and off for each such occasion. Select the destination planet on the
+   screen by clicking the mouse on it and then press Esc to de-select it.
+   Now you can set your ship waypoint by pressing Ctrl-Enter or Ctrl-click.
+   Since the planet is not selected, VPA will not adjust the waypoint.
+
+A: In recent versions (VPA 3.61) you can also press Shift-G in large zoom
+   levels. This will show the gravity wells of each planets.
+
+------------------------------------------------------------------------
+
+* Custom VPA configurations and new versions of VPA
+
+Q: I edited VPA configuration files to suit my personal taste. But the new
+   version of VPA contains VPA.INI and VPA.MSG in its distributive.
+   I don't want to overwrite my favourite configuration, but I want to
+   see and use new options implemented in the new version...
+
+A: VPA currently does not have a flexible configuration feature (as well
+   as good documentation). You can edit VPA.INI and VPA.MSG files as you
+   wish, but you should be aware not to overwrite your custom settings
+   with the standard files included within VPA distributive. Before
+   installing a new version of VPA, copy your custom VPA.INI and VPA.MSG
+   (if you modified them) to a safe location or rename them. After you
+   installed new VPA, compare the contents of old and new files. You will
+   have to either repeat all the changes you made with the new files, or
+   copy new settings from the new files to the old ones and bring the old
+   files back - whatever is more convenient for you. VPA.INI file is small
+   enough, and you can easily handle it. VPA.MSG is large and complicated,
+   that's why the author does not recommend making any changes to it unless
+   you are absolutely sure (see VPAMSG.DOC). The author apologizes for
+   possible inconvenience.
+
+------------------------------------------------------------------------
+
+* Using extended missions
+
+Q: PHOST and some add-ons support extended missions (additional missions
+   with two possible parameters, "Mission-Intercept-Tow" standard).
+   Can I set these missions in VPA?
+
+A: Yes. In order to use extended missions, place the MISSION.INI file to the
+   game directory. This file contains definitions of extended missions
+   available for the game. Game master should provide it to players.
+   VPA will show extended missions and let you set them. Extended missions
+   are available at the bottom of the mission selection menu.
+
+------------------------------------------------------------------------
+
+* Using map bookmarks
+
+Q: What are map bookmarks and how do I use them in VPA?
+
+A: When your empire spans across a large map area, you cannot have it all
+   on the same screen with map resolution good enough to see all necessary
+   details. You zoom the map window in to manage one region, then you either
+   scroll or zoom out and then in again to manage another region, etc.
+   VPA provides a feature called "screen bookmarks" or "stored positions"
+   to help you to move across your empire quickly. When you have a good
+   view of one of the regions of your empire, press Shift-Alt-<n>, where
+   <n> is a numeric key ("0".."9") to place a "bookmark" there. VPA will
+   remember coordinates and resolution of the current map window. Then
+   you can move to another map region, but whenever you press Alt-<n>
+   (with the same <n>), VPA will instatly take you to that first region.
+   You can store up to 10 map positions (bookmarks).
+
+------------------------------------------------------------------------
+
+* Creating custom reports in VPA
+
+Q: How do I create custom report forms for VPA?
+
+A: See REPORTS.DOC for the description of VPA Report Language (VRL).
+
+------------------------------------------------------------------------
+
+* Customizing message templates
+
+Q: How do I customize VPA message templates (VPA.MSG)?
+
+A: See VPAMSG.DOC for the description of VPA.MSG format.
+
+------------------------------------------------------------------------
+
+* Customizing display colors in VPA
+
+Q: How do I customize display color in VPA?
+
+A: See COLORS.DOC for the description of VPA color system.
+
+------------------------------------------------------------------------
+
+* Using VPA data transmissions
+
+Q: How do I use VPA data transmissions?
+
+A: VPA allows you to send planetary data, minefield scans and map markers
+   to other players. To send data, select the desired object on the map
+   (enter its information screen) and press Shift-F3. You will be prompted
+   to select addressee(s) of the data transmission, then one or more special
+   format messages will be sent to other players of your choice.
+
+   However, to protect you from being intentionally misinformed by the enemy,
+   VPA will not accept data transmission messages from other players unless
+   you give VPA a special permission for it. To allow accepting data
+   transmissions from race X, you should edit file named VPADATn.INI in
+   the game directory (n - YOUR race number) and set "AcceptDataX = Yes".
+   "AcceptData0" parameter allows or disallows accepting data from unknown
+   senders (e.g., from rumour messages). After giving VPA new permissions
+   to accept data transfers, re-run VPA one time with the "/m" command line
+   switch to re-process messages.
+
+------------------------------------------------------------------------
+
+* Using the KeepWayPoints mode
+
+Q: What does the "KeepWayPoints" option in VPA.INI do?
+
+A: When this option is enabled, at the start of each turn VPA will
+   automatically restore waypoints for your ships that were set on the
+   previous turn, except for ships that ran out of fuel, were towed or
+   chunnelled. This feature uses planetary gravity, so if a ship had its
+   waypoint set to the edge of planetary warp well and warp factor 2 or more,
+   the waypoint will be cleared once the ship reaches the planet (that is
+   very useful in combination with "AutoUseGravity = On").
+
+   This mode is very useful for DOS players, because when you set a waypoint
+   farther than 200 LYs away from the ship, Host will trim it (for technical
+   reasons), so you have to re-set the waypoint each next turn, otherwise
+   the ship may not reach its destination. VPA will do this work for you.
+
+   Also, this feature can be useful for hyper-ships. Their waypoints and
+   warp settings are cleared by Host after each jump. If KeepWayPoints mode
+   is enabled, VPA will restore their original waypoints and warp.
+
+   Warning: If you use other utilities to set ship waypoints while you have
+   "KeepWayPoints = On", you must run VPA after all them, before making your
+   TRN. Otherwise there is no way for VPA to know about the new waypoints,
+   and it may re-set some waypoints next turn to the old locations.
+
+------------------------------------------------------------------------
+
+* Dull ship missions
+
+Q: VPA does not allow me to set some missions to some ships. But I need
+   these missions for (...whatever...)!
+
+A: VPA tries to reduce your risk of making mistakes (accidentally setting
+   wrong ship mission), so it removes some missions from ship mission menu.
+   These missions are normally cannot be performed, like Laying Mines with
+   a freighter, or Building Fighters with a torpedo ship. However, if you
+   still need these missions (for instance, you have some add-on that uses
+   them), you can set "DullMissions = On" in VPA.INI to bring them back.
+
+------------------------------------------------------------------------
+
+* Dull messages
+
+Q: VPA does not allow me to send messages to some races. Why?
+
+A: Normally, when you send a message to a race that is not played, that
+   message will be never received by the addressee and will only slow down
+   Host processing. That's why the default VPA configuration does not allow
+   sending messages to races with zero score. However, if by some reason
+   you need to send such a message (for example, if you are using some
+   add-on that wipes all scores to hide ship numbers from players), you can
+   set "DullMessages = On" in VPA.INI to do it.
+
+   Also, PHOST has an option for blanking scores ("ScoringMethod = None").
+   If you have PCONFIG.SRC in the game directory (that is highly recommended),
+   VPA will allow sending "dull" messages without changing VPA.INI.
+
+------------------------------------------------------------------------
+
+* Hull functions
+
+Q: I'm playing in a game with PLIST 3.0 which has many hull functions. Some
+   are restricted to races and/or experience levels. Can VPA handle that?
+
+A: Since version 3.63, VPA supports the full feature set of hull function
+   configuration. It handles the most important functions such as Cloak and
+   Gravitonic internally, and knows about the race/level restrictions.
+
+   You can use Shift-F on a ship to list all its functions in a scrollable
+   list. This window will display all functions that ship has (or will have
+   under a foreign owner or with a future experience level). Functions are
+   marked:
+      [U] are universal abilities which everyone has with all ships
+      [R] are racial abilities which one race has with all ships
+          ("Klingon ships are immune to planet attacks")
+      [C] are functions assigned to a ship class ("MBRs can cloak")
+      [S] are functions assigned to individual ships ("#421 cannot be
+          cloned")
+  Races and experience levels that can use a function are highlighted in
+  the list, with the current race and level marked.
+
+------------------------------------------------------------------------
+
+* How to speed up VPA
+
+Q: I have a very slow PC, and VPA is not that fast on it...
+
+A: VPA is notorious for its great speed. However, on old slow PCs it still
+   can take some time. There are some advises how to speed up VPA:
+
+   1) Any disk cache can be very helping. VPA reads a lot of data from disk.
+   2) To speed up map redrawing:
+      a) it's better to turn off permanent ship tracking (Shift-T),
+         especially if there are any FireCloud Cruisers in sight;
+      b) planet names (Shift-P) also take some time to write;
+      c) if you miss planet names, you can set "SmallFont = Off" in VPA.INI,
+         that will speed up planet names writing, although they will be
+         not so nice-looking.
+
+   Since VPA is a DPMI application, it will normally use all memory
+   you have in your computer (except for memory configured as EMS), so
+   there's no need to shuffle DOS drivers around to get more "conventional"
+   memory.
+
+------------------------------------------------------------------------
+
+* Mouse problems under Windows NT
+
+Q: I'm using VPA under Windows NT. When I select a planet with the mouse,
+   I am unable to move off of the planet. What's the problem?
+
+A: VPA has a feature called "StickyMouse" that prevents low-amplitude random
+   movement of the mouse from actually moving the cursor. It is usually
+   a very helpful feature that increases the convenience of the interface
+   and prevents setting wrong waypoints. But the NT mouse driver works in
+   such a way that all mouse movements are subdivided into 1-pixel parts,
+   so VPA confuses them with random movement caused by desk vibrations,
+   shaky hands, etc. and ignores them. Under Windows NT you should set
+   "StickyMouse = OFF" in VPA.INI.
+
+------------------------------------------------------------------------
+
+* Where do I get RTM.EXE?
+
+Q: VPA refuses to run with a message that it can't find "dpmi16bi.ovl"
+   or "rtm.exe".
+
+A: These files are distributed separately, in an archive commonly called
+   "vpasupp.zip" (VPA support files). That archive will also include a
+   nice resource.pln file.
+
+------------------------------------------------------------------------
+
+* What happened to the F8 (search ship) function?
+
+Q: The F8 key does not work any longer!
+
+A: The "search ship" function is on Shift-F7 in VPA 3.58c and later.
+
+------------------------------------------------------------------------
+
+* VPA's Maketurn / Unpack
+
+Q: I've heard VPA's Unpack and/or Maketurn are notoriously buggy. What gives?
+
+A: It is true that these functions had bugs in the past. For example,
+   Maketurn would cancel all pending build orders in PHost games. We
+   believe to have fixed all pending issues and these functions are now
+   safe.
+
+------------------------------------------------------------------------
+
+* VPA on Windows 2000 / XP / Vista / Laptop
+
+Q: I have this brand-new Laptop / Windows 2000 / Windows XP and VPA won't
+   run on it. What can I do?
+
+A: Bug Microsoft and/or your graphics card vendor to improve their DOS
+   support.
+
+   If that doesn't help, try VPAMM, which is based on a different
+   graphics engine than the "standard" VPA. You can get this program from
+   the VPA website. As of VPA 3.61f, VPAMM is a fully-grown VPA which is
+   exactly identical to normal VPA (although it looks slightly different
+   because it uses different circle algorithms :-)
+
+   The best solution of course would be if you find and solve the problem
+   (a magic registry hack?). So far, VPA developers were in the lucky
+   situation that their XP systems do support VPA.
+
+   VPA will not run on 64-bit versions of Windows. These do not support
+   DOS programs at all.
+
+   Other things that may help:
+
+    - you might have a program "HTPATCH.EXE" running. To remove it,
+      delete the registry key
+         HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\HTPATCH
+      and reboot. Nobody seems to know what this program *exactly* does.
+      Reportedly it adds hyper-threading support to your graphics driver,
+      and graphics throughput will drop by a few percent when you remove
+      it.
+
+    - if you have a really fast computer, try DOSBOX from
+      <http://dosbox.sourceforge.net/>. As of December 2003, it runs
+      VPAMM if you disable DPMI ("set DPMI=no"). DOSBOX emulates a
+      complete PC, so by saying "really fast computer", I mean *really*
+      fast. DOSBOX reduces execution speed by a magnitude of 100
+      compared to native execution.
+
+    - install Linux and use DOSEMU. Disk space is cheap so adding
+      another operating system won't kill you.
+
+------------------------------------------------------------------------
+
+* How does next turn mineral prediction function work?
+
+Q: In base construction yard when pressing 'n' key VPA shows minerals
+   and cash that will be aviable next turn. How does it works ?
+
+A: This feature is added to help planning resources moment in your empire.
+   You can check if next turn you will be able to build desire ship.
+   All calculations are made using only ships, planets, bases that
+   player has all information aviable at the moment. This means that
+   only race XX ships read from playerXX.rst will be used. To make VPA
+   uses YY ally ships, the playerYY.rst should be present during unpack.
+   VPA trys as close as possible to simulate Thost or Phost behavior,
+   but cannot simulate random processes (meteors, ion storms, minefield travel)
+   or actions of your enemy. The following host stages are simulated :
+            gambling ships
+            jettison and cargo dump
+            beam down money ('bdm' or mission=25)
+            cyborg self repair
+            planetary production
+            hiss
+            alchemy
+            torpedoes build ('mkt' or mission=20)
+            ship fighters production
+            advanced alchemy
+            base fix, recycle (no ally check)
+            repair ships using supplies
+            simple tow resolution
+            ship movement including hyperjump
+            chunnel
+            supplies production
+            base free fighters
+            base 'dmp' FC
+            base 'Max Defense' mission
+            colonize (no ally check)
+            allies (unload for bases)
+   The following actions are NOT simulated  :
+            beam up minerals
+            give ship or planet
+            RGA
+            pillage
+            Fed super refit
+            overpopulation supply loss
+
+------------------------------------------------------------------------
+
+* Ship list sorting extra information
+
+Q: What does mean those color markers left to ship name while
+   changing ship list sort order ?
+
+A: Ship list sort order can be changed using Shift-z key. The sorting
+   order will change in following way : ship ID, ship battle order,
+   ship hull id, tow dependency. Just below ship list markers a letter
+   indicates current sort order. B - battle order, H - ship hull id,
+   T - tow order.
+   
+   Battle order is computed using rules similar to ones used in Phost. 
+   Cloak attack is not used. Ship list markers using battle order sorting 
+   are listed below:
+   blue circle      ship will fight before planet.
+   green circle     ship will fight after planet.
+   yellow circle    ship is aggressive (has beams, torpedoes launchers, fighters 
+                    bays and kill mission or enemy set) but its FC is not set to 
+		    numerical value.
+   red cross        ship has no fuel.
+   brown rhombe     ship has beams, torpedoes launchers or fighters bays but kill
+                    mission or enemy is not set.
+   white rhombe     ship cannot attack (no beams, torps or bays).
+   
+   In ship hull id sort order only green square is used to indicate
+   ships with hull of player own design.
+   
+   In tow sort order the following markers are used:
+   green square     ship that is towing.
+   green cross      ship that is being towed.
+   yellow cross     ship that is being towed has warp not set to 0.
+   red cross        more than one ship is trying to tow this ship
+   
+------------------------------------------------------------------------
+
+* Actual list
+
+Q: I often forget to give commands to one of my units. Can VPA help me?
+
+A: If you have a large number of objects (ships, planets, bases) to operate,
+   some remain outside of the control because you may forget give order for
+   them. For decrease chance of that collision come in handy to you the
+   actual list. Use ',' and '.' keys instead cursor's keys for selection
+   next or previous objects your own. When orders for current object are
+   complete, press '/' key for exclude object from actual list. If you need
+   to return to this object, use the cursor's keys for selection and '/' key
+   to include them in actual list.
+
+   Actual list objects have headings of white color, others - darkgray.
+
+   At the beginning of each turn, all objects are on the list. Press '/'
+   to take them off when you're finished with them.
+
+------------------------------------------------------------------------
+
+* What does OptimizeFuel do?
+
+Q: What does the "OptimizeFuel" option in VPA.INI do?
+
+A: Flying at low speed can conserve fuel. To see this, consider a ship 
+that travels 90 ly. At warp 9 it will go 81 ly in the first turn and 
+9 ly in the second turn. At warp 7 it will go 49 and 41 ly. However, since 
+it is lighter in the second turn (because some fuel was burned), going
+at warp 7 may save a few kt of fuel, because it travels a longer distance 
+with the lower weight. 
+And of course there are ship lists (e.g. PLIST) where engines will burn
+fewer fuel if they go at a lower speed.
+
+If the OptimizeFuel option is set, VPA will automatically adjust the speed
+of all ships that have a planet as a target and are not on an intercept mission
+such that the ships burn as few as possible fuel. More precisely, VPA will check
+how many turns a ship will take at maximum safe speed (e.g. warp 8 for a
+HyperDrive 8 or an Enerpsi Drive), and will then slow the ship down if
+the number of turns is the same at the lower speed.
+
+Speed adjustment happens for all ships whenever VPA encounters a new result,
+or if a new planetary waypoint is set for a ship.
+
+------------------------------------------------------------------------
+
+
+* What does AutoAdjustWarp do?
+
+Q: What does the "OptimizeFuel" option in VPA.INI do?
+
+A: Just the same as the OptimizeFuel option, but it is called 
+for every ship whenever a new turn is processed. Thus a ship 
+travelling 105 ly at warp 8 would slow down to warp 7 after one turn,
+if slowing down conserves fuel.
+
+------------------------------------------------------------------------
+
+* VPA Versions
+
+Q: What's the difference between VPA and VPAMM (Mixed Mode)?
+
+A: The standard VPA version is a Borland Pascal Protected Mode program.
+   It uses Borland's rtm.exe loader, Borland's BGI graphics library, and
+   Borlands VGA driver or Ulrich von Bassewitz' SVGA driver.
+
+   The above software collection is not free of problems. For example,
+   the BGI library has a well-known bug which makes VPA display garbage
+   under Windows 2000.
+
+   Stefan Reuther has ported VPA to the runtime environment used in PCC.
+   It uses an internal loader, and its own graphics library. It is called
+   "mixed mode" because, unlike standard VPA, it can fall back to real mode
+   if protected mode is not available (if you do not know what this techno
+   babble means, ignore it - you won't miss it.). This is VPAMM. Since
+   that's quite a big change in the program's environment, this version for
+   a long time beared the label "experimental". A bit more plastic, this
+   operation is as if you replace the engine of your Mercedes (=VPA) car
+   by the one from a BMW (=PCC) car. The car still looks the same, but the
+   gas pedal might feel a bit different (=VPAMM looks a bit different), and
+   if you overlooked something, the gearshift got stuck (=predictions are
+   off).
+
+   As of mid-2003, however, we claim VPAMM to be as reliable and accurate
+   as VPA. It looks slightly different (harmless) and might be a bit
+   slower. It sometimes has trouble with the mouse pointer, which is
+   annoying but harmless, too.
+
+------------------------------------------------------------------------
+
+* Windows Version
+
+Q: Will there be a Windows version of VPA?
+
+A: No. VPA is a DOS program, and ever will be. It uses many of the features
+   of the DOS 16-bit environment which are not available in 32-bit or even
+   64-bit environments. Therefore, porting it would actually mean rewriting
+   it.
+
+   Thus, there will not ever be a program that can claim to be a "Windows
+   version of VPA". However, there are a few programs of varying quality and
+   completeness that (claim to) emulate the VPA interface to some extent.
