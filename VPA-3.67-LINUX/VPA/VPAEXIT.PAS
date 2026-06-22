@@ -1,5 +1,6 @@
 {$I switches.inc}            
 Unit	VPAExit;	(* VPA Final Part *)
+{$V-}
 
 Interface
 
@@ -9,7 +10,7 @@ procedure QuitVPA;
 
 Implementation
 
-uses	AuxF,StrF,Mouse,Keyboard,Graph,Screen,VPAData,Messages,MsgRead,Config,RST_TRN,VPAInit
+uses	AuxF,StrF,Mouse,Keyboard,ptcgraph,Screen,VPAData,Messages,MsgRead,Config,RST_TRN,VPAInit
 {$IFDEF TASKS}
     ,Tasks
 {$ENDIF}
@@ -426,6 +427,7 @@ procedure SaveGameData;
 	i,n,k,j	: int;
 	fp,isum	: long;
 	p	: pointer;
+	pb	: ^ByteArr;
   procedure OpenCtrl (var ctrl:file; cn:str20);
     begin
       if not OpenRW(ctrl,cn,No) then OpenW(ctrl,cn,Yes);
@@ -467,17 +469,13 @@ procedure SaveGameData;
     SavePHostCommands;
    {$ENDIF}
     really:=No;
-    asm
-	push	ds
-	pop	es
-	lea	di,Changed
-	mov	cx,sChanged
-	xor	al,al
-	cld
-	repe	scasb
-	jcxz	@@1
-	mov	really,1
-@@1:
+    really := No;
+    pb := @Changed;
+    i := 1;
+    while (i <= sChanged) and (not really) do
+    begin
+      if pb^[i] <> 0 then really := Yes;
+      inc(i);
     end;
     if not really then Exit;
     Writeln('Updating game data... ');
@@ -531,8 +529,7 @@ procedure SaveGameData;
     CloseData(ctrl2);
   end;
 
-procedure Greets; external;
-{$L greets.obj}
+{ Greets (greets.obj) descartado en el port; WriteGreeting usa un stub }
 
 procedure WriteGreeting;
   var	p	: pointer;
@@ -550,13 +547,8 @@ procedure WriteGreeting;
     end;
   begin
     if (not CreatedNewBase) and (Random(100)>20) then Exit;
-    asm
-	call	Greets
-	mov	word ptr p,ax
-	mov	word ptr p+2,dx
-	mov	l,bx
-	mov	n,cx
-    end;
+    { GREETS (greets.obj) descartado en el port: sin datos de saludo }
+    p := nil; l := 0; n := 0;
     rs:=PlanetsRegInfo[1];
     if (Pos('WINPLAN',PlanetsRegInfo[2])<>0) and OpenData(f,'REG.KEY',No) then
     begin
@@ -633,12 +625,7 @@ procedure SaveAll;
 procedure SaveChanges;
   begin
     Clear(0,0,479,479);
-    asm
-	mov	ah,2
-	xor	bh,bh
-	xor	dx,dx
-	int	10h
-    end;
+    { (en DOS aqui se posicionaba el cursor de texto por BIOS; no aplica) }
     SaveAll;
     ch:=2;
   end;
