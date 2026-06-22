@@ -853,6 +853,11 @@ const
   SPC_ChunnelTarget=28;  SPC_PlanetImmunity=29;  SPC_OreCondenser=30;  SPC_Boarding=31;
   SPC_AntiCloakImmunity=32;  SPC_Academy=33;  SPC_Repairs=34;  SPC_FullWeaponry=35;
   SPC_HardenedEngines=36;  SPC_Commander=37;  SPC_IonShield=38;  SPC_HardenedCloak=39;
+{ Representacion antigua de hull-functions (VPACC off): IsHullFunc se implementa
+  en la rama ELSE de la implementacion; se declara aqui para uso cross-unit (CONFIG). }
+function IsHullFunc (h:byte; f:HullFuncs) : int;
+{ Consulta de hull-functions estilo HULLFUNC: stub compat (ver implementacion) }
+function ShipOrHullDoes(sid:integer; f1,f2,f3:integer):boolean;
 {$ELSE}
 type
   THullFuncQueryResult = record
@@ -2982,6 +2987,17 @@ function IsHullFunc (h:byte; f:HullFuncs) : int;
 function IsShipFunc (const sh:SRec; f:HullFuncs):boolean;
   begin
     IsShipFunc := (IsHullFunc(sh.hull, f) <> 0);
+  end;
+function ShipOrHullDoes(sid:integer; f1,f2,f3:integer):boolean;
+  begin
+    { stub compat: la deteccion real (SPC_*) requiere CC/HULLFUNC.PAS (PCC2).
+      Devuelve False hasta reimplementar HULLFUNC; ver README seccion 1. }
+    ShipOrHullDoes := False;
+  end;
+function IsShipFunc3 (const sh:SRec; a,b,c:int):boolean;
+  begin
+    { stub compat: idem; requiere HULLFUNC (PCC2). False hasta reimplementar. }
+    IsShipFunc3 := False;
   end;
 {$ENDIF}
 
