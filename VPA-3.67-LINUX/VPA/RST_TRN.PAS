@@ -1,5 +1,6 @@
 {$I switches.inc}
 Unit	RST_TRN;	(* RST, TRN, registration, protection *)
+{$V-}
 {$I-}
 
 Interface
@@ -40,6 +41,9 @@ function DeScrambleShipNames (race:int) : boolean;
 	sname	: ^snames;
 	buf	: pointer;
 	was	: boolean;
+	pb	: ^ByteArr;
+	p,bk	: int;
+	matched	: boolean;
   const	RBlock	= 30000;
   function ProcessName (s:pnarr) : boolean;
     var	j	: int;
@@ -98,66 +102,24 @@ function DeScrambleShipNames (race:int) : boolean;
       BlockRead(dat,buf^,RBlock,n);
       if IOResult=0 then ;
       if n=0 then Break;
-      asm
-	cld
-	push	ds
-	lds	si,buf
-	les	di,buf
-	mov	cx,n
-@@11:	lodsb
-	sub	al,13
-	stosb
-	loop	@@11
-	pop	ds
-      end;
-      asm
-	mov	was,No
-	les	di,buf
-	mov	al,byte ptr ScrambledName
-	mov	cx,n
-	sub	cx,19
-@@1:	repne	scasb
-	jcxz	@@2
-	push	cx
-	push	di
-	lea	si,ScrambledName+1
-	mov	cx,ScrambledNameLen-1
-	repe	cmpsb
-	pop	di
-	pop	cx
-	jne	@@1
-	push	ax
-	push	cx
-	push	di
-	push	es
-	push	es
-	dec	di
-	push	di
-	inc	di
-	push	bp		{!!! local call !!!}
-	call	ProcessName
-	mov	was,al
-	pop	es
-	pop	di
-	pop	cx
-	pop	ax
-	jmp	@@1
-@@2:
+      { descifrar bloque MDATA: cada byte -13 (ByteArr es 1-based) }
+      pb := buf;
+      for bk := 1 to n do pb^[bk] := byte(pb^[bk] - 13);
+      { buscar cada aparicion de ScrambledName en el buffer y procesarla.
+        El offset 0-based del asm = indice (p) en el array 1-based. }
+      was := No;
+      for p := 1 to n-19 do
+      begin
+        matched := True;
+        for bk := 1 to ScrambledNameLen do
+          if pb^[p+bk-1] <> byte(ScrambledName[bk]) then begin matched := False; Break; end;
+        if matched then was := ProcessName(pnarr(@pb^[p]));
       end;
       if was then
       begin
-	asm
-	cld
-	push	ds
-	lds	si,buf
-	les	di,buf
-	mov	cx,n
-@@12:	lodsb
-	add	al,13
-	stosb
-	loop	@@12
-	pop	ds
-	end;
+	{ recifrar bloque: cada byte +13 }
+	pb := buf;
+	for bk := 1 to n do pb^[bk] := byte(pb^[bk] + 13);
 	Seek(dat,FilePos(dat)-n);
 	BlockWrite(dat,buf^,n);
       end;
@@ -246,20 +208,11 @@ procedure CheckPlanetsRegistration;
       BlockRead(f,buf^,DOSPReadSize);
       CloseData(f);
       bpos:=0;
-      asm
-	cld
-	les	di,buf
-	mov	bx,di
-	mov	al,'5'
-	mov	cx,DOSPReadSize
-@@1:	repne	scasb
-	jcxz	@@2
-	cmp	byte ptr es:[di],'7'
-	jne	@@1
-	sub	di,bx
-	mov	bpos,di
-@@2:
-      end;
+      { buscar '5' seguido de '7'; bpos = offset 0-based del '7' (= i+1) }
+      bpos := 0;
+      for i := 0 to DOSPReadSize-2 do
+        if (buf^[i+1] = ord('5')) and (buf^[i+2] = ord('7')) then
+        begin bpos := i+1; Break; end;
       if bpos=0 then j:=int(regdata[51])+1
       else begin
 	inc(bpos,10);

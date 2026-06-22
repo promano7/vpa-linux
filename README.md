@@ -388,7 +388,7 @@ categoría (esto es la hoja de ruta de las Fases 2–4):
 | 3 — Entrada (ratón/teclado) | 🟡 En curso | **`MOUSE`→`ptcmouse` y `KEYBOARD`→`ptccrt` portados y validados.** `KbdFlags` (Shift/Ctrl) queda como `0` (ptccrt no lo expone) — TODO. Pendiente: llamar a `PollMouse` desde el bucle de entrada. |
 | 3 — Entrada (ratón/teclado) | ⬜ Pendiente | |
 | 4 — Limpieza de bajo nivel | ⬜ Pendiente | |
-| 5 — E/S y portabilidad de datos | ⬜ Pendiente | |
+| 5 — E/S y portabilidad de datos | 🟡 En curso | **`RST_TRN.PAS` portado** (.rst/.trn): (des)cifrado de nombres ±13, búsqueda `ScrambledName`+`ProcessName`, lectura de registro de `PLANETS.EXE` — asm 16-bit→Pascal (0-based asm vs 1-based `ByteArr`). |
 | 6 — Primer binario nativo | ⬜ Pendiente | |
 | 7 — Pruebas y empaquetado | ⬜ Pendiente | |
 
