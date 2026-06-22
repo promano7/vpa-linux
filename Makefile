@@ -19,6 +19,13 @@ build:
 	@echo ""
 	@echo ">> Listo: $(BIN)"
 
+## debug : compila con info de linea (-gl) para depurar con gdb (backtraces)
+debug:
+	@mkdir -p build
+	$(FPC) @$(CFG) -gl -O- $(MAIN)
+	@echo ""
+	@echo ">> Listo (debug): $(BIN)  — usar con: gdb ./$(BIN)"
+
 ## run : compila y muestra la ayuda de uso (pasa argumentos con ARGS=...)
 ##       Ejemplo:  make run ARGS="3 /ruta/a/la/partida"
 run: build
