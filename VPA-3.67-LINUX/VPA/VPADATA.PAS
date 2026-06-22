@@ -9,11 +9,12 @@
 
 {$I switches.inc}
 Unit    VPAData;        (* VPA Data Structures *)
-{$C MOVEABLE PRELOAD PERMANENT}
+{$V-}
+
 
 Interface
 
-uses    Mouse,AuxF,StrF,Graph, Config; 
+uses    Mouse,AuxF,StrF,ptcgraph, Config; 
 
 const   Version = '3.67';
         VerNum  = 367;
@@ -803,6 +804,55 @@ const
 var
         HullFunc: ^IntArr;      { [Hull,Fn],[Hull,Fn],... }
         HullFN  : int;
+
+{ ==========================================================================
+  Compat Linux (VPACC off): definiciones que el nucleo usa SIN guarda y que,
+  con VPACC activo vendrian de la rama VPACC-on (abajo) o de CC/HULLFUNC.PAS.
+  Los usos de Enum / THullFuncQueryResult del nucleo SI van guardados por
+  IFDEF VPACC, por eso aqui no hacen falta stubs de esas funciones.
+  ========================================================================== }
+type
+  THullFuncQueryResult = record data:pointer; count:int; end;
+{ Block from VPA2.PAS (estado del nucleo) }
+var     mt0,mt1         : longint;
+        MineN,IonN,WormN,UfoN,MarkN : int;
+        BL0             : int;
+        bOver           : boolean;
+        AllH,eAllH,hOver: boolean;
+        ScanH           : int;
+        lsxy            : array [1..2,1..2] of int;
+        dlship          : SRec;
+        dlf             : long;
+        dlt             : int;
+        dlc             : byte;
+        mEv0            : word;
+const   iBeam : int = 10;
+        jBeam : int = 10;
+        jAmmo : int = 0;
+        iColo : int = 0;
+        iDefense : int = 0;
+        iRace : int = 0;
+var     GSOP : array [1..8] of int;
+var     DScolorR, DScolorO, DScolorT, DSwm : byte;
+const   DSdrawn : boolean = No;
+        SRdrawn : boolean = No;
+        forceDL : boolean = No;
+var     SRradius : word;
+const   ShipSortTablePtr : ^ShipSortArray = nil;
+var     ShipSortTableIndex : word;
+        ShipSortTableLock  : boolean;
+{ Codigos de habilidades de casco (SPC_*), de CC/HULLFUNC.PAS }
+const
+  SPC_Alchemy=0;  SPC_Refinery=1;  SPC_AdvancedRefinery=2;  SPC_HeatsTo50=3;
+  SPC_CoolsTo50=4;  SPC_HeatsTo100=5;  SPC_Hyperdrive=6;  SPC_Gravitonic=7;
+  SPC_ScansAllWormholes=8;  SPC_Gambling=9;  SPC_AntiCloak=10;  SPC_ImperialAssault=11;
+  SPC_Chunneling=12;  SPC_Ramscoop=13;  SPC_FullBioscan=14;  SPC_AdvancedCloak=15;
+  SPC_Cloak=16;  SPC_Bioscan=17;  SPC_GloryDeviceLow=18;  SPC_GloryDeviceHigh=19;
+  SPC_Unclonable=20;  SPC_CloneOnce=21;  SPC_Ungiveable=22;  SPC_GiveOnce=23;
+  SPC_Level2Tow=24;  SPC_Tow=25;  SPC_ChunnelSelf=26;  SPC_ChunnelOthers=27;
+  SPC_ChunnelTarget=28;  SPC_PlanetImmunity=29;  SPC_OreCondenser=30;  SPC_Boarding=31;
+  SPC_AntiCloakImmunity=32;  SPC_Academy=33;  SPC_Repairs=34;  SPC_FullWeaponry=35;
+  SPC_HardenedEngines=36;  SPC_Commander=37;  SPC_IonShield=38;  SPC_HardenedCloak=39;
 {$ELSE}
 type
   THullFuncQueryResult = record
@@ -2918,27 +2968,14 @@ procedure FreeShipFuncQueryResult(var qr:THullFuncQueryResult);
   end;
 
 {$ELSE}
-function IsHullFunc (h:byte; f:HullFuncs) : int; assembler;
-  asm   { returns # of (h,f) pair in HullFunc }
-        push    ds
-        mov     bl,h
-        mov     bh,f
-        mov     dx,HullFN
-        or      dx,dx
-        jz      @@3
-        lds     si,HullFunc
-        mov     cx,dx
-        cld
-@@1:    lodsw
-        cmp     ax,bx
-        je      @@2
-        loop    @@1
-        xor     dx,dx
-        jmp     @@3
-@@2:    sub     dx,cx
-        inc     dx
-@@3:    xchg    ax,dx
-        pop     ds
+function IsHullFunc (h:byte; f:HullFuncs) : int;
+  { devuelve el indice 1-based del par (h,f) en HullFunc, o 0 si no esta }
+  var i : int;  key : word;
+  begin
+    IsHullFunc := 0;
+    key := (word(ord(f)) shl 8) or h;
+    for i := 1 to HullFN do
+      if word(HullFunc^[i]) = key then begin IsHullFunc := i; Exit; end;
   end;
 
 { check whether ship has a function }
