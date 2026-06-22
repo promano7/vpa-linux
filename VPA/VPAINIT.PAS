@@ -157,7 +157,7 @@ procedure Parameters;
       else if byte(addir[0])=0 then
       begin
   addir:=ParamStr(i);
-  if not (addir[byte(addir[0])] in [#0,'\',':']) then addir:=addir+'\';
+  if not (addir[byte(addir[0])] in [#0,'/']) then addir:=addir+'/';  { Linux: separador '/' (era '\' de DOS) }
       end
       else InvalidParm(parm);
     end;
