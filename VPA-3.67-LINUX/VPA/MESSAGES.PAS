@@ -1,5 +1,6 @@
 {$I switches.inc}
 Unit	Messages;	(* VPA Message Processor *)
+{$V-}
 
 Interface
 
@@ -60,7 +61,7 @@ procedure CloseMessageFile;
 
 Implementation
 
-uses	StrF,Graph,Screen,Mouse,Keyboard,TCombat,DOS,ConfigIO
+uses	StrF,ptcgraph,Screen,Mouse,Keyboard,TCombat,DOS,ConfigIO
 {$IFDEF VPACC},
         PHostM
 {$ENDIF}{,PVCR};
@@ -1621,8 +1622,8 @@ procedure ViewMessages;
       if chh=13 then chh:=ord(CRChar[msgt]);
       if (msgt=m_In) and (m_to<>0) and ((chh=ord('m')) and (msgobj=0)) then chh:=ord('r');
       case chh of
-	$4B00	: NextMsg(Mem[Seg0040:$17] and 3<>0);
-	$4D00	: NextMsg(Mem[Seg0040:$17] and 3<>0);
+	$4B00	: NextMsg((KbdFlags and KbdShft)<>0);
+	$4D00	: NextMsg((KbdFlags and KbdShft)<>0);
 	$4800	: if msgt<>m_In then
 		  begin
 		    repeat msgt:=pred(msgt) until (nm1[msgt]>0) or (msgt=m_In);
@@ -1892,26 +1893,18 @@ procedure StoreWinPlanMess;
 
 procedure EncodeObject (var obj; var buf; len:word);
   label	a1;
+  var src : array[0..65535] of byte absolute obj;
+      dst : array[0..65535] of word absolute buf;
+      i   : word;  b : byte;
   begin
+    { codifica cada byte en 2 chars: nibble bajo y nibble alto desplazados a 'a'..'p'
+      (equivalente al AAM 16 + add 'a' + stosw del asm original) }
     if len<>0 then
-    begin
-      asm
-	push	ds
-	lds	si,obj
-	les	di,buf
-	mov	cx,len
-	cld
-a1:	lodsb
+      for i := 0 to len-1 do
+      begin
+        b := src[i];
+        dst[i] := word(ord('a') + (b and $0F)) or (word(ord('a') + (b shr 4)) shl 8);
       end;
-      inline	($D4/$10);
-      asm
-	add	al,'a'
-	add	ah,'a'
-	stosw
-	loop	a1
-	pop	ds
-      end;
-    end;
   end;
 
 procedure TransmitObject;
