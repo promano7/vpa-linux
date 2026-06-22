@@ -228,16 +228,17 @@ verificable al final de cada una.
 - [ ] Clasificar los `absolute` del núcleo: *aliasing* (se queda) vs. acceso a hardware (se reescribe).
 
 ### Fase 5 — E/S de ficheros y portabilidad de datos *(crítica)*
-- [ ] **Tamaños de tipos** *(parcialmente verificado en §5)*: en `{$MODE TP}` con FPC 3.2.2 x86_64, `Integer`=2, `Word`=2, `LongInt`=4 bytes (idénticos a BP7) y los `packed record` de enteros/bytes/chars serializan igual. **Dos trampas confirmadas:** `Pointer`=8 bytes (era 4) y `Real`=8 bytes (en BP7 el `Real` por defecto era de **6 bytes**). Hay que revisar si VPA guarda `Real` o punteros en disco.
+- [x] **Tamaños de tipos** *(verificado en §5)*: en `{$MODE TP}` con FPC 3.2.2 x86_64, `Integer`=2, `Word`=2, `LongInt`=4 bytes (idénticos a BP7). **Dos trampas confirmadas:** `Pointer`=8 bytes (era 4) y `Real`=8 bytes (en BP7 era de **6 bytes**). **Resuelto:** los records que van a disco (`SRec`, `STRec`, `MRec`, `URec`, combate…) contienen solo `int`/`char`/`long`/`byte`/`boolean` — **ningún `pointer` ni `real` dentro** (auditado), así que no hay desajuste de tamaño. El único `Pointer`→entero problemático estaba en el display de dirección de error (`VPA.PAS`, manejador de fallos); corregido con `PtrUInt`.
+- [x] **Empaquetado de records (CRÍTICO, resuelto).** Turbo/Borland Pascal **siempre** empaqueta records sin relleno; FPC en modo TP **alinea a 2 por defecto**, insertando padding tras campos de tamaño impar (p. ej. `fcode` de 3 bytes en `SRec`) y desalineando lo leído de los `.DAT`. Verificado: `SizeOf(SRec)`=124 con relleno vs **123 byte-packed** (`name` en offset 46 vs 45). Solución: `{$PACKRECORDS 1}` en `switches.inc` (incluido por todas las units) → layout idéntico al de DOS. Binario recompila, enlaza y arranca.
 - [ ] **Endianness:** validar lectura de los binarios (x86 era little-endian; vigilar si se compila para ARM).
 - [ ] **Rutas:** manejar mayúsculas/minúsculas, separador `\`→`/` y nombres 8.3 de forma tolerante en Linux.
 - [ ] Adaptar el manejo de errores de Borland (`ExitProc`, `ExitCode`, `ErrorAddr`, procedimientos `far`) al equivalente de FPC.
 
 ### Fase 6 — Primer binario nativo
 - [x] **Iterar hasta lograr compilación limpia y un ejecutable que arranque.** ✅ **HITO: todas las units compilan y enlazan en un binario ELF de 64 bits.** Arranca bajo X11 (probado con Xvfb): inicializa `cthreads`, abre el display, imprime el banner y la ayuda de uso, y sale limpiamente al no recibir raza/directorio. `34064` líneas compiladas, 25 warnings.
-- [ ] Probar con datos reales de una partida (RST/TRN) — requiere un directorio de juego con `GENx.DAT`, `SHIPx.DAT`, etc.
+- [x] **Warnings de rango y de puntero corregidos:** las constantes fuera de rango de byte se debían al camino VPACC-off nunca compilado en el original — `VPA4` (`chr($5300)` de la tecla DEL, que se trunca a `chr(0)` como en DOS) → explicitado a `chr(0)`; `CONFIG` (`byte(key)-byte(kFF1)+1` con un enum que cruza 256) → `ord(...)`. El truncado de puntero de 64 bits en el display de error (`VPA.PAS`, `long(ErrorAddr)`) → `PtrUInt`. Quedan solo warnings benignos de FPC (switches `$E/$L/$N` ignorados, comparaciones siempre true/false, alguna variable sin inicializar) sin impacto.
 - [ ] Conectar `PollMouse` al bucle de entrada principal (el ratón pasó de callbacks de interrupción a polling).
-- [ ] Revisar warnings: constantes fuera de rango de byte (`VPA4:1626`, `CONFIG:517/703`) y truncado de puntero de 64 bits en el display de dirección de error (`VPA.PAS:43/45`, `long(ErrorAddr)`).
+- [ ] Probar con datos reales de una partida (RST/TRN) — requiere un directorio de juego con `GENx.DAT`, `SHIPx.DAT`, etc.
 
 ### Fase 7 — Pruebas, empaquetado y (opcional) distribución
 - [ ] Comparar comportamiento contra la versión DOS en DOSBox.
