@@ -1,8 +1,13 @@
 {$I switches.inc}
 Program	VPA;		(* VGA Planets Assistant *)
+{$V-}
 {$A-,B-,D+,E+,F-,G+,I-,L+,N+,O-,P+,Q-,R-,S-,T-,V-,X+}
 
-uses	AuxF,Screen,VPA2,VPAInit,VPAExit,Building,Messages,Report,VCS,
+uses
+{$IFDEF UNIX}
+	cthreads,	{ Linux: ptcgraph usa hilos para el bucle de eventos X11; cthreads debe ir primero }
+{$ENDIF}
+	AuxF,Screen,VPA2,VPAInit,VPAExit,Building,Messages,Report,VCS,
 {$IFDEF TASKS}
     Tasks,
 {$ENDIF}  
