@@ -11,6 +11,7 @@
 {DEFINE TASKS}  {Set $DEFINE to include undone Tasks by Alex Ivlev 2002}
 
 Unit  VPAInit;  (* VPA Initialization Part *)
+{$V-}
 
 Interface
 
@@ -28,7 +29,7 @@ function  StartVPA : boolean;
 Implementation
 
 uses
-  StrF,Graph,Screen,Mouse,Keyboard,Config,MsgRead,Messages,Report,ExtFeat,Ini,
+  StrF,ptcgraph,Screen,Mouse,Keyboard,Config,MsgRead,Messages,Report,ExtFeat,Ini,
 {$IFDEF VPACC}
         PHostM,Hullfunc,
 {$ENDIF}
@@ -1255,33 +1256,13 @@ procedure OpenGraph;
       if gd<>VPASCR_Size then Erase(f);
     end;
     InitRatios;
-    GrMode0:=mem[Seg0040:$49];
+    GrMode0:=3;   { sin BIOS en Linux; CloseGraph gestiona la restauracion }
 
-    if useSVGA then
-    begin
-        gd := InstallUserDriver('SVGA',nil);
-        if GraphResult<>grOK then
-        begin
-                Writeln('Error installing SVGA driver.');
-                halt(1);
-        end;
-        GrErr(RegisterBGIDriver(@svgaProc));
-        Gm := gmVesa640x480x256;    {start in 640x480x256 VESA mode}
-    end
-    else if CustomBGI then
-    begin
-      Writeln('Using custom BGI driver: ',bgiDRV,'/',bgiDir,'/',bgiMode);
-      gd := InstallUserDriver(bgiDrv,nil);
-      gm := bgiMode;
-    end
-    else
-    begin
-        GrErr(RegisterBGIDriver(@EGAVGADriverProc));
-        bgiDir:='';
-        gd:=Detect;
-    end;
-    if UseSmallFont then GrErr(RegisterBGIFont(@SmallFontProc));
-    InitGraph(gd,gm,bgiDir);
+    { --- Init grafica con ptcgraph (Linux): no usa drivers .bgi; se elige el
+          modo nativo directamente. 640x480, 256 colores. --- }
+    gd := D8bit;
+    gm := m640x480;
+    InitGraph(gd, gm, '');
     GrErr(-1);
     GrMode:=Yes;
    {$IFDEF VPAMM}
@@ -1715,16 +1696,7 @@ function StartVPA : boolean;
   LoadPlanetsData;
   CheckDataFiles;
   CheckNewRST;
-  asm
-  nop
-  nop
-  nop
-  nop
-  jmp @@1
-  mov SWPlan,0
-  mov RegWP,1
-@@1:
-    end;
+  { (bloque asm original: codigo muerto, el jmp saltaba los mov; eliminado) }
   if not DFiles then RWMode:=Off;
     ReadData; { includes CheckPHOST, ReadConfig2 and MapInit }
   { XYPLANn must not be sent in UTILn, because ReadMessages needs it }
@@ -1745,10 +1717,7 @@ function StartVPA : boolean;
     begin
     if GPause then PressAnyKey;
       InitHelp;
-      asm
-  mov es,Seg0040
-  and byte ptr es:[17h],not 40h
-      end;
+      { (apagaba CapsLock via BIOS; no aplica en Linux) }
       OpenGraph;
       InitMouse;
       if NewTurn then CheckOutMap;
