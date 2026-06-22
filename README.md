@@ -9,8 +9,10 @@ sustitución de la BGI de Borland.
 - **Autor original:** Alex V. Ivlev (1993–96); mantenido posteriormente por otros.
 - **Objetivo:** ejecutable Linux nativo, sin DOSBox ni dosemu.
 
-> Estado del proyecto: **Fase 0 en curso**. Este documento se actualiza a medida
-> que avanzamos. Ver la sección [Seguimiento](#seguimiento-del-progreso) al final.
+> Estado del proyecto: **¡Primer binario nativo funcionando!** 🎉 Todo el código fuente
+> compila y enlaza en un ejecutable ELF de 64 bits que arranca bajo X11. Quedan pruebas
+> con datos reales de partida y la limpieza de runtime (Fases 4–7). Este documento se
+> actualiza a medida que avanzamos. Ver [Seguimiento](#seguimiento-del-progreso) al final.
 
 > **Entorno verificado** (FPC 3.2.2 / Ubuntu 24.04): las units `ptcgraph`, `ptccrt`,
 > `ptcmouse` y el backend `ptc` están disponibles (paquete `fp-units-gfx`), el toolchain
@@ -232,8 +234,10 @@ verificable al final de cada una.
 - [ ] Adaptar el manejo de errores de Borland (`ExitProc`, `ExitCode`, `ErrorAddr`, procedimientos `far`) al equivalente de FPC.
 
 ### Fase 6 — Primer binario nativo
-- [ ] Iterar hasta lograr compilación limpia y un ejecutable que arranque.
-- [ ] Probar con datos reales de una partida (RST/TRN).
+- [x] **Iterar hasta lograr compilación limpia y un ejecutable que arranque.** ✅ **HITO: todas las units compilan y enlazan en un binario ELF de 64 bits.** Arranca bajo X11 (probado con Xvfb): inicializa `cthreads`, abre el display, imprime el banner y la ayuda de uso, y sale limpiamente al no recibir raza/directorio. `34064` líneas compiladas, 25 warnings.
+- [ ] Probar con datos reales de una partida (RST/TRN) — requiere un directorio de juego con `GENx.DAT`, `SHIPx.DAT`, etc.
+- [ ] Conectar `PollMouse` al bucle de entrada principal (el ratón pasó de callbacks de interrupción a polling).
+- [ ] Revisar warnings: constantes fuera de rango de byte (`VPA4:1626`, `CONFIG:517/703`) y truncado de puntero de 64 bits en el display de dirección de error (`VPA.PAS:43/45`, `long(ErrorAddr)`).
 
 ### Fase 7 — Pruebas, empaquetado y (opcional) distribución
 - [ ] Comparar comportamiento contra la versión DOS en DOSBox.

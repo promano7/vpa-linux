@@ -1,4 +1,5 @@
 Unit	ScrSaver;	{* VPA Screen Saver *}
+{$V-}
 
 Interface
 
@@ -6,7 +7,7 @@ procedure ScreenSaver;
 
 Implementation
 
-uses	AuxF,Graph,Keyboard,Mouse,Screen,VPAData,TCombat;
+uses	AuxF,ptcgraph,Keyboard,Mouse,Screen,VPAData,TCombat;
 
 const	ShipPic	: set of byte =
 		[ 5..7,9..20,29..33,45..47,49,50,54..69,72..74,76..80,
@@ -220,9 +221,7 @@ procedure ScreenSaver;
 {	if dx<=0 then begin}
 {	end;}
 	Delay(18);
-	asm
-	  int	28h
-	end;
+		{ (int 28h = ceder CPU en DOS; no aplica en Linux) }
 	inc(x,dx); inc(y,dy);
 	WaitRetrace;
         if not useSVGA then PutImage(x,y,img[lr]^,NormalPut)
