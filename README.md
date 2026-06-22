@@ -216,9 +216,11 @@ verificable al final de cada una.
 - [ ] **Hito:** arrancar en modo gráfico y dibujar el mapa estelar.
 
 ### Fase 3 — Entrada: ratón y teclado
-- [ ] Reescribir `UNIT/MOUSE.PAS` sobre `ptcmouse` (sondeo de eventos) en lugar de INT 33h + handler en asm.
-- [ ] Reescribir `UNIT/KEYBOARD.PAS` sobre `ptccrt` (`ReadKey`, etc.).
-- [ ] **Mapear los scancodes BIOS** que usa el bucle principal (`$3B00`=F1, `$3C00`=F2…) a los que devuelve `ptccrt`.
+- [x] Reescrito `UNIT/MOUSE.PAS` sobre `ptcmouse` (sondeo de eventos con `PollMouse`) en lugar de INT 33h + handler en asm. Detecta flancos (move, press/release de cada botón) comparando estado previo/actual y despacha a `HandlerTable`.
+- [x] Reescrito `UNIT/KEYBOARD.PAS` sobre `ptccrt` (`ReadKey`, `KeyPressed`, `PreviewKey`).
+- [x] **Mapeados los scancodes BIOS** ($3B00=F1, etc.): `ReadKey` devuelve el ascii en el byte bajo o el scancode en el byte alto para teclas extendidas.
+- [x] **`PollMouse` conectado al bucle de entrada:** se llama desde `KeyPressed` (no desde `FastKeyPressed`, reservado a bucles de animación). Cadena verificada: bucle principal → `KeyPressed` → `PollMouse` → `Dispatch(EvLtPress…)` → `MouseHandler` fija `mEvent` → el bloque `while mEvent<>0` ejecuta la acción. Compila, enlaza y arranca.
+- [ ] **Pendiente de prueba interactiva** (requiere partida real): navegar mapa y menús con ratón. Falta también exponer Shift/Ctrl/Alt: `KbdFlags` devuelve 0 por ahora (`ptccrt` no los expone).
 - [ ] **Hito:** navegar por el mapa y los menús con ratón y teclado.
 
 ### Fase 4 — Limpieza de bajo nivel (UNIT + núcleo)
@@ -237,7 +239,7 @@ verificable al final de cada una.
 ### Fase 6 — Primer binario nativo
 - [x] **Iterar hasta lograr compilación limpia y un ejecutable que arranque.** ✅ **HITO: todas las units compilan y enlazan en un binario ELF de 64 bits.** Arranca bajo X11 (probado con Xvfb): inicializa `cthreads`, abre el display, imprime el banner y la ayuda de uso, y sale limpiamente al no recibir raza/directorio. `34064` líneas compiladas, 25 warnings.
 - [x] **Warnings de rango y de puntero corregidos:** las constantes fuera de rango de byte se debían al camino VPACC-off nunca compilado en el original — `VPA4` (`chr($5300)` de la tecla DEL, que se trunca a `chr(0)` como en DOS) → explicitado a `chr(0)`; `CONFIG` (`byte(key)-byte(kFF1)+1` con un enum que cruza 256) → `ord(...)`. El truncado de puntero de 64 bits en el display de error (`VPA.PAS`, `long(ErrorAddr)`) → `PtrUInt`. Quedan solo warnings benignos de FPC (switches `$E/$L/$N` ignorados, comparaciones siempre true/false, alguna variable sin inicializar) sin impacto.
-- [ ] Conectar `PollMouse` al bucle de entrada principal (el ratón pasó de callbacks de interrupción a polling).
+- [x] **`PollMouse` conectado al bucle de entrada principal** (vía `KeyPressed`; ver Fase 3).
 - [ ] Probar con datos reales de una partida (RST/TRN) — requiere un directorio de juego con `GENx.DAT`, `SHIPx.DAT`, etc.
 
 ### Fase 7 — Pruebas, empaquetado y (opcional) distribución

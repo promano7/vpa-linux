@@ -16,7 +16,7 @@ function KbdFlags : byte;
 
 Implementation
 
-uses ptccrt;
+uses ptccrt, Mouse;
 
 var
   bufKey  : word;      { buffer de retroceso de 1 tecla (para PreviewKey/peek) }
@@ -38,7 +38,12 @@ function FastKeyPressed : boolean;
   begin FastKeyPressed := bufFull or ptccrt.KeyPressed; end;
 
 function KeyPressed : boolean;
-  begin KeyPressed := bufFull or ptccrt.KeyPressed; end;
+  { Linux: sondea el raton aqui para generar eventos (mEvent) en cada espera de
+    entrada. FastKeyPressed NO lo hace (bucles de animacion que solo abortan con tecla). }
+  begin
+    Mouse.PollMouse;
+    KeyPressed := bufFull or ptccrt.KeyPressed;
+  end;
 
 function ReadKey : word;
   begin
