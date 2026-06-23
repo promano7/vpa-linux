@@ -174,6 +174,7 @@ procedure PollMouse;
   begin
     if MouseDisabled or (not MouseHandlerInstalled) then Exit;
     GetMouseState(lx, ly, lb);
+    {$IFDEF UNIX}xfocus.MapMouseToSurface(lx, ly);{$ENDIF}   { pantalla completa: escalar a 640x480 }
     mx := lx; my := ly; btns := word(lb) and $07;
     if rangeSet then
     begin

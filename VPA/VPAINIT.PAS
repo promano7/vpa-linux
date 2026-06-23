@@ -1725,6 +1725,7 @@ function StartVPA : boolean;
       { (apagaba CapsLock via BIOS; no aplica en Linux) }
       OpenGraph;
       {$IFDEF UNIX}GrabInputFocus;{$ENDIF}   { reclamar foco de teclado para la ventana ptcgraph }
+      {$IFDEF UNIX}if FullscreenRequested then RequestFullscreen;{$ENDIF}
       InitMouse;
       if NewTurn then CheckOutMap;
     end;

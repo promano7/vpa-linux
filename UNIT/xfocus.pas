@@ -10,6 +10,8 @@ unit xfocus;
 interface
 
 function  FullscreenRequested: boolean;
+procedure RequestFullscreen;
+procedure MapMouseToSurface(var x, y: longint);
 procedure GrabInputFocus;
 procedure ReleaseInputFocus;
 procedure DbgKey(w: word);
@@ -26,10 +28,72 @@ var
   gWin: TWindow  = 0;
   gCur: TCursor  = 0;
   gXDebug: boolean = False;
+  gFullscreen: boolean = False;  { pantalla completa activa (escalar raton) }
+  gWinW: cint = 0;               { tamano de la ventana (cache para escalar el raton) }
+  gWinH: cint = 0;
+  gSizeCnt: integer = 0;         { throttle de la consulta de tamano }
 
 function FullscreenRequested: boolean;
 begin
-  FullscreenRequested := GetEnvironmentVariable('VPA_FULLSCREEN') <> '';
+  FullscreenRequested := (GetEnvironmentVariable('VPA_FULLSCREEN') <> '') or
+                         (LowerCase(GetEnvironmentVariable('VPA_VIDEO')) = 'fullscreen');
+end;
+
+{ Pide al gestor de ventanas que ponga la ventana a pantalla completa
+  (_NET_WM_STATE_FULLSCREEN). NO cambia el modo de video: el monitor sigue a su
+  resolucion nativa y el gestor agranda la ventana; ptc escala su superficie. }
+procedure RequestFullscreen;
+var
+  ev: TXEvent;
+  netState, netFS: TAtom;
+begin
+  if (gDpy = nil) or (gWin = 0) then exit;
+  netState := XInternAtom(gDpy, '_NET_WM_STATE', 0);
+  netFS    := XInternAtom(gDpy, '_NET_WM_STATE_FULLSCREEN', 0);
+  if (netState = 0) or (netFS = 0) then exit;
+  FillChar(ev, sizeof(ev), 0);
+  ev.xclient._type := ClientMessage;
+  ev.xclient.window := gWin;
+  ev.xclient.message_type := netState;
+  ev.xclient.format := 32;
+  ev.xclient.data.l[0] := 1;       { _NET_WM_STATE_ADD }
+  ev.xclient.data.l[1] := clong(netFS);
+  ev.xclient.data.l[2] := 0;
+  ev.xclient.data.l[3] := 1;       { fuente: aplicacion }
+  XSendEvent(gDpy, XDefaultRootWindow(gDpy), 0,
+             SubstructureRedirectMask or SubstructureNotifyMask, @ev);
+  XFlush(gDpy);
+  gFullscreen := True;
+  if gXDebug then Writeln(StdErr, 'xfocus: solicitada pantalla completa (_NET_WM_STATE_FULLSCREEN)');
+end;
+
+procedure UpdateWindowSize;
+var attr: TXWindowAttributes;
+begin
+  if (gDpy = nil) or (gWin = 0) then exit;
+  if XGetWindowAttributes(gDpy, gWin, @attr) <> 0 then
+  begin
+    gWinW := attr.width;
+    gWinH := attr.height;
+  end;
+end;
+
+{ Escala coordenadas de raton de pixeles de ventana a la superficie 640x480.
+  Solo actua en pantalla completa; en modo ventana (640x480) no hace nada. }
+procedure MapMouseToSurface(var x, y: longint);
+begin
+  if not gFullscreen then exit;
+  if (gDpy = nil) or (gWin = 0) then exit;
+  { refrescar el tamano de ventana de vez en cuando (el gestor la agranda async) }
+  if (gSizeCnt = 0) or (gWinW <= 0) then UpdateWindowSize;
+  gSizeCnt := (gSizeCnt + 1) and 63;
+  if (gWinW > 0) and (gWinH > 0) then
+  begin
+    x := (x * 640) div gWinW;
+    y := (y * 480) div gWinH;
+    if x < 0 then x := 0 else if x > 639 then x := 639;
+    if y < 0 then y := 0 else if y > 479 then y := 479;
+  end;
 end;
 
 procedure DbgKey(w: word);
