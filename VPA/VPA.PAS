@@ -6,6 +6,7 @@ Program	VPA;		(* VGA Planets Assistant *)
 uses
 {$IFDEF UNIX}
 	cthreads,	{ Linux: ptcgraph usa hilos para el bucle de eventos X11; cthreads debe ir primero }
+	{$IFDEF UNIX}xfocus,{$ENDIF}
 {$ENDIF}
 	AuxF,Screen,VPA2,VPAInit,VPAExit,Building,Messages,Report,VCS,
 {$IFDEF TASKS}
@@ -68,6 +69,7 @@ Begin
     repeat
       WriteFreeMem;
       Main;
+      {$IFDEF UNIX}xfocus.DbgDispatch(ch);{$ENDIF}
       case ch of
 {enter} 13	: ScreenSaver;
 {b}	ord('b'),

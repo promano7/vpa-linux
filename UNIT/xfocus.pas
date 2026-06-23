@@ -14,6 +14,7 @@ procedure GrabInputFocus;
 procedure ReleaseInputFocus;
 procedure DbgKey(w: word);
 procedure DbgMouseBtn(x, y: longint; btn: word);
+procedure DbgDispatch(w: word);
 
 implementation
 uses x, xlib, xatom, ctypes, unixtype, baseunix, sysutils;
@@ -37,6 +38,11 @@ end;
 procedure DbgMouseBtn(x, y: longint; btn: word);
 begin
   if gXDebug then Writeln(StdErr, 'VPA recibe raton botones=', btn, ' en (', x, ',', y, ')');
+end;
+
+procedure DbgDispatch(w: word);
+begin
+  if gXDebug then Writeln(StdErr, '>>> VPA DESPACHA ch=$', HexStr(w, 4), ' (Main salio del bucle)');
 end;
 
 function TitleMatches(const nm, want, base: string): boolean;
