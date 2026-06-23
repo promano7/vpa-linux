@@ -165,9 +165,10 @@ begin
   end;
   if gWin <> 0 then
   begin
-    Writeln(StdErr, 'xfocus: ventana encontrada -> ocultando cursor + pidiendo foco');
-    MakeBlankCursor;
-    if gCur <> 0 then XDefineCursor(gDpy, gWin, gCur);   { persiste: conexion abierta }
+    Writeln(StdErr, 'xfocus: ventana encontrada -> pidiendo foco de teclado');
+    { No ocultamos el cursor del sistema: XDefinecursor hacia que el puntero
+      desapareciera tambien fuera de la ventana. Mientras VPA no dibuje su propia
+      diana, dejamos visible el puntero de Linux como puntero. }
     XRaiseWindow(gDpy, gWin);
     XSetInputFocus(gDpy, gWin, RevertToParent, CurrentTime);
     netActive := XInternAtom(gDpy, '_NET_ACTIVE_WINDOW', 1);

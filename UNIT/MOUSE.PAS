@@ -102,7 +102,7 @@ procedure EnableMouse;
     if MouseHandlerInstalled then Exit;
     MousePresent := InitMouse;
     if not MousePresent then Exit;
-    ptcmouse.HideMouse;   { ocultar el cursor del sistema: VPA dibuja su propia diana }
+    ptcmouse.ShowMouse;   { mostrar el puntero del sistema (la diana propia aun no va) }
     MouseHandlerInstalled := True;
     MouseDisabled := False;
     MouseX := 160; MouseY := 100; MouseButtons := 0;
