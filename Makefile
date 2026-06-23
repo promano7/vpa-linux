@@ -8,7 +8,7 @@ CFG   = vpa.cfg
 MAIN  = VPA/VPA.PAS
 BIN   = build/VPA
 
-.PHONY: all build clean run help
+.PHONY: all build clean run help hlp
 
 all: build
 
@@ -35,6 +35,18 @@ run: build
 clean:
 	rm -f build/*.ppu build/*.o build/*.rsj build/*.a $(BIN)
 	@echo ">> Limpiado."
+
+## hlp  : genera el fichero de ayuda VPA.HLP desde VHLP/VPA.HHH
+##        (VHLPMAKE enlaza el unit grafico, por eso necesita un display:
+##         se usa xvfb-run para un display virtual). Copialo a tu carpeta
+##         de partida (donde ejecutas VPA), igual que los ficheros .DAT.
+hlp:
+	@mkdir -p build
+	$(FPC) @$(CFG) -obuild/vhlpmake VHLP/VHLPMAKE.PAS
+	@cp VHLP/VPA.HHH build/VPA.HHH
+	@cd build && (xvfb-run -a ./vhlpmake VPA.HHH || ./vhlpmake VPA.HHH) && mv -f VPA.hlp VPA.HLP && rm -f VPA.HHH vhlpmake
+	@echo ""
+	@echo ">> Generado build/VPA.HLP — copialo a tu carpeta de partida:  cp build/VPA.HLP ~/PLANETS/"
 
 ## help : lista los objetivos
 help:

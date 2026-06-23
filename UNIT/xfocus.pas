@@ -37,7 +37,9 @@ end;
 
 procedure DbgMouseBtn(x, y: longint; btn: word);
 begin
-  if gXDebug then Writeln(StdErr, 'VPA recibe raton botones=', btn, ' en (', x, ',', y, ')');
+  if not gXDebug then exit;
+  if btn = $FFFF then Writeln(StdErr, 'VPA: raton MOVIDO a (', x, ',', y, ')')
+  else Writeln(StdErr, 'VPA recibe raton botones=', btn, ' en (', x, ',', y, ')');
 end;
 
 procedure DbgDispatch(w: word);

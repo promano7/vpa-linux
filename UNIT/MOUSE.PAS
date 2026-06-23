@@ -70,6 +70,7 @@ var
   HandlerTable : array[0..6] of TMouseProc;
   prevX, prevY : integer;
   prevButtons  : word;
+  dbgMoveCnt   : longint;
   rangeSet     : boolean;
   rX1, rY1, rX2, rY2 : integer;   { rango permitido del cursor (clamp por software) }
 
@@ -100,7 +101,7 @@ procedure EnableMouse;
     if MouseHandlerInstalled then Exit;
     MousePresent := InitMouse;
     if not MousePresent then Exit;
-    ptcmouse.ShowMouse;
+    ptcmouse.HideMouse;   { ocultar el cursor del sistema: VPA dibuja su propia diana }
     MouseHandlerInstalled := True;
     MouseDisabled := False;
     MouseX := 160; MouseY := 100; MouseButtons := 0;
@@ -181,7 +182,11 @@ procedure PollMouse;
     end;
     MouseX := mx; MouseY := my; MouseButtons := btns;
     {$IFDEF UNIX}if btns <> prevButtons then xfocus.DbgMouseBtn(mx, my, btns);{$ENDIF}
-    if (mx <> prevX) or (my <> prevY) then Dispatch(EvMouseMove);
+    if (mx <> prevX) or (my <> prevY) then
+    begin
+      {$IFDEF UNIX}inc(dbgMoveCnt); if (dbgMoveCnt and 31)=0 then xfocus.DbgMouseBtn(mx, my, $FFFF);{$ENDIF}
+      Dispatch(EvMouseMove);
+    end;
     if ((btns and LeftButton)<>0)   and ((prevButtons and LeftButton)=0)   then Dispatch(EvLtPress);
     if ((btns and LeftButton)=0)    and ((prevButtons and LeftButton)<>0)  then Dispatch(EvLtRelease);
     if ((btns and RightButton)<>0)  and ((prevButtons and RightButton)=0)  then Dispatch(EvRtPress);
