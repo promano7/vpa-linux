@@ -4107,6 +4107,7 @@ begin
       if (mEv0<>EvMouseMove) and (mEvent=0) then MouseOn;
       mEv0:=0;
       LastActivityTime:=Timer;
+      {$IFDEF UNIX}if mEvent<>0 then CpuNap;{$ENDIF}   { scroll continuo: no clavar CPU }
     end;
     if (ScreenSaverTime>0) and (Timer>LastActivityTime+ScreenSaverTime) then
       begin ch:=13; Exit end;
@@ -4114,6 +4115,9 @@ begin
       ShowClock;
       LastClockTime:=Timer;
     end;
+    { port Linux: ceder CPU cuando no hay nada pendiente, para no girar el bucle
+      al 100% (en DOS no habia SO; aqui disparaba el ventilador) }
+    if (ForceKey=0) and (mEvent=0) then CpuNap;
   until False;
 end;
 

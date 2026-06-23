@@ -13,14 +13,27 @@ function KeyPressed : boolean;
 function ReadKey : word;
 function PreviewKey : word; 	{ use only if KeyPressed }
 function KbdFlags : byte;
+procedure CpuNap;   { cede CPU brevemente (port Linux: evita el busy-loop) }
 
 Implementation
 
-uses ptccrt, Mouse{$IFDEF UNIX}, xfocus{$ENDIF};
+uses ptccrt, Mouse{$IFDEF UNIX}, xfocus, baseunix, unixtype{$ENDIF};
 
 var
   bufKey  : word;      { buffer de retroceso de 1 tecla (para PreviewKey/peek) }
   bufFull : boolean;
+
+procedure CpuNap;
+{$IFDEF UNIX}
+  var ts : TTimeSpec;
+{$ENDIF}
+  begin
+    {$IFDEF UNIX}
+    ts.tv_sec  := 0;
+    ts.tv_nsec := 5 * 1000000;   { 5 ms: ~200 Hz, suficiente para raton/teclado }
+    fpnanosleep(@ts, nil);
+    {$ENDIF}
+  end;
 
 { lee una tecla cruda y la convierte al 'word' de VPA:
   ascii normal -> byte bajo; tecla extendida (#0 + scancode) -> scancode en byte alto }
