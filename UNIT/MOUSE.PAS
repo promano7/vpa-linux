@@ -71,6 +71,7 @@ var
   prevX, prevY : integer;
   prevButtons  : word;
   dbgMoveCnt   : longint;
+  dbgPollCnt   : longint;
   rangeSet     : boolean;
   rX1, rY1, rX2, rY2 : integer;   { rango permitido del cursor (clamp por software) }
 
@@ -171,6 +172,14 @@ procedure RestoreMouseStatus;
 procedure PollMouse;
   var lx, ly, lb: longint; mx, my: integer; btns: word;
   begin
+    {$IFDEF UNIX}
+    inc(dbgPollCnt);
+    if (dbgPollCnt and 511) = 0 then
+    begin
+      GetMouseState(lx, ly, lb);
+      xfocus.DbgPoll(MouseHandlerInstalled, MouseDisabled, lx, ly, lb);
+    end;
+    {$ENDIF}
     if MouseDisabled or (not MouseHandlerInstalled) then Exit;
     GetMouseState(lx, ly, lb);
     mx := lx; my := ly; btns := word(lb) and $07;

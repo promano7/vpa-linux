@@ -15,6 +15,7 @@ procedure ReleaseInputFocus;
 procedure DbgKey(w: word);
 procedure DbgMouseBtn(x, y: longint; btn: word);
 procedure DbgDispatch(w: word);
+procedure DbgPoll(installed, disabled: boolean; x, y, b: longint);
 
 implementation
 uses x, xlib, xatom, ctypes, unixtype, baseunix, sysutils;
@@ -45,6 +46,13 @@ end;
 procedure DbgDispatch(w: word);
 begin
   if gXDebug then Writeln(StdErr, '>>> VPA DESPACHA ch=$', HexStr(w, 4), ' (Main salio del bucle)');
+end;
+
+procedure DbgPoll(installed, disabled: boolean; x, y, b: longint);
+begin
+  if gXDebug then
+    Writeln(StdErr, 'PollMouse: habilitado=', installed, ' deshab=', disabled,
+            '  ptc_raton=(', x, ',', y, ') botones=', b);
 end;
 
 function TitleMatches(const nm, want, base: string): boolean;
