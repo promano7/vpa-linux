@@ -57,6 +57,7 @@ const
         LargePlanets    : boolean = On;
         PlanetNames     : boolean = On;
         UseSmallFont    : boolean = On;
+        LittFont        : smallint = SmallFont;  { fuente vectorial LITT_VPA.CHR; SmallFont si no carga }
         ScreenSaverTime : longint = 5*60*18;
         BadVideoOrMouse : boolean = No;
         AutoUseGravity  : boolean = No;

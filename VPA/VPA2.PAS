@@ -771,7 +771,7 @@ procedure DrawMap (clr:boolean);
 
       if ((showP) or (showN))  and (ratioN>=PNRatio) then
       begin
-        if UseSmallFont then SetTextStyle(SmallFont,HorizDir,4);
+        if UseSmallFont then SetTextStyle(LittFont,HorizDir,4);
         SetTextJustify(CenterText,BottomText);
         SetColor(LightGray);
         for i:=1 to 500 do if (planet[i]<>NIL) then 
@@ -810,7 +810,7 @@ procedure DrawMap (clr:boolean);
       if showA then
       begin
         mc := '*';
-        if UseSmallFont then SetTextStyle(SmallFont,HorizDir,4);
+        if UseSmallFont then SetTextStyle(LittFont,HorizDir,4);
         for i:=1 to nmark do
           with mark^[i] do
           if (mtype<>mrkNone) and (Abs2Scr(x,y,xx,yy) or
@@ -900,7 +900,7 @@ procedure DrawMap (clr:boolean);
       end;
       
       if showV and Addon.Teleport then begin         {View Teleport}
-        if UseSmallFont then SetTextStyle(SmallFont,HorizDir,4);
+        if UseSmallFont then SetTextStyle(LittFont,HorizDir,4);
         for i := 1 to 500 do begin
           l0 := GetTeleportDataTX(i,c,l1);
           if (l0=0) then begin                            {No TX, check RX}

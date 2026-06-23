@@ -241,7 +241,7 @@ procedure DrawShip;
       end;
     end;
     {$ENDIF}
-    if ls>24 then SetTextStyle(SmallFont,HorizDir,4);
+    if ls>24 then SetTextStyle(LittFont,HorizDir,4);
     SetColor(LightBlue);
     OutTextXY(ShX,ShY+9*10,s);
     SetTextStyle(DefaultFont,HorizDir,1);

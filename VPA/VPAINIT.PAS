@@ -1265,6 +1265,11 @@ procedure OpenGraph;
     InitGraph(gd, gm, '');
     GrErr(-1);
     GrMode:=Yes;
+    { Cargar la fuente vectorial de las etiquetas del mapa (en DOS venia como
+      litt_vpa.obj enlazado como SmallFont; aqui se carga el .CHR equivalente).
+      Si falla la carga, queda SmallFont (comportamiento anterior). }
+    LittFont := InstallUserFont('LITT_VPA.CHR');
+    if LittFont <= 0 then LittFont := SmallFont;
    {$IFDEF VPAMM}
     { VPA/MM behaves as SVGA most of the time: we need to do manual
       text output, and mouse cursor }

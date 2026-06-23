@@ -3124,7 +3124,7 @@ begin
 {      SetColor(IIF(showM,RaceColor[owner,_M_],Black));}
       SetColor(DarkGray);
       SetTextJustify(Centertext,TopText);
-      if UseSmallFont then SetTextStyle(SmallFont,HorizDir,4);
+      if UseSmallFont then SetTextStyle(LittFont,HorizDir,4);
       if (m^.units>0) then
         begin
         DrawWCircle(xx,yy,trunc(Sqrt(MaxL(m^.units,0))*ratio2/ratio1));
