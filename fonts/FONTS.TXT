@@ -1,0 +1,21 @@
+Fonts for VPA
+==============
+
+  To use one of these, copy it into your VPA directory, and put
+  'Font=filename' into the [System] section of vpa.ini.
+
+cp437.fnt
+cp850.fnt
+cp852.fnt
+cp860.fnt
+cp863.fnt
+cp865.fnt
+  Simple no-frills fonts for certain DOS codepages
+latin1.fnt
+  Simple no-frills font in Latin-1 encoding (Windows/Unix)
+rusfont.fnt
+  The standard cyrillic font built into VPA, codepage 866
+sanserif.fnt
+  Nice sans-serif font, codepage 437
+thin.fnt
+  A rather thin font, codepage 437

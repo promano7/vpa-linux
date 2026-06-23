@@ -9,10 +9,13 @@ sustitución de la BGI de Borland.
 - **Autor original:** Alex V. Ivlev (1993–96); mantenido posteriormente por otros.
 - **Objetivo:** ejecutable Linux nativo, sin DOSBox ni dosemu.
 
-> Estado del proyecto: **¡Primer binario nativo funcionando!** 🎉 Todo el código fuente
-> compila y enlaza en un ejecutable ELF de 64 bits que arranca bajo X11. Quedan pruebas
-> con datos reales de partida y la limpieza de runtime (Fases 4–7). Este documento se
-> actualiza a medida que avanzamos. Ver [Seguimiento](#seguimiento-del-progreso) al final.
+> Estado del proyecto: **¡Jugable!** 🎉 El binario nativo carga una partida real, dibuja el
+> mapa estelar y responde por completo al **teclado** (F1 ayuda, F3 mensajes, F5 simulador
+> de combate, navegación…) y al **ratón** (mover, seleccionar, scroll al borde). La ayuda
+> (`VPA.HLP`) se renderiza, el consumo de CPU en reposo es ~0 y el puntero se comporta con
+> normalidad. Quedan detalles de afinado (ver [Limitaciones conocidas](#limitaciones-conocidas)):
+> diana propia del ratón, nombres de planeta con fuente vectorial, y modo pantalla completa.
+> Este documento se actualiza a medida que avanzamos.
 
 > **Entorno verificado** (FPC 3.2.2 / Ubuntu 24.04): las units `ptcgraph`, `ptccrt`,
 > `ptcmouse` y el backend `ptc` están disponibles (paquete `fp-units-gfx`), el toolchain
@@ -403,3 +406,48 @@ categoría (esto es la hoja de ruta de las Fases 2–4):
 | 7 — Pruebas y empaquetado | ⬜ Pendiente | |
 
 Leyenda: ⬜ Pendiente · 🟡 En curso · ✅ Completada
+
+> **Nota:** la tabla de fases anterior es el histórico del *port* inicial. El estado
+> real **a día de hoy** es el de las dos secciones siguientes.
+
+### Estado actual (runtime)
+
+El binario nativo **funciona y es jugable**. Resueltos, en orden, los problemas que
+hacían parecer que el programa estaba "congelado":
+
+1. **Foco de teclado** — bajo gestores de ventanas tipo Cinnamon, `ptc` no pedía el foco
+   de teclado al abrir. Unit nueva **`xfocus`**: busca la ventana por título y hace
+   `XSetInputFocus` + `_NET_ACTIVE_WINDOW`. Teclado 100% operativo.
+2. **Fichero de ayuda** — el `VPA.HLP` original era binario de DOS (empaquetado de
+   registros de Borland ≠ FPC). Se regenera desde `VHLP/VPA.HHH` con **`make hlp`** (usa
+   `xvfb-run` porque el compilador de ayuda enlaza la capa gráfica). Hay que copiar el
+   `VPA.HLP` resultante a la carpeta de partida.
+3. **Ratón no habilitado** — `MousePresent` quedaba en `False` (la detección INT33 de DOS
+   se quitó). Por defecto a `True` en Linux (`/K` lo sigue desactivando).
+4. **Scroll desbocado** — el bucle de scroll dependía de la interrupción de ratón de DOS.
+   Ahora sondea el ratón en cada vuelta y no hace scroll si el puntero sale de la ventana
+   (`xfocus.PointerInsideWindow` vía `XQueryPointer`).
+5. **CPU al 100% / ventilador** — el bucle principal hacía *busy-wait* (sin SO al que ceder
+   en DOS). Añadido `Keyboard.CpuNap` (sleep de ~5 ms) en el bucle inactivo y en el scroll
+   continuo. Consumo en reposo ~0%.
+6. **Cursor del sistema** — se dejó visible y con comportamiento normal dentro/fuera de la
+   ventana (el ocultado anterior lo hacía desaparecer fuera).
+
+### Limitaciones conocidas
+
+| Tema | Estado | Detalle |
+|---|---|---|
+| Diana propia del ratón | 📝 Pendiente | VPA dibuja su propia cruz blanca (`MouseMotionHandler`, `if mdraw`); de momento sirve el puntero de Linux. |
+| Nombres de planeta gigantes | 📝 Pendiente | Usan `OutTextXY` + `SetTextStyle(SmallFont,…,4)`; `SmallFont` es vectorial BGI (`.CHR`) y no está en `ptcgraph` → cae a la fuente por defecto escalada ×4. Solo aparecen al acercar el zoom (umbral `PNRatio`, por diseño). |
+| Pantalla completa / ventana grande | 📝 Pendiente | `ptcgraph` ata el tamaño del *surface* (640×480) al de la ventana y no reescala las coordenadas del ratón. Plan: pantalla completa por gestor de ventanas (`_NET_WM_STATE_FULLSCREEN`, sin cambio de modo de vídeo) + escalar el ratón, **opcional por variable de entorno**. El cambio de modo de vídeo está descartado (dejaba pantalla negra). |
+| Cerrar con la "X" | 📝 Pendiente | `ptccrt` traduce el cierre de ventana a `Ctrl-C` (#3), que VPA ignora. Salir con **Alt-X**. |
+| Sprites de naves/combate | 📝 Pendiente | El decodificador de sprites VGA planares del visor de combate sigue *stubbed* (visuales en blanco). |
+| Modificadores Shift/Ctrl/Alt | 📝 Pendiente | `KbdFlags` devuelve 0 (afecta a algún zoom y atajos). |
+
+### Fuentes de mapa de bits (`.FNT`)
+
+VPA admite `Font=fichero.fnt` en la sección `[System]` de `vpa.ini` para cargar una fuente
+de mapa de bits **8×16** (256 caracteres × 16 bytes = 4096 bytes) en su buffer interno
+`StandardFont` (la que usa `WriteXY`). La distribución oficial incluye `LATIN1.FNT` (Latin-1,
+ideal para Linux), `SANSERIF.FNT`, `THIN.FNT` y varias *code pages* DOS. **Ojo:** esto **no**
+afecta a los nombres de planeta del mapa, que usan la fuente vectorial (`OutTextXY`).
