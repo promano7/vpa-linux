@@ -16,6 +16,7 @@ procedure DbgKey(w: word);
 procedure DbgMouseBtn(x, y: longint; btn: word);
 procedure DbgDispatch(w: word);
 procedure DbgPoll(installed, disabled: boolean; x, y, b: longint);
+function  PointerInsideWindow: boolean;
 
 implementation
 uses x, xlib, xatom, ctypes, unixtype, baseunix, sysutils;
@@ -53,6 +54,28 @@ begin
   if gXDebug then
     Writeln(StdErr, 'PollMouse: habilitado=', installed, ' deshab=', disabled,
             '  ptc_raton=(', x, ',', y, ') botones=', b);
+end;
+
+{ ¿esta el puntero del raton dentro de la ventana de VPA? Se usa para no hacer
+  auto-scroll cuando el puntero ha salido de la ventana (si no, MouseX se queda
+  congelado en el borde y el mapa se desplaza sin parar). }
+function PointerInsideWindow: boolean;
+var
+  root, child: TWindow;
+  rx, ry, wx, wy: cint;
+  mask: cuint;
+  attr: TXWindowAttributes;
+begin
+  PointerInsideWindow := True;        { si no podemos consultar, no bloquear }
+  if (gDpy = nil) or (gWin = 0) then Exit;
+  if not XQueryPointer(gDpy, gWin, @root, @child, @rx, @ry, @wx, @wy, @mask) then
+  begin
+    PointerInsideWindow := False;     { puntero en otra pantalla => fuera }
+    Exit;
+  end;
+  if XGetWindowAttributes(gDpy, gWin, @attr) = 0 then Exit;
+  PointerInsideWindow := (wx >= 0) and (wx < attr.width) and
+                         (wy >= 0) and (wy < attr.height);
 end;
 
 function TitleMatches(const nm, want, base: string): boolean;
