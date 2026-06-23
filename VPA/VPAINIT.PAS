@@ -1260,7 +1260,6 @@ procedure OpenGraph;
 
     { --- Init grafica con ptcgraph (Linux): no usa drivers .bgi; se elige el
           modo nativo directamente. 640x480, 256 colores. --- }
-    {$IFDEF UNIX}if FullscreenRequested then ptcgraph.FullscreenGraph := True;{$ENDIF}
     gd := D8bit;
     gm := m640x480;
     InitGraph(gd, gm, '');

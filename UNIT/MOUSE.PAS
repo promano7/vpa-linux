@@ -60,7 +60,7 @@ procedure PollMouse;   { Linux: el bucle principal debe llamar a esto }
 
 Implementation
 
-uses ptcmouse;
+uses ptcmouse{$IFDEF UNIX}, xfocus{$ENDIF};
 
 type TMouseProc = procedure;
 
@@ -180,6 +180,7 @@ procedure PollMouse;
       if (mx <> lx) or (my <> ly) then SetMousePos(mx, my);
     end;
     MouseX := mx; MouseY := my; MouseButtons := btns;
+    {$IFDEF UNIX}if btns <> prevButtons then xfocus.DbgMouseBtn(mx, my, btns);{$ENDIF}
     if (mx <> prevX) or (my <> prevY) then Dispatch(EvMouseMove);
     if ((btns and LeftButton)<>0)   and ((prevButtons and LeftButton)=0)   then Dispatch(EvLtPress);
     if ((btns and LeftButton)=0)    and ((prevButtons and LeftButton)<>0)  then Dispatch(EvLtRelease);

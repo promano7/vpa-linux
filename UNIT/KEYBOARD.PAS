@@ -16,7 +16,7 @@ function KbdFlags : byte;
 
 Implementation
 
-uses ptccrt, Mouse;
+uses ptccrt, Mouse{$IFDEF UNIX}, xfocus{$ENDIF};
 
 var
   bufKey  : word;      { buffer de retroceso de 1 tecla (para PreviewKey/peek) }
@@ -46,9 +46,12 @@ function KeyPressed : boolean;
   end;
 
 function ReadKey : word;
+  var r : word;
   begin
-    if bufFull then begin ReadKey := bufKey; bufFull := False; end
-    else ReadKey := RawReadKey;
+    if bufFull then begin r := bufKey; bufFull := False; end
+    else r := RawReadKey;
+    {$IFDEF UNIX}xfocus.DbgKey(r);{$ENDIF}
+    ReadKey := r;
   end;
 
 function PreviewKey : word;   { use only if KeyPressed }
