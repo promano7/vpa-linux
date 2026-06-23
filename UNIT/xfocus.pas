@@ -196,13 +196,18 @@ begin
         and (Copy(nm, Length(nm)-Length(base)+1, Length(base)) = base));
 end;
 
-function FindWin(dpy:PDisplay; root:TWindow; const want, base:string; diag:boolean): TWindow;
+function FindWin(dpy:PDisplay; root:TWindow; const want, base:string; strict:boolean): TWindow;
 var
   netcl, aType: TAtom; aFmt: cint; nItems, bAfter: culong; prop: PCUChar;
-  wlist: PCULong; i: integer; w, res: TWindow; nm: PChar;
+  wlist: PCULong; i: integer; w, exactW, lenientW: TWindow; nm: PChar;
   rootR, parentR: TWindow; children: PWindow; nch: cuint;
+  s: string;
 begin
-  res := 0;
+  exactW := 0; lenientW := 0;
+  { 1) lista de ventanas del gestor (EWMH): buscamos la coincidencia EXACTA con
+       la ruta completa (lo que ptcgraph pone como titulo de la ventana de VPA);
+       guardamos aparte una coincidencia laxa (titulo = nombre base) por si la
+       exacta no existiera. Asi no cogemos el terminal titulado "VPA". }
   netcl := XInternAtom(dpy, '_NET_CLIENT_LIST', 1);
   if netcl <> 0 then
   begin
@@ -216,28 +221,34 @@ begin
         w := wlist[i]; nm := nil;
         if (XFetchName(dpy, w, @nm) <> 0) and (nm <> nil) then
         begin
-          if (res = 0) and TitleMatches(string(nm), want, base) then res := w;
+          s := string(nm);
+          if (exactW = 0) and (s = want) then exactW := w
+          else if (lenientW = 0) and TitleMatches(s, want, base) then lenientW := w;
           XFree(nm);
         end;
       end;
       XFree(prop);
     end;
   end;
-  if res = 0 then
-    if XQueryTree(dpy, root, @rootR, @parentR, @children, @nch) <> 0 then
+  { 2) respaldo por XQueryTree si aun no hay exacta (gestores sin EWMH) }
+  if (exactW = 0) and (XQueryTree(dpy, root, @rootR, @parentR, @children, @nch) <> 0) then
+  begin
+    for i := nch-1 downto 0 do
     begin
-      for i := nch-1 downto 0 do
+      nm := nil;
+      if (XFetchName(dpy, children[i], @nm) <> 0) and (nm <> nil) then
       begin
-        nm := nil;
-        if (XFetchName(dpy, children[i], @nm) <> 0) and (nm <> nil) then
-        begin
-          if (res = 0) and TitleMatches(string(nm), want, base) then res := children[i];
-          XFree(nm);
-        end;
+        s := string(nm);
+        if (exactW = 0) and (s = want) then exactW := children[i]
+        else if (lenientW = 0) and TitleMatches(s, want, base) then lenientW := children[i];
+        XFree(nm);
       end;
-      if children <> nil then XFree(children);
     end;
-  FindWin := res;
+    if children <> nil then XFree(children);
+  end;
+  if exactW <> 0 then FindWin := exactW
+  else if strict then FindWin := 0      { en modo estricto, solo vale la exacta }
+  else FindWin := lenientW;             { ultimo recurso: coincidencia laxa }
 end;
 
 procedure MakeBlankCursor;
@@ -268,13 +279,15 @@ begin
   gWin := 0; tries := 0;
   while (gWin = 0) and (tries < 20) do
   begin
-    gWin := FindWin(gDpy, root, want, base, false);
+    gWin := FindWin(gDpy, root, want, base, true);   { estricto: solo la ventana de VPA (ruta completa) }
     if gWin = 0 then
     begin
       ts.tv_sec := 0; ts.tv_nsec := 50*1000000; fpnanosleep(@ts, nil);
       inc(tries);
     end;
   end;
+  if gWin = 0 then
+    gWin := FindWin(gDpy, root, want, base, false);  { ultimo recurso: coincidencia laxa por nombre base }
   if gWin <> 0 then
   begin
     Writeln(StdErr, 'xfocus: ventana encontrada -> pidiendo foco de teclado');
