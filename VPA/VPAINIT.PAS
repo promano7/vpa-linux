@@ -1725,7 +1725,9 @@ function StartVPA : boolean;
       { (apagaba CapsLock via BIOS; no aplica en Linux) }
       OpenGraph;
       {$IFDEF UNIX}GrabInputFocus;{$ENDIF}   { reclamar foco de teclado para la ventana ptcgraph }
-      {$IFDEF UNIX}if FullscreenRequested then RequestFullscreen;{$ENDIF}
+      { Pantalla completa por _NET_WM_STATE retirada: el gestor la aplicaba a la
+        ventana activa (no a la de VPA) y se quedaba colgada. Pendiente reescribir
+        por la via segura (ventana mas grande creada por nosotros, escalando ptc). }
       InitMouse;
       if NewTurn then CheckOutMap;
     end;
