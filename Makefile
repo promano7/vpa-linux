@@ -8,7 +8,7 @@ CFG   = vpa.cfg
 MAIN  = VPA/VPA.PAS
 BIN   = build/VPA
 
-.PHONY: all build clean run help hlp
+.PHONY: all build clean run help hlp data
 
 all: build
 
@@ -16,6 +16,7 @@ all: build
 build:
 	@mkdir -p build
 	$(FPC) @$(CFG) $(MAIN)
+	@cp -f VPA/LITT_VPA.CHR build/ 2>/dev/null || true
 	@echo ""
 	@echo ">> Listo: $(BIN)"
 
@@ -47,6 +48,15 @@ hlp:
 	@cd build && (xvfb-run -a ./vhlpmake VPA.HHH || ./vhlpmake VPA.HHH) && mv -f VPA.hlp VPA.HLP && rm -f VPA.HHH vhlpmake
 	@echo ""
 	@echo ">> Generado build/VPA.HLP — copialo a tu carpeta de partida:  cp build/VPA.HLP ~/PLANETS/"
+
+## data : reune en build/ los ficheros de datos de ejecucion (binario + VPA.HLP
+##        + LITT_VPA.CHR) listos para copiar a tu carpeta de partida.
+##        VPA.HLP se compila (regla 'hlp'); LITT_VPA.CHR es un dato estatico.
+data: build hlp
+	@cp -f VPA/LITT_VPA.CHR build/ 2>/dev/null || true
+	@echo ""
+	@echo ">> Datos de ejecucion en build/:  VPA  VPA.HLP  LITT_VPA.CHR"
+	@echo ">> Copialos a tu carpeta de partida, p.ej.:  cp build/VPA build/VPA.HLP build/LITT_VPA.CHR ~/PLANETS/"
 
 ## help : lista los objetivos
 help:
