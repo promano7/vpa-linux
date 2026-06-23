@@ -210,6 +210,7 @@ procedure GrabInputFocus;
 var
   root: TWindow; want, base: string; tries: integer;
   ev: TXEvent; netActive: TAtom; ts: TTimeSpec;
+  nm: PChar; attr: TXWindowAttributes;
 begin
   gXDebug := GetEnvironmentVariable('VPA_XDEBUG') <> '';
   if gDpy = nil then gDpy := XOpenDisplay(nil);
@@ -230,6 +231,17 @@ begin
   if gWin <> 0 then
   begin
     Writeln(StdErr, 'xfocus: ventana encontrada -> pidiendo foco de teclado');
+    if gXDebug then
+    begin
+      Writeln(StdErr, 'xfocus: gWin=0x', HexStr(gWin, 8));
+      if (XFetchName(gDpy, gWin, @nm) <> 0) and (nm <> nil) then
+        begin Writeln(StdErr, '  titulo  = "', string(nm), '"'); XFree(nm); end
+      else
+        Writeln(StdErr, '  titulo  = (sin nombre)');
+      if XGetWindowAttributes(gDpy, gWin, @attr) <> 0 then
+        Writeln(StdErr, '  tamano  = ', attr.width, 'x', attr.height);
+      Writeln(StdErr, '  esperado (ParamStr0) = "', want, '"  base = "', base, '"');
+    end;
     { No ocultamos el cursor del sistema: XDefinecursor hacia que el puntero
       desapareciera tambien fuera de la ventana. Mientras VPA no dibuje su propia
       diana, dejamos visible el puntero de Linux como puntero. }
