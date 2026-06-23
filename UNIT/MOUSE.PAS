@@ -19,7 +19,7 @@ const	EvMouseMove	= 1;
 
 type	PointerShape	= array [1..2,1..16] of word;
 
-const	MousePresent		: boolean = False;
+const	MousePresent		: boolean = True;   { Linux/ptc: siempre hay puntero; /K lo desactiva }
 	MouseHandlerInstalled	: boolean = False;
 	MouseDisabled		: boolean = True;
 
@@ -172,14 +172,6 @@ procedure RestoreMouseStatus;
 procedure PollMouse;
   var lx, ly, lb: longint; mx, my: integer; btns: word;
   begin
-    {$IFDEF UNIX}
-    inc(dbgPollCnt);
-    if (dbgPollCnt and 511) = 0 then
-    begin
-      GetMouseState(lx, ly, lb);
-      xfocus.DbgPoll(MouseHandlerInstalled, MouseDisabled, lx, ly, lb);
-    end;
-    {$ENDIF}
     if MouseDisabled or (not MouseHandlerInstalled) then Exit;
     GetMouseState(lx, ly, lb);
     mx := lx; my := ly; btns := word(lb) and $07;
