@@ -179,7 +179,8 @@ procedure PollMouse;
     begin
       if mx < rX1 then mx := rX1 else if mx > rX2 then mx := rX2;
       if my < rY1 then my := rY1 else if my > rY2 then my := rY2;
-      if (mx <> lx) or (my <> ly) then SetMousePos(mx, my);
+      { sin warp del puntero fisico: VPA dibuja su propia diana, y el warp
+        provocaba un bucle de realimentacion que fijaba el raton en el borde }
     end;
     MouseX := mx; MouseY := my; MouseButtons := btns;
     {$IFDEF UNIX}if btns <> prevButtons then xfocus.DbgMouseBtn(mx, my, btns);{$ENDIF}

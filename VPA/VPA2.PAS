@@ -4073,6 +4073,8 @@ begin
     end;
     while mEvent<>0 do
     begin
+      Mouse.PollMouse;   { port: sin interrupcion de raton; refrescar MouseX/Y aqui
+                           para poder salir del borde y no hacer scroll infinito }
       ch:=0;
       mEv0:=mEvent; mEvent:=0;
       if AutoScroll and
