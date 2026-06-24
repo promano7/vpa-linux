@@ -13,8 +13,11 @@ sustitución de la BGI de Borland.
 > mapa estelar y responde por completo al **teclado** (F1 ayuda, F3 mensajes, F5 simulador
 > de combate, navegación…) y al **ratón** (mover, seleccionar, scroll al borde). La ayuda
 > (`VPA.HLP`) se renderiza, el consumo de CPU en reposo es ~0 y el puntero se comporta con
-> normalidad. Quedan detalles de afinado (ver [Limitaciones conocidas](#limitaciones-conocidas)):
-> diana propia del ratón, nombres de planeta con fuente vectorial, y modo pantalla completa.
+> normalidad. El **simulador de combate** y las **StarBases** muestran los sprites de las naves,
+> la ventana es **escalable** y admite **pantalla completa** (`VPA_SCALE`), y la salida distingue
+> guardar (**Alt-X** / botón **[X]**) de salir sin guardar (**Ctrl-Alt-X**, con confirmación).
+> Quedan solo detalles de afinado puramente estéticos (ver [Limitaciones conocidas](#limitaciones-conocidas)):
+> la diana propia del ratón y los nombres de planeta con fuente vectorial.
 > Este documento se actualiza a medida que avanzamos.
 
 > **Entorno verificado** (FPC 3.2.2 / Ubuntu 24.04): las units `ptcgraph`, `ptccrt`,
@@ -436,7 +439,7 @@ categoría (esto es la hoja de ruta de las Fases 2–4):
 | 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Resuelto el caso `libXxf86dga` (AUR). Pendiente solo admin: `git init` + rama + licencia. |
 | 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya OFF. `vpa.cfg` generado. **Units portadas: `STRF`, `AUXF`** (compilan + validadas). `AUXF` ahora exporta `MaxAvail`/`MemAvail` (heap DOS→valor grande en Linux), centralizado para todo el núcleo. Receta de port en §6. |
 | 2 — Capa gráfica (`ptcgraph`) | 🟡 En curso | Swap aplicado; SVGA fuera; `vpa.cfg`. **`SCREEN`, `TCOMBAT`, `MESSAGES` y `VPAINIT` portados y compilan.** `VPAINIT`: registro de drivers BGI → `InitGraph(D8bit, m640x480, '')` directo; quitados `mem[Seg0040]`, asm muerto y reset de CapsLock. Geometría/atributos de texto: a afinar viendo el binario. Frente actual: asm de `MSGREAD.PAS`. |
-| — Features *stubeadas* (restaurar luego) | 📝 Anotado | (1) **Hull-functions** (`Enum*`) → stub vacío (ver §1). (2) **`KbdFlags`** (Shift/Ctrl) → 0. (3) **`TCOMBAT.LoadPic`**: el decodificador de sprites VGA planares (4 planos) + rotación + paleta del visor de combate se deja en *stub* (sprite en blanco); es asm autocontenido (~320 líneas), se porta como tarea aislada. `SetPal` queda no-op mientras tanto. |
+| — Features *stubeadas* (restaurar luego) | 📝 Anotado | (1) **Hull-functions** (`Enum*`) → stub vacío (ver §1). (2) **`KbdFlags`** (Shift/Ctrl) → 0. (3) **`TCOMBAT.LoadPic`**: el decodificador de sprites VGA planares (4 planos) + paleta + rotación del visor de combate **ya está portado** a Pascal (ver «Estado actual (runtime)»); `SetPal` implementado. |
 | — Capa compat VPACC/HULLFUNC | ✅ Desbloqueado | Añadida a `VPADATA` (rama `{$IFNDEF VPACC}`): vars de estado (`BL0`, `bOver`, `mt0/mt1`, `MineN`…), consts (`iBeam`…`iRace`), ~40 `SPC_*`, tipo `THullFuncQueryResult`, declaración de `IsHullFunc`. `IsHullFunc` (asm) portado a Pascal; `ShipOrHullDoes`/`IsShipFunc3` como **stubs** (False) hasta reimplementar `HULLFUNC` (PCC2). **`VPA4`, `VPA2`, `CONFIG` ya compilan.** |
 | — Warnings de rango a revisar | 📝 Anotado | Constantes fuera de rango de byte en el path VPACC-off (nunca compilado en el original): `VPA4:1626` (21248), `CONFIG:517/703` (265). Truncan y compilan; revisar en runtime por si afectan datos. |
 | 3 — Entrada (ratón/teclado) | 🟡 En curso | **`MOUSE`→`ptcmouse` y `KEYBOARD`→`ptccrt` portados y validados.** `KbdFlags` (Shift/Ctrl) queda como `0` (ptccrt no lo expone) — TODO. Pendiente: llamar a `PollMouse` desde el bucle de entrada. |
@@ -473,6 +476,21 @@ hacían parecer que el programa estaba "congelado":
    continuo. Consumo en reposo ~0%.
 6. **Cursor del sistema** — se dejó visible y con comportamiento normal dentro/fuera de la
    ventana (el ocultado anterior lo hacía desaparecer fuera).
+7. **Ventana escalable y pantalla completa** — `VPA_SCALE` agranda la ventana (la superficie
+   sigue siendo 640×480 y `ptc` la escala) y `VPA_SCALE=fullscreen` ocupa toda la pantalla por
+   encima del panel del escritorio, **sin** cambiar el modo de vídeo. El ratón se reescala en
+   ambos sentidos para mantener la precisión píxel a píxel (ver §1 y §4).
+8. **Sprites de naves/combate** — portado el decodificador de sprites VGA planares (4 planos) +
+   paleta + truncado + rotación + espejo, montando la imagen en formato `ptcgraph`. Muestran las
+   naves correctamente el **simulador de combate** (ambos bandos, con color y animación), las
+   **StarBases** (pantalla de construcción) y el salvapantallas. La paleta del juego se
+   salva/restaura alrededor del combate para no alterar los colores del mapa.
+9. **Salida con/sin guardar** — **Alt-X** y el botón **[X]** de la ventana salen **guardando**;
+   **Ctrl-Alt-X** sale **sin guardar** tras pedir confirmación (Y/N). La intención se fija de
+   forma determinista en la propia pulsación (no se lee el estado de modificadores al cerrar).
+10. **Ratón quieto al cargar** — al abrir, el cursor se centra y la posición interna de
+   `ptcmouse` se sincroniza con el *warp*, de modo que el mapa ya no hace auto-scroll solo hasta
+   que el usuario mueve el ratón.
 
 ### Limitaciones conocidas
 
@@ -480,10 +498,7 @@ hacían parecer que el programa estaba "congelado":
 |---|---|---|
 | Diana propia del ratón | 📝 Pendiente | VPA dibuja su propia cruz blanca (`MouseMotionHandler`, `if mdraw`); de momento sirve el puntero de Linux. |
 | Nombres de planeta gigantes | 📝 Pendiente | Usan `OutTextXY` + `SetTextStyle(SmallFont,…,4)`; `SmallFont` es vectorial BGI (`.CHR`) y no está en `ptcgraph` → cae a la fuente por defecto escalada ×4. Solo aparecen al acercar el zoom (umbral `PNRatio`, por diseño). |
-| Pantalla completa / ventana grande | 📝 Pendiente | `ptcgraph` ata el tamaño del *surface* (640×480) al de la ventana y no reescala las coordenadas del ratón. Plan: pantalla completa por gestor de ventanas (`_NET_WM_STATE_FULLSCREEN`, sin cambio de modo de vídeo) + escalar el ratón, **opcional por variable de entorno**. El cambio de modo de vídeo está descartado (dejaba pantalla negra). |
-| Cerrar con la "X" | 📝 Pendiente | `ptccrt` traduce el cierre de ventana a `Ctrl-C` (#3), que VPA ignora. Salir con **Alt-X**. |
-| Sprites de naves/combate | 📝 Pendiente | El decodificador de sprites VGA planares del visor de combate sigue *stubbed* (visuales en blanco). |
-| Modificadores Shift/Ctrl/Alt | 📝 Pendiente | `KbdFlags` devuelve 0 (afecta a algún zoom y atajos). |
+| Modificadores Shift/Ctrl/Alt | 📝 Pendiente | `KbdFlags` devuelve 0, así que Shift/Ctrl no se detectan en algún zoom y atajo del mapa. (La salida **Ctrl-Alt-X** sí funciona: se resuelve con un indicador propio fijado en la pulsación, no vía `KbdFlags`.) |
 
 ### Fuentes de mapa de bits (`.FNT`)
 
