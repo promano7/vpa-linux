@@ -90,11 +90,12 @@ en el código, lo limpio es:
 
 ### Fuentes de referencia externas (PCC2 / PDK)
 
-Para resolver el bloqueo de hull-functions (la API `EnumHullfuncs` que el núcleo
-necesita y que en VPA vive en `CC/HULLFUNC.PAS`, con dependencias ausentes del
-ecosistema PCC 1.x) se dispone del código de Stefan Reuther como **referencia**.
-Son C/C++, **no contienen units Pascal** drop-in, pero documentan la lógica y el
-formato de datos de hull-functions para una reimplementación autocontenida:
+Para la lógica de hull-functions se dispone del código de Stefan Reuther como
+**referencia**. (Ojo: el `CC/HULLFUNC.PAS` que acompaña al fuente es en realidad la
+unit de **PCC** —Streu, 2005-06—, con dependencias ausentes del ecosistema PCC 1.x;
+**VPA implementa su propia versión** —el modelo *antiguo*— en `VPADATA.PAS`.) Las
+fuentes de Reuther son C/C++, **no contienen units Pascal** drop-in, pero documentan
+la lógica y el formato de datos para referencia:
 
 | Fuente | Contenido útil | Licencia |
 |---|---|---|
@@ -114,9 +115,24 @@ Reuther). Recordatorio práctico: la lógica de "qué casco tiene qué habilidad
 en gran parte los datos del juego (`hullfunc.txt`, `shiplist.txt`, `auxdata.hst`), cuyo
 **formato son hechos** y no material protegible.
 
-**Plan:** de momento la capa `Enum*` queda como *stub* vacío (la pantalla de habilidades de
-nave saldrá vacía); se reimplementará en Pascal autocontenido tomando el PDK/PCC2 como
-referencia, conservando los avisos de copyright correspondientes.
+**Estado (resuelto, sin traducir el PDK):** se evaluó usar el PDK como base de
+traducción, pero resultó **innecesario** para el modelo de datos de VPA. VPA no usa el
+modelo moderno de hull-functions de PHost (sobre el que opera `hullfunc.c` del PDK), sino
+el **modelo antiguo**: un array `HullFunc^` con funciones 0..19 que se carga en
+`CONFIG.PAS` (desde `DefaultHullFunc` + los ajustes del host). Para ese modelo, la función
+existente `IsHullFunc` ya equivale al `hullHasSpecial` del PDK. Por eso se implementaron
+`IsShipFunc3` y `ShipOrHullDoes` (que estaban en *stub* a `False`, deshabilitando la
+detección de **chunnel** en flota y de **cloak avanzado**) **puenteando** los códigos
+`SPC_*` al modelo antiguo: los `SPC_*` 0..19 coinciden con el ordinal de `HullFuncs`; los
+≥20 (ChunnelSelf/Others/Target, HardenedCloak…) son refinamientos de PHost que el modelo
+antiguo agrupa en `hfChunneling`/`hfCloak` y se ignoran sin pérdida real para este modelo.
+El PDK sirvió para **confirmar** la numeración `SPC_*` y la semántica «ship-or-hull», pero
+no se tradujo código suyo.
+
+La capa `Enum*` estilo PCC2 (`EnumHullfuncsForShip`, p. ej. la pantalla de detalle con la
+**lista completa** de habilidades de la nave) sigue **solo** bajo `{$IFDEF VPACC}`, que está
+**desactivado**; portarla sí requeriría el modelo moderno (PDK/PCC2) y los datos
+`hullfunc.txt`/`shiplist.txt` — queda **pendiente y opcional**.
 
 ### Ficheros vendorizados de Free Pascal (`VENDOR/`)
 
@@ -439,8 +455,8 @@ categoría (esto es la hoja de ruta de las Fases 2–4):
 | 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Resuelto el caso `libXxf86dga` (AUR). Pendiente solo admin: `git init` + rama + licencia. |
 | 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya OFF. `vpa.cfg` generado. **Units portadas: `STRF`, `AUXF`** (compilan + validadas). `AUXF` ahora exporta `MaxAvail`/`MemAvail` (heap DOS→valor grande en Linux), centralizado para todo el núcleo. Receta de port en §6. |
 | 2 — Capa gráfica (`ptcgraph`) | 🟡 En curso | Swap aplicado; SVGA fuera; `vpa.cfg`. **`SCREEN`, `TCOMBAT`, `MESSAGES` y `VPAINIT` portados y compilan.** `VPAINIT`: registro de drivers BGI → `InitGraph(D8bit, m640x480, '')` directo; quitados `mem[Seg0040]`, asm muerto y reset de CapsLock. Geometría/atributos de texto: a afinar viendo el binario. Frente actual: asm de `MSGREAD.PAS`. |
-| — Features *stubeadas* (restaurar luego) | 📝 Anotado | (1) **Hull-functions** (`Enum*`) → stub vacío (ver §1). (2) **`KbdFlags`** (Shift/Ctrl) → 0. (3) **`TCOMBAT.LoadPic`**: el decodificador de sprites VGA planares (4 planos) + paleta + rotación del visor de combate **ya está portado** a Pascal (ver «Estado actual (runtime)»); `SetPal` implementado. |
-| — Capa compat VPACC/HULLFUNC | ✅ Desbloqueado | Añadida a `VPADATA` (rama `{$IFNDEF VPACC}`): vars de estado (`BL0`, `bOver`, `mt0/mt1`, `MineN`…), consts (`iBeam`…`iRace`), ~40 `SPC_*`, tipo `THullFuncQueryResult`, declaración de `IsHullFunc`. `IsHullFunc` (asm) portado a Pascal; `ShipOrHullDoes`/`IsShipFunc3` como **stubs** (False) hasta reimplementar `HULLFUNC` (PCC2). **`VPA4`, `VPA2`, `CONFIG` ya compilan.** |
+| — Features *stubeadas* (restaurar luego) | 📝 Anotado | (1) **Hull-functions**: `IsShipFunc3`/`ShipOrHullDoes` **implementados** sobre el modelo antiguo (ver §1 y «Estado actual»); solo la capa `Enum*` estilo PCC2 sigue bajo `{$IFDEF VPACC}` (off). (2) **`KbdFlags`** (Shift/Ctrl) → 0. (3) **`TCOMBAT.LoadPic`**: el decodificador de sprites VGA planares (4 planos) + paleta + rotación del visor de combate **ya está portado** a Pascal (ver «Estado actual (runtime)»); `SetPal` implementado. |
+| — Capa compat VPACC/HULLFUNC | ✅ Desbloqueado | Añadida a `VPADATA` (rama `{$IFNDEF VPACC}`): vars de estado (`BL0`, `bOver`, `mt0/mt1`, `MineN`…), consts (`iBeam`…`iRace`), ~40 `SPC_*`, tipo `THullFuncQueryResult`, declaración de `IsHullFunc`. `IsHullFunc` (asm) portado a Pascal; **`ShipOrHullDoes`/`IsShipFunc3` implementados** puenteando los `SPC_*` al modelo antiguo (chunnel en flota y cloak avanzado ya se detectan). **`VPA4`, `VPA2`, `CONFIG` compilan.** |
 | — Warnings de rango a revisar | 📝 Anotado | Constantes fuera de rango de byte en el path VPACC-off (nunca compilado en el original): `VPA4:1626` (21248), `CONFIG:517/703` (265). Truncan y compilan; revisar en runtime por si afectan datos. |
 | 3 — Entrada (ratón/teclado) | 🟡 En curso | **`MOUSE`→`ptcmouse` y `KEYBOARD`→`ptccrt` portados y validados.** `KbdFlags` (Shift/Ctrl) queda como `0` (ptccrt no lo expone) — TODO. Pendiente: llamar a `PollMouse` desde el bucle de entrada. |
 | 3 — Entrada (ratón/teclado) | ⬜ Pendiente | |
