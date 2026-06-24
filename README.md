@@ -60,7 +60,8 @@ La autoría que sí está declarada en el código está **estratificada**:
 |---|---|---|
 | Núcleo de VPA | Alex V. Ivlev, «Copyright (c) 1993-96» | Base del programa |
 | Mantenimiento posterior | Pantallas «Copyright (c) 1998» y «(c) 2003» | Mantenedores sucesivos |
-| `CC/` (código PCC) y subsistema DPMI | Stefan Reuther | Sus términos remiten a `UNIT/DPMI.TXT` |
+| `CC/` (código PCC) | Stefan Reuther | Términos en `CC/README` y §1 (PCC2/PDK). Se conserva en el build. |
+| ~~Subsistema DPMI~~ (eliminado) | Stefan Reuther (D4TP, © 2000-02) | **Eliminado del port** junto con su licencia `UNIT/DPMI.TXT` (era solo para DOS). |
 | Documentación empaquetada | Dave Killingsworth (Starbase), Unity… | Solo docs, no código |
 
 ### Qué significa en la práctica
@@ -78,9 +79,10 @@ en el código, lo limpio es:
 
 1. **Contactar con el mantenedor actual** en SourceForge (`sfplanets`/`lastberserker`)
    y pedir que confirme la licencia, idealmente añadiendo un fichero `LICENSE` al repo.
-2. Para las partes de **Stefan Reuther** (CC + DPMI), consultar `UNIT/DPMI.TXT` y, si hace
-   falta, preguntarle directamente (sigue activo en la comunidad VGA Planets: PCC2, c2nu…).
-   *Nota:* su código DPMI/CC está entre lo que probablemente se descarte en el port.
+2. Para el código de **Stefan Reuther** que se conserva (`CC/`, PCC), los términos están en
+   `CC/README` y en §1 (PCC2/PDK). Su **subsistema DPMI** (D4TP) se ha **eliminado** del port
+   (era exclusivo de DOS), y con él su licencia `UNIT/DPMI.TXT`. Sigue activo en la comunidad
+   VGA Planets (PCC2, c2nu…) por si hiciera falta consultarle.
 3. Conservar todos los avisos de copyright (Ivlev, Reuther y demás) en la versión derivada.
 
 > **Nota MPL 1.1 + GPL:** la MPL 1.1 por sí sola se considera incompatible con la GPL.
@@ -287,7 +289,7 @@ verificable al final de cada una.
 - [ ] **Hito:** navegar por el mapa y los menús con ratón y teclado.
 
 ### Fase 4 — Limpieza de bajo nivel (UNIT + núcleo)
-- [ ] Eliminar `UNIT/DPMI.PAS`, `UNIT/DPMITEST.PAS`, `UNIT/MEMTEST.PAS`, `UNIT/SYSEXT.PAS` (eran del subsistema descartado; confirmar que nada vivo los usa).
+- [x] **Eliminados** `UNIT/DPMI.PAS`, `UNIT/DPMITEST.PAS`, `UNIT/MEMTEST.PAS`, `UNIT/SYSEXT.PAS` (subsistema DPMI de DOS), más los binarios DOS muertos `UNIT/DPMI.TPU`/`UNIT/SYSEXT.TPU` y la doc/licencia `UNIT/DPMI.TXT`. Verificado que nada vivo los usa y que `vpa.pas` compila y enlaza sin ellos. `DPMI` solo lo usaban `DPMITEST`/`MEMTEST` (programas de prueba, también fuera).
 - [ ] Revisar `UNIT/AUXF.PAS` y `UNIT/STRF.PAS`: sustituir asm por Pascal/intrínsecos de FPC.
 - [ ] Tratar las ~11 interrupciones y ~29 líneas de asm del núcleo, fichero a fichero (hora del sistema, etc.).
 - [ ] Clasificar los `absolute` del núcleo: *aliasing* (se queda) vs. acceso a hardware (se reescribe).
