@@ -1300,6 +1300,9 @@ procedure OpenGraph;
     OutTextXY(MX0,26*8+12,' by Alex V. Ivlev');
     OutTextXY(MX0,26*8+30, '  (c) 2002-2014');
     OutTextXY(MX0,26*8+42, '    VPA Group');
+    SetColor(LightGreen);
+    OutTextXY(MX0,26*8+66, '(c) 2026 VPA-Linux');
+    OutTextXY(MX0,26*8+78, '  by Pablo Romano');
     SetColor(Blue);
     OutTextXY(MX0,46*8,'  VGA Planets game');
     OutTextXY(MX0,47*8,'       was created');
@@ -1693,7 +1696,7 @@ function StartVPA : boolean;
     ini_initialize;
     InitVPAData;
 {    Writeln(ReadKey); Writeln(ReadKey); Writeln(ReadKey); writeln(readkey); readkey;}
-  Writeln(#13#10'-= VGA Planets Assistant '+Version+'  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team =-');
+  Writeln(#13#10'-= VGA Planets Assistant '+Version+'  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-');
   Writeln(      '=============================================================================='#13#10);
   Parameters;
   Writeln('Running with ',MemAvail div 1024,'K of free memory');
