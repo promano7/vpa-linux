@@ -41,42 +41,23 @@ begin
                          (LowerCase(GetEnvironmentVariable('VPA_VIDEO')) = 'fullscreen');
 end;
 
-{ Escala deseada (variable VPA_SCALE): entero, recortado a lo que cabe en
-  pantalla manteniendo 4:3 con escala entera (nitido). 1 = sin redimensionar. }
-function DesiredScale: integer;
-var s, code, maxs, sw, sh, scr: integer; v: string;
-begin
-  DesiredScale := 1;
-  v := GetEnvironmentVariable('VPA_SCALE');
-  if v = '' then exit;
-  Val(v, s, code);
-  if (code <> 0) or (s < 1) then s := 1;
-  scr := XDefaultScreen(gDpy);
-  sw := XDisplayWidth(gDpy, scr);
-  sh := XDisplayHeight(gDpy, scr);
-  maxs := sw div 640;
-  if (sh div 480) < maxs then maxs := sh div 480;
-  if maxs < 1 then maxs := 1;
-  if s > maxs then s := maxs;   { recortar a lo que cabe en pantalla }
-  DesiredScale := s;
-end;
-
-{ Redimensiona NUESTRA ventana (gWin, confirmada como la de VPA) a un tamano
-  mayor con escala entera. No usa el gestor de ventanas (XResizeWindow apunta
-  directo a gWin), asi que no puede afectar a otra ventana ni quedarse colgado:
-  es una ventana normal, solo mas grande. ptc escala el surface 640x480. }
+{ La ventana mas grande la crea ya ptcgraph parcheado (VENDOR/ptcgraph + VPA_SCALE),
+  con el surface a 640x480 escalado por ptc. Aqui solo detectamos que la ventana
+  es mayor de 640x480 y activamos el escalado de coordenadas del raton
+  (ventana -> surface), que hace MapMouseToSurface. Sin VPA_SCALE no hace nada. }
 procedure ApplyWindowScale;
-var s: integer;
+var attr: TXWindowAttributes;
 begin
   if (gDpy = nil) or (gWin = 0) then exit;
-  s := DesiredScale;
-  if s <= 1 then exit;
-  XResizeWindow(gDpy, gWin, cuint(640 * s), cuint(480 * s));
-  XFlush(gDpy);
-  gFullscreen := True;            { activar escalado del raton }
-  gWinW := 640 * s; gWinH := 480 * s;
-  if gXDebug then
-    Writeln(StdErr, 'xfocus: ventana redimensionada a ', 640*s, 'x', 480*s, ' (escala ', s, ')');
+  if XGetWindowAttributes(gDpy, gWin, @attr) = 0 then exit;
+  if (attr.width > 640) or (attr.height > 480) then
+  begin
+    gFullscreen := True;          { activa el escalado del raton en MapMouseToSurface }
+    gWinW := attr.width; gWinH := attr.height;
+    if gXDebug then
+      Writeln(StdErr, 'xfocus: ventana ', gWinW, 'x', gWinH,
+              ' (>640x480) -> escalado de raton activado');
+  end;
 end;
 
 { Pide al gestor de ventanas que ponga la ventana a pantalla completa
