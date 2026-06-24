@@ -1312,6 +1312,17 @@ procedure LoadPic (lr:LRtype; pic:byte; rot,fli,truncpal,process:boolean);
               if y<y1 then y1:=y;  if y>y2 then y2:=y;
             end;
         if not found then begin x1:=0; y1:=0; x2:=0; y2:=0; end;
+        { Incluir un borde en blanco de 1px alrededor. El salvapantallas desplaza la
+          nave 1px por fotograma con NormalPut (en horizontal o vertical); ese borde
+          negro borra el rastro del fotograma anterior y evita los surcos. Es
+          inofensivo en combate (solo relleno negro). }
+        if found then
+        begin
+          if x1>0   then dec(x1);
+          if y1>0   then dec(y1);
+          if x2<103 then inc(x2);
+          if y2<103 then inc(y2);
+        end;
       end;
 
       { --- montar img[lr]^ en formato ptcgraph 8bpp (recortado a la caja):

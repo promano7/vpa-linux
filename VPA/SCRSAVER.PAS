@@ -202,7 +202,6 @@ procedure ScreenSaver;
 @@69:   pop	ds
       end; *)
       sx:=img[lr]^[1];
-      if vert then inc(img[lr]^[3]);
       sy:=img[lr]^[3];
       if vert then
       begin
