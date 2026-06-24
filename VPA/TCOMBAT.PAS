@@ -1216,6 +1216,11 @@ procedure LoadPic (lr:LRtype; pic:byte; rot,fli,truncpal,process:boolean);
       paleta + rotacion (estaba en el asm original de LoadPic). De momento el sprite
       se deja en blanco para no bloquear el arranque: combate sin dibujos de nave. }
     if process then FillChar(buf^, SizeOf(buf^), 0);
+    { Importante: img[lr]^ se reserva con GetMem sin inicializar. Si se deja con
+      basura, convertImage/PutImage leen un ancho/alto enormes y el simulador de
+      combate (y las StarBases) se cuelgan. Lo dejamos como imagen VACIA valida
+      (cabecera a 0 => 1x1) hasta tener el decodificador real. }
+    if img[lr] <> nil then FillChar(img[lr]^, ImgSize, 0);
     x1 := 0; y1 := 0; x2 := 103; y2 := 103;
     x01:=x1; y01:=y1; x02:=x2; y02:=y2;
   end;
