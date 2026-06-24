@@ -14,6 +14,7 @@ function  ResolveScale: longint;
 function  WantFullscreen: boolean;
 procedure ApplyWindowScale;
 procedure RequestFullscreen;
+procedure ReleaseFullscreen;
 procedure MapMouseToSurface(var x, y: longint);
 procedure MapSurfaceToWindow(var x, y: longint);
 procedure GrabInputFocus;
@@ -26,7 +27,7 @@ procedure DbgFont(id: longint);
 function  PointerInsideWindow: boolean;
 
 implementation
-uses x, xlib, xatom, ctypes, unixtype, baseunix, sysutils;
+uses x, xlib, xutil, xatom, ctypes, unixtype, baseunix, sysutils;
 
 var
   gDpy: PDisplay = nil;          { conexion persistente (mantiene vivo el cursor) }
@@ -125,25 +126,95 @@ procedure RequestFullscreen;
 var
   ev: TXEvent;
   netState, netFS: TAtom;
+  hints: PXSizeHints;
+  attr: TXWindowAttributes;
+  scr, sw, sh: longint;
+  i: integer;
+  ts: TimeSpec;
 begin
   if (gDpy = nil) or (gWin = 0) then exit;
+
+  { esperar a que la ventana este mapeada/gestionada por el gestor (hasta ~2s) }
+  for i := 1 to 40 do
+  begin
+    if (XGetWindowAttributes(gDpy, gWin, @attr) <> 0) and (attr.map_state = IsViewable) then break;
+    ts.tv_sec := 0; ts.tv_nsec := 50 * 1000 * 1000; fpnanosleep(@ts, nil);
+  end;
+
+  scr := XDefaultScreen(gDpy);
+  sw := XDisplayWidth(gDpy, scr);
+  sh := XDisplayHeight(gDpy, scr);
+
+  { fondo negro: ptc solo pinta su consola (640x480 escalada) en la esquina; el
+    resto de la ventana, al llenar la pantalla, debe quedar negro, no en blanco. }
+  XSetWindowBackground(gDpy, gWin, XBlackPixel(gDpy, scr));
+  XClearWindow(gDpy, gWin);
+
+  { relajar el tamano MAXIMO para que el gestor pueda agrandar la ventana hasta
+    llenar la pantalla (algunos gestores no ocultan el panel si la ventana no
+    cubre todo el monitor). El minimo se deja pequeno. }
+  hints := XAllocSizeHints;
+  if hints <> nil then
+  begin
+    hints^.flags := PMinSize or PMaxSize;
+    hints^.min_width := 1;  hints^.min_height := 1;
+    hints^.max_width := sw; hints^.max_height := sh;
+    XSetWMNormalHints(gDpy, gWin, hints);
+    XFree(hints);
+  end;
+
+  netState := XInternAtom(gDpy, '_NET_WM_STATE', 0);
+  netFS    := XInternAtom(gDpy, '_NET_WM_STATE_FULLSCREEN', 0);
+  if (netState <> 0) and (netFS <> 0) then
+  begin
+    { fijar la propiedad (fiable en algunos gestores) ... }
+    XChangeProperty(gDpy, gWin, netState, XA_ATOM, 32, PropModeReplace,
+                    PByte(@netFS), 1);
+    { ... y enviar el ClientMessage (para la ventana ya mapeada) }
+    FillChar(ev, sizeof(ev), 0);
+    ev.xclient._type := ClientMessage;
+    ev.xclient.window := gWin;
+    ev.xclient.message_type := netState;
+    ev.xclient.format := 32;
+    ev.xclient.data.l[0] := 1;       { _NET_WM_STATE_ADD }
+    ev.xclient.data.l[1] := clong(netFS);
+    ev.xclient.data.l[2] := 0;
+    ev.xclient.data.l[3] := 1;       { fuente: aplicacion }
+    XSendEvent(gDpy, XDefaultRootWindow(gDpy), 0,
+               SubstructureRedirectMask or SubstructureNotifyMask, @ev);
+  end;
+  XFlush(gDpy);
+  gFullscreen := True;
+  if gXDebug then Writeln(StdErr, 'xfocus: solicitada pantalla completa (_NET_WM_STATE_FULLSCREEN), pantalla ', sw, 'x', sh);
+end;
+
+{ Quita el estado de pantalla completa. Se llama al cerrar la grafica, como
+  doble seguro para que el panel del escritorio reaparezca (ademas, al destruir
+  la ventana el estado desaparece de todas formas). }
+procedure ReleaseFullscreen;
+var
+  ev: TXEvent;
+  netState, netFS: TAtom;
+begin
+  if (gDpy = nil) or (gWin = 0) then exit;
+  if not gFullscreen then exit;
   netState := XInternAtom(gDpy, '_NET_WM_STATE', 0);
   netFS    := XInternAtom(gDpy, '_NET_WM_STATE_FULLSCREEN', 0);
   if (netState = 0) or (netFS = 0) then exit;
+  XDeleteProperty(gDpy, gWin, netState);
   FillChar(ev, sizeof(ev), 0);
   ev.xclient._type := ClientMessage;
   ev.xclient.window := gWin;
   ev.xclient.message_type := netState;
   ev.xclient.format := 32;
-  ev.xclient.data.l[0] := 1;       { _NET_WM_STATE_ADD }
+  ev.xclient.data.l[0] := 0;       { _NET_WM_STATE_REMOVE }
   ev.xclient.data.l[1] := clong(netFS);
   ev.xclient.data.l[2] := 0;
-  ev.xclient.data.l[3] := 1;       { fuente: aplicacion }
+  ev.xclient.data.l[3] := 1;
   XSendEvent(gDpy, XDefaultRootWindow(gDpy), 0,
              SubstructureRedirectMask or SubstructureNotifyMask, @ev);
   XFlush(gDpy);
-  gFullscreen := True;
-  if gXDebug then Writeln(StdErr, 'xfocus: solicitada pantalla completa (_NET_WM_STATE_FULLSCREEN)');
+  if gXDebug then Writeln(StdErr, 'xfocus: liberada la pantalla completa (REMOVE _NET_WM_STATE_FULLSCREEN)');
 end;
 
 procedure UpdateWindowSize;
