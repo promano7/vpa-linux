@@ -1300,7 +1300,7 @@ procedure OpenGraph;
     OutTextXY(MX0,26*8+12,' by Alex V. Ivlev');
     OutTextXY(MX0,26*8+30, '  (c) 2002-2014');
     OutTextXY(MX0,26*8+42, '    VPA Group');
-    SetColor(LightGreen);
+    SetColor(Cyan);
     OutTextXY(MX0,26*8+66, '(c) 2026 VPA-Linux');
     OutTextXY(MX0,26*8+78, '  by Pablo Romano');
     SetColor(Blue);
