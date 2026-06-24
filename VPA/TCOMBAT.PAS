@@ -26,7 +26,7 @@ const   RotPic  : set of byte =
         __DarkGray      = 11;
         __VeryDarkGray  = 13;
 
-        ImgSize = 104*104 div 2+6; { 104x104 image size }
+        ImgSize = 12 + 104*104*2; { imagen ptcgraph 8bpp: 3 longint cabecera + 1 word/pixel }
 
 var     img     : array [LRtype] of ^IntArr;
         pal     : array [0..15,1..3] of byte;
@@ -344,6 +344,20 @@ var     rbuf    : pointer;
         fy      : array [1..20] of int;
         s       : string[79];
         x01,y01,x02,y02 : word;
+        savedPal: array [0..15,0..2] of smallint;  { paleta del juego salvada en combate }
+
+type    PImgBytes = ^TImgBytes;
+        TImgBytes = array [0..ImgSize-1] of byte;
+        PRawBytes = ^TRawBytes;
+        TRawBytes = array [0..RLen-1] of byte;
+
+{ Ancho/alto del img montado en formato ptcgraph (longint en offsets 0 y 4). }
+function ImgW (lr:LRType): int;
+  var pb: PImgBytes;
+  begin pb := PImgBytes(img[lr]); ImgW := pb^[0] + pb^[1] shl 8; end;
+function ImgH (lr:LRType): int;
+  var pb: PImgBytes;
+  begin pb := PImgBytes(img[lr]); ImgH := pb^[4] + pb^[5] shl 8; end;
 
 const   Rand  : array [1..119] of int =
             ( $19B,$165,$216,$183,$E3, $C5, $196,$1C1,$2D8,$27,
@@ -980,14 +994,14 @@ procedure Battle;
       SetFillStyle(1,_Gray);
       Bar(0,475,499,479);
 {$ENDIF}
-      szx[Left]:=img[Left]^[1]+1;
-      szx[Right]:=img[Right]^[1]+1;
-      szy[Left]:=img[Left]^[2]+1;
-      szy[Right]:=img[Right]^[2]+1;
+      szx[Left]:=ImgW(Left);
+      szx[Right]:=ImgW(Right);
+      szy[Left]:=ImgH(Left);
+      szy[Right]:=ImgH(Right);
       x[Left]:=SX[Left]-szx[Left] div 2;
       x[Right]:=SX[Right]-szx[Right] div 2;
-      yy1:=img[Left]^[2]+1;
-      yy2:=img[Right]^[2]+1;
+      yy1:=ImgH(Left);
+      yy2:=ImgH(Right);
       y[Left]:=SY-yy1 div 2;
       y[Right]:=SY-yy2 div 2;
       if yy1>yy2 then begin yy2:=y[Left]+yy1; yy1:=y[Left] end
@@ -1157,10 +1171,10 @@ procedure Battle;
         pic[lr]:=ExplPic;
         if Show then
         begin
-          inc(x[lr],img[lr]^[1] div 2);
+          inc(x[lr],ImgW(lr) div 2);
           LoadPic(lr,ExplPic,No,No,Yes,Yes);
-          x[lr]:=x[lr]-img[lr]^[1] div 2;
-          y[lr]:=SY-img[lr]^[2] div 2;
+          x[lr]:=x[lr]-ImgW(lr) div 2;
+          y[lr]:=SY-ImgH(lr) div 2;
           SetPal;
         end;
       end;
@@ -1200,28 +1214,124 @@ procedure Battle;
 
 procedure LoadPic (lr:LRtype; pic:byte; rot,fli,truncpal,process:boolean);
   var   x,y,x1,x2,y1,y2 : word;
-        i,k             : int;
+        i,k,p,bx,bit,off,w,h,pbase : int;
         f               : file;
-        buf_ofs         : word;
+        b               : byte;
+        haveData,found  : boolean;
+        rb              : PRawBytes;
+        ib              : PImgBytes;
+        tmp             : ImArr;
   begin
     if (pic<=0) or (pic>151) then begin pic:=111; rot:=No end;
+    haveData := False;
     if OpenFile(f,ResName,0,No) then
     begin
       Seek(f,longint(pic-1)*RLen);
       BlockRead(f,rbuf^,RSize);
       CloseData(f);
+      haveData := True;
     end;
-    buf_ofs := Ofs(buf^);
-    { TODO: portar el decodificador de sprite VGA planar (4 planos) + truncado de
-      paleta + rotacion (estaba en el asm original de LoadPic). De momento el sprite
-      se deja en blanco para no bloquear el arranque: combate sin dibujos de nave. }
-    if process then FillChar(buf^, SizeOf(buf^), 0);
-    { Importante: img[lr]^ se reserva con GetMem sin inicializar. Si se deja con
-      basura, convertImage/PutImage leen un ancho/alto enormes y el simulador de
-      combate (y las StarBases) se cuelgan. Lo dejamos como imagen VACIA valida
-      (cabecera a 0 => 1x1) hasta tener el decodificador real. }
-    if img[lr] <> nil then FillChar(img[lr]^, ImgSize, 0);
-    x1 := 0; y1 := 0; x2 := 103; y2 := 103;
+    rb := PRawBytes(rbuf);
+
+    { --- paleta: 15 words (byte bajo) en POffs -> 5 colores RGB (orden R,B,G).
+          Left ocupa pal[1..5]; Right ocupa pal[6..10]. --- }
+    if haveData then
+    begin
+      if lr=Left then pbase:=1 else pbase:=6;
+      for i:=0 to 4 do
+      begin
+        pal[pbase+i,1] := rb^[POffs + (i*3+0)*2];   { R }
+        pal[pbase+i,2] := rb^[POffs + (i*3+1)*2];   { B }
+        pal[pbase+i,3] := rb^[POffs + (i*3+2)*2];   { G }
+      end;
+    end;
+
+    x1:=0; y1:=0; x2:=103; y2:=103;
+
+    if process then
+    begin
+      FillChar(buf^, SizeOf(buf^), 0);
+      if haveData then
+      begin
+        { --- decodificar planar VGA (4 planos): 93 lineas, 4 planos,
+              13 bytes (104 px) + 1 byte de relleno por plano. MSB primero. --- }
+        off := 4;
+        for y:=0 to 92 do
+          for p:=0 to 3 do
+          begin
+            for bx:=0 to 12 do
+            begin
+              b := rb^[off]; inc(off);
+              for bit:=0 to 7 do
+                if (b shr (7-bit)) and 1 = 1 then
+                  buf^[y,bx*8+bit] := buf^[y,bx*8+bit] or (1 shl p);
+            end;
+            inc(off);          { saltar 14o byte }
+          end;
+
+        { --- truncado de paleta: apaga 6..10; si es Right desplaza 1..5 -> 6..10
+              (asi cada bando usa sus propios indices de paleta). --- }
+        if truncpal then
+          for y:=0 to 103 do
+            for x:=0 to 103 do
+            begin
+              b := buf^[y,x];
+              if (b>=6) and (b<=10) then buf^[y,x]:=0
+              else if (lr<>Left) and (b>=1) and (b<=5) then buf^[y,x]:=b+5;
+            end;
+
+        { --- rotacion 90 (pics verticales) --- }
+        if rot then
+        begin
+          tmp := buf^;
+          for y:=0 to 103 do
+            for x:=0 to 103 do
+              buf^[x,103-y] := tmp[y,x];
+        end;
+
+        { --- espejo horizontal --- }
+        if fli then
+          for y:=0 to 103 do
+            for x:=0 to 51 do
+            begin
+              b := buf^[y,x]; buf^[y,x]:=buf^[y,103-x]; buf^[y,103-x]:=b;
+            end;
+
+        { --- apagar el borde (col 0 para Left, col 103 para Right) --- }
+        if lr=Left then for y:=0 to 103 do buf^[y,0]:=0
+                   else for y:=0 to 103 do buf^[y,103]:=0;
+
+        { --- caja real de la imagen (pixeles no-cero) --- }
+        found:=False; x1:=103; y1:=103; x2:=0; y2:=0;
+        for y:=0 to 103 do
+          for x:=0 to 103 do
+            if buf^[y,x]<>0 then
+            begin
+              found:=True;
+              if x<x1 then x1:=x;  if x>x2 then x2:=x;
+              if y<y1 then y1:=y;  if y>y2 then y2:=y;
+            end;
+        if not found then begin x1:=0; y1:=0; x2:=0; y2:=0; end;
+      end;
+
+      { --- montar img[lr]^ en formato ptcgraph 8bpp (recortado a la caja):
+            longint ancho, longint alto, longint reservado, luego 1 word/pixel. --- }
+      ib := PImgBytes(img[lr]);
+      if ib<>nil then
+      begin
+        w := x2-x1+1; h := y2-y1+1;
+        FillChar(ib^, 12, 0);
+        ib^[0]:=w and $ff; ib^[1]:=(w shr 8) and $ff;
+        ib^[4]:=h and $ff; ib^[5]:=(h shr 8) and $ff;
+        k := 12;
+        for y:=y1 to y2 do
+          for x:=x1 to x2 do
+          begin
+            ib^[k] := buf^[y,x]; ib^[k+1] := 0; inc(k,2);
+          end;
+      end;
+    end;
+
     x01:=x1; y01:=y1; x02:=x2; y02:=y2;
   end;
 
@@ -1288,14 +1398,14 @@ procedure AnalysePic (lr:LRtype; pic:byte);
   end;
 
 procedure SetPal;
-  var   rgb     : array [0..255,1..3] of byte;
-        pal17   : array [0..16] of byte;
-        i       : int;
+  var   i : int;
   begin
    {$IFDEF VPAMM}
     for i:=1 to 15 do SetRGBPalette(i, 4*pal[i,1], 4*pal[i,3], 4*pal[i,2]);
    {$ELSE}
-    { SetPal: no-op temporal (la paleta de sprites de combate esta stubeada). }
+    { Aplica la paleta de sprites de combate (indices 1..15): los colores estan
+      almacenados como 6 bits (0..63) en orden R,B,G; ptcgraph quiere 0..255 RGB. }
+    for i:=1 to 15 do SetRGBPalette(i, 4*pal[i,1], 4*pal[i,3], 4*pal[i,2]);
    {$ENDIF}
   end;
 
@@ -1408,6 +1518,7 @@ begin
 end;
 
 procedure TCombatInit (VCRPalette:boolean);
+  var i: int; r,g,b: smallint;
   begin
     CheckMem(RSize);
     GetMem(rbuf,RSize);
@@ -1417,12 +1528,29 @@ procedure TCombatInit (VCRPalette:boolean);
     GetMem(img[Left],ImgSize);
     CheckMem(ImgSize);
     GetMem(img[Right],ImgSize);
+    { dejar img[] como imagen vacia valida hasta que LoadPic la rellene }
+    FillChar(img[Left]^, ImgSize, 0);
+    FillChar(img[Right]^, ImgSize, 0);
+    { guardar la paleta 0..15 para restaurarla al salir (combate la reescribe) }
+    {$IFDEF UNIX}
+    for i:=0 to 15 do
+    begin
+      GetRGBPalette(i, r, g, b);
+      savedPal[i,0]:=r; savedPal[i,1]:=g; savedPal[i,2]:=b;
+    end;
+    {$ENDIF}
     if VCRPalette then Move(VCRpal,pal,3*16)
                   else Move(PLpal,pal,3*16);
   end;
 
 procedure TCombatFinish;
+  var i: int;
   begin
+    {$IFDEF UNIX}
+    { restaurar la paleta del juego (que el combate habia reescrito en 1..15) }
+    for i:=0 to 15 do
+      SetRGBPalette(i, savedPal[i,0], savedPal[i,1], savedPal[i,2]);
+    {$ENDIF}
     FreeMem(rbuf,RSize);
     FreeMem(buf,104*104);
     FreeMem(img[Left],ImgSize);
