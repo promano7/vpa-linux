@@ -41,6 +41,17 @@ var
   DirectVideo: Boolean {$IFDEF HasCRT}absolute crt.DirectVideo{$ENDIF HasCRT};
   TextAttr: Byte {$IFDEF HasCRT}absolute crt.TextAttr{$ENDIF HasCRT};
   KeyMode: TKeyMode = kmTP7;
+  { Estado de modificadores (Shift=3, Ctrl=4, Alt=8, estilo BIOS 0040:0017) del
+    ultimo evento de tecla procesado. ptccrt normalmente lo descarta; lo exponemos
+    para que VPA pueda distinguir, p.ej., Ctrl-Alt-X de Alt-X. (Modificacion VPA) }
+  PTCLastKbdFlags: Byte = 0;
+  { Se fija EXACTAMENTE al pulsar Alt+X: True si Ctrl estaba pulsado (Ctrl-Alt-X =
+    salir SIN guardar), False si no (Alt-X = salir guardando). Determinista: no
+    depende de leer el estado de modificadores al cerrar. (Modificacion VPA) }
+  PTCQuitNoSave: Boolean = False;
+  { Estado real de la tecla Ctrl (rastreado por eventos press/release de Ctrl),
+    para no depender de que cada evento individual refleje el modificador. }
+  PTCCtrlDown: Boolean = False;
 
 function KeyPressed: Boolean;
 function ReadKey: Char;
@@ -122,15 +133,24 @@ begin
       case ev.EventType of
         PTCCloseEvent:
           begin
-            { emulate Ctrl-C/Ctrl-Break, when the user
-              presses the [X] button to close the window }
-            KeyBufAdd(#3);
+            { El boton [X] de la ventana equivale a Alt-X en VPA: salir guardando.
+              (Antes generaba #3/Ctrl-C, que VPA ignoraba.) (Modificacion VPA) }
+            PTCLastKbdFlags := 0;
+            PTCQuitNoSave := False;   { boton [X] = Alt-X = salir guardando }
+            KeyBufAdd(#0#45);
           end;
         PTCKeyEvent:
           begin
             KeyEv := ev as IPTCKeyEvent;
+            { rastrear el estado real de Ctrl (independiente del evento concreto) }
+            if KeyEv.Code = PTCKEY_CONTROL then PTCCtrlDown := KeyEv.Press;
             if KeyEv.Press then
             begin
+              { guardar modificadores de esta pulsacion (estilo BIOS) }
+              PTCLastKbdFlags := 0;
+              if KeyEv.Shift   then PTCLastKbdFlags := PTCLastKbdFlags or 3;
+              if KeyEv.Control then PTCLastKbdFlags := PTCLastKbdFlags or 4;
+              if KeyEv.Alt     then PTCLastKbdFlags := PTCLastKbdFlags or 8;
               if KeyEv.Alt then
               begin
                 case KeyEv.Code of
@@ -185,7 +205,7 @@ begin
                   PTCKEY_K:      KeyBufAdd(#0#37);
                   PTCKEY_L:      KeyBufAdd(#0#38);
                   PTCKEY_Z:      KeyBufAdd(#0#44);
-                  PTCKEY_X:      KeyBufAdd(#0#45);
+                  PTCKEY_X:      begin PTCQuitNoSave := KeyEv.Control or PTCCtrlDown; KeyBufAdd(#0#45); end;
                   PTCKEY_C:      KeyBufAdd(#0#46);
                   PTCKEY_V:      KeyBufAdd(#0#47);
                   PTCKEY_B:      KeyBufAdd(#0#48);

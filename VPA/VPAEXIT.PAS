@@ -630,12 +630,38 @@ procedure SaveChanges;
     ch:=2;
   end;
 
+{$IFDEF UNIX}
+{ Confirmacion grafica "salir sin guardar" (Ctrl-Alt-X). Debe ejecutarse ANTES de
+  CloseGraphics: al cerrar la ventana ptc el teclado deja de generar eventos, asi
+  que el prompt de texto del original colgaria. Devuelve True si el usuario confirma
+  que quiere salir SIN guardar. }
+function ConfirmQuitNoSave : boolean;
+  var ch : word;
+  begin
+    SetFillStyle(SolidFill, Black);
+    Bar(96, 218, 560, 260);
+    SetColor(White);
+    Rectangle(96, 218, 560, 260);
+    OutTextXY(112, 233, 'No changes will be saved. Are you sure? (Y/N)');
+    repeat ch := ReadKey
+    until (ch=ord('y')) or (ch=ord('Y')) or (ch=ord('n')) or (ch=ord('N'));
+    ConfirmQuitNoSave := (ch=ord('y')) or (ch=ord('Y'));
+  end;
+{$ENDIF}
+
 procedure QuitVPA;
   var	save	: boolean;
   begin
-    save:=(KbdFlags and KbdCtrl=0);
+    save := not KbdQuitNoSave;   { Ctrl-Alt-X => no guardar; Alt-X / [X] => guardar }
     if not Batch then
     begin
+{$IFDEF UNIX}
+      { Preguntar (graficamente) antes de cerrar el grafico. }
+      if (not save) and MaySave and (NewTurn or DataChg) then
+        save := not ConfirmQuitNoSave;
+      CloseGraphics;
+      CloseData(helpfile);
+{$ELSE}
       CloseGraphics;
       CloseData(helpfile);
       if (not save) and MaySave and (NewTurn or DataChg) then
@@ -644,6 +670,7 @@ procedure QuitVPA;
 	save:=not YesNo;
 	Writeln;
       end;
+{$ENDIF}
     end;
     if save then SaveAll;
     ExtFeatQuitVPAHook;

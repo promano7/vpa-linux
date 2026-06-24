@@ -65,7 +65,11 @@ Begin
   if StartVPA then
   begin
     InitVCR;
-    DrawMap(Yes);    
+    DrawMap(Yes);
+    { Centrar el cursor al arrancar (como el VPA original). Si no, la ventana puede
+      abrirse con el puntero sobre un borde del mapa y disparar el auto-scroll
+      continuo hasta que el usuario mueve el raton. }
+    MoveMouseTo(240,240);
     repeat
       WriteFreeMem;
       Main;

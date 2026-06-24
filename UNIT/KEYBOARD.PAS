@@ -13,6 +13,7 @@ function KeyPressed : boolean;
 function ReadKey : word;
 function PreviewKey : word; 	{ use only if KeyPressed }
 function KbdFlags : byte;
+function KbdQuitNoSave : boolean;  { True si la ultima salida pedida fue Ctrl-Alt-X (sin guardar) }
 procedure CpuNap;   { cede CPU brevemente (port Linux: evita el busy-loop) }
 
 Implementation
@@ -75,9 +76,15 @@ function PreviewKey : word;   { use only if KeyPressed }
 
 function KbdFlags : byte;
   begin
-    { TODO: ptccrt no expone el estado Shift/Ctrl/Alt del teclado.
-      Se devuelve 0 (sin modificadores) hasta engancharlo al backend ptc. }
-    KbdFlags := 0;
+    { Estado de modificadores del ultimo evento de tecla, expuesto por el ptccrt
+      vendorizado (Shift=3, Ctrl=4, Alt=8). Permite distinguir Ctrl-Alt-X de Alt-X. }
+    KbdFlags := ptccrt.PTCLastKbdFlags;
+  end;
+
+function KbdQuitNoSave : boolean;
+  begin
+    { Indicador fijado al pulsar Alt+X: True si era Ctrl-Alt-X (salir sin guardar). }
+    KbdQuitNoSave := ptccrt.PTCQuitNoSave;
   end;
 
 begin
