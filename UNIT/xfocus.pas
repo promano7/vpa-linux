@@ -150,17 +150,23 @@ begin
   XSetWindowBackground(gDpy, gWin, XBlackPixel(gDpy, scr));
   XClearWindow(gDpy, gWin);
 
-  { relajar el tamano MAXIMO para que el gestor pueda agrandar la ventana hasta
-    llenar la pantalla (algunos gestores no ocultan el panel si la ventana no
-    cubre todo el monitor). El minimo se deja pequeno. }
-  hints := XAllocSizeHints;
-  if hints <> nil then
+  { VPA_FS_CENTER: si esta definida, se dejan los hints de tamano FIJOS para que
+    el gestor centre la ventana 4:3 (la mayoria de escritorios lo hacen y ocultan
+    el panel igual). Si NO esta definida (por defecto), se relaja el tamano
+    maximo para que el gestor agrande la ventana hasta llenar la pantalla
+    (algunos gestores no ocultan el panel si la ventana no cubre todo el monitor;
+    el contenido queda pegado a la esquina superior izquierda). }
+  if GetEnvironmentVariable('VPA_FS_CENTER') = '' then
   begin
-    hints^.flags := PMinSize or PMaxSize;
-    hints^.min_width := 1;  hints^.min_height := 1;
-    hints^.max_width := sw; hints^.max_height := sh;
-    XSetWMNormalHints(gDpy, gWin, hints);
-    XFree(hints);
+    hints := XAllocSizeHints;
+    if hints <> nil then
+    begin
+      hints^.flags := PMinSize or PMaxSize;
+      hints^.min_width := 1;  hints^.min_height := 1;
+      hints^.max_width := sw; hints^.max_height := sh;
+      XSetWMNormalHints(gDpy, gWin, hints);
+      XFree(hints);
+    end;
   end;
 
   netState := XInternAtom(gDpy, '_NET_WM_STATE', 0);
