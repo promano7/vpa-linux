@@ -529,7 +529,7 @@ procedure GetShip;
     with Hulls[h] do
     begin
       {Clear(SX,ShY,ShX+22*8-1,ShY+9*10+7);}
-      LoadPic(Left,pic,No,No,No,No);
+      LoadPic(Left,pic,No,No,No,Yes);
       SetPal;
       if clone then blW:=clship^.weapons
                else blW:=weapons;
