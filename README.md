@@ -179,7 +179,7 @@ Métricas reales medidas sobre el fuente **3.67** (solo ficheros `.pas`):
 | Módulo | Ficheros | Líneas | Rol | Destino en el port |
 |---|---:|---:|---|---|
 | `VPA/` | 26 | 40.390 | Núcleo de la aplicación | **Migrar** |
-| `VPAMM/` | 11 | 8.349 | «Modo mixto»: DPMI + VESA + kernel propio | **Descartar** |
+| `VPAMM/` | 11 | 8.349 | «Modo mixto»: DPMI + VESA + kernel propio | **Descartado (eliminado del repo)** |
 | `UNIT/` | 11 | 3.293 | Capa de bajo nivel (ratón, teclado, DPMI…) | **Reescribir parcialmente** |
 | `CC/` | 5 | 4.149 | Código PCC (mensajes de comandos PHost), opcional | Opcional (`$IFDEF VPACC`) |
 | `VHLP/` | 3 | 324 | Sistema de ayuda | Migrar (sencillo) |
@@ -255,7 +255,7 @@ verificable al final de cada una.
 
 ### Fase 1 — Recorte y andamiaje de compilación
 - [x] **VPAMM ya está desactivado** por defecto (`{.$DEFINE VPAMM}` en `switches.inc`): el build estándar de `vpa.pas` no lo incluye. No hay que tocar el núcleo para sacarlo.
-- [ ] Excluir del build el directorio `VPAMM/` y las units DPMI de `UNIT/` (`DPMI`, `DPMITEST`, `MEMTEST`); opcionalmente moverlos a un `legacy/` para declutter.
+- [x] **Carpeta `VPAMM/` descartada y eliminada del repositorio.** Era la variante "modo mixto" de DOS (DPMI + VESA + kernel gráfico propio: `DRIVERS`, `AAVESA`, `AAFONT`, `VESA256`, `VGA640`, `GRAPH`…). El símbolo `VPAMM` nunca se define en el port (los bloques `{$IFDEF VPAMM}` compilan a nada) y la capa gráfica es `ptcgraph`, no esos drivers. Verificado que `vpa.pas` **compila y enlaza sin la carpeta** (no está en las rutas `-Fu` de `vpa.cfg` ni la usa ningún `uses`/`{$I}` del build vivo). Las units DPMI de `UNIT/` (`DPMI`, `DPMITEST`, `MEMTEST`, `SYSEXT`) solo las usan programas de prueba descartados; pendientes de eliminar aparte (ver Fase 4).
 - [x] `vpa.cfg` para FPC en modo `{$MODE TP}` con las rutas de units del proyecto + ptcgraph (ruta Arch verificada). *(Sustituye a `BPC.CFG`.)*
 - [x] **`Makefile` para FPC** (sustituye al de Borland Make): objetivos `build`/`clean`/`run`/`help`. Build con `fpc @vpa.cfg VPA/VPA.PAS`. Instrucciones completas de compilación y ejecución en **[`BUILD.md`](BUILD.md)** (dependencias en Arch, ejecución con una partida, solución de problemas).
 - [ ] Decidir sobre `VPACC` (hoy ON) y `TASKS` (hoy OFF): mantener o desactivar `VPACC` al principio para reducir superficie.
