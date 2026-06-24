@@ -201,9 +201,9 @@ procedure ScreenSaver;
 
 @@69:   pop	ds
       end; *)
-      sx:=img[lr]^[1]+1;
-      if vert then inc(img[lr]^[2]);
-      sy:=img[lr]^[2]+1;
+      sx:=img[lr]^[1];
+      if vert then inc(img[lr]^[3]);
+      sy:=img[lr]^[3];
       if vert then
       begin
 	x:=Random(639-sx); y:=479-sy;

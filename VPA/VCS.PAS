@@ -278,10 +278,10 @@ procedure DrawPicture (lr:LRType);
   	if useSVGA then
   	begin
         convertImage(img[lr]^,img256);
-        PutImage(SX[lr]+RX+(104-img[lr]^[1]) div 2,RY+(104-img[lr]^[2]) div 2,img256,NormalPut);
+        PutImage(SX[lr]+RX+(104-img[lr]^[1]) div 2,RY+(104-img[lr]^[3]) div 2,img256,NormalPut);
     end
     else
-        PutImage(SX[lr]+RX+(104-img[lr]^[1]) div 2,RY+(104-img[lr]^[2]) div 2,img[lr]^,NormalPut);
+        PutImage(SX[lr]+RX+(104-img[lr]^[1]) div 2,RY+(104-img[lr]^[3]) div 2,img[lr]^,NormalPut);
   end;
 
 procedure FillShip (lr:LRType; hull:word);

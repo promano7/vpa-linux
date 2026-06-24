@@ -160,10 +160,10 @@ procedure DrawShip;
         if useSVGA then
         begin
           convertImage(img[Left]^,img256);
-          PutImage(SX+(104-img[Left]^[1]) div 2,SY+(93-img[Left]^[2]) div 2,img256,NormalPut);
+          PutImage(SX+(104-img[Left]^[1]) div 2,SY+(93-img[Left]^[3]) div 2,img256,NormalPut);
         end
         else
-          PutImage(SX+(104-img[Left]^[1]) div 2,SY+(93-img[Left]^[2]) div 2,img[Left]^,NormalPut);
+          PutImage(SX+(104-img[Left]^[1]) div 2,SY+(93-img[Left]^[3]) div 2,img[Left]^,NormalPut);
     SetColor(Yellow);
     with Hulls[currhull] do
     begin

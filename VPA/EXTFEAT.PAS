@@ -4455,11 +4455,13 @@ end;
 
 procedure DrawPic(lr:LRType; x,y: int);
 begin
+  { img[lr]^ esta en formato ptcgraph: ancho=longint en offset 0 (word [1]),
+    alto=longint en offset 4 (word [3]). El word [2] es el word alto del ancho (=0). }
   if useSVGA then begin
     convertImage(img[lr]^,img256);
-    PutImage(x + (104-img[lr]^[1]) div 2, y + (104-img[lr]^[2]) div 2, img256, NormalPut);
+    PutImage(x + (104-img[lr]^[1]) div 2, y + (104-img[lr]^[3]) div 2, img256, NormalPut);
   end else
-    PutImage(x + (104-img[lr]^[1]) div 2, y + (104-img[lr]^[2]) div 2, img[lr]^, NormalPut);
+    PutImage(x + (104-img[lr]^[1]) div 2, y + (104-img[lr]^[3]) div 2, img[lr]^, NormalPut);
 end;
 
 procedure ShowFleetReport;
