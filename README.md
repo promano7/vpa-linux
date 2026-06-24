@@ -252,10 +252,10 @@ verificable al final de cada una.
 - [ ] Portar la cadena del núcleo gráfico (`SCREEN`, `VPADATA`, `Global`…) hasta compilar.
 - [ ] **Hito:** arrancar en modo gráfico y dibujar el mapa estelar.
 - [x] **Ventana más grande opcional (`VPA_SCALE`).** La superficie de dibujo sigue siendo 640×480 (toda la UI de VPA está diseñada para ese tamaño); para agrandar la ventana sin cambiar el modo de vídeo ni usar "fullscreen" del gestor (ambos provocaron cuelgues), se **vendoriza un `ptcgraph` con un parche mínimo** que crea la "consola" de `ptc` más grande y deja que `ptc` escale la superficie 640×480 para llenarla (ver `VENDOR/` y §1). El ratón se reescala en ambos sentidos (`xfocus.MapMouseToSurface`/`MapSurfaceToWindow`) para que el clic y las flechas mantengan la precisión píxel a píxel. Opciones (variable de entorno):
-  - sin definir → **escala 2 por defecto**;
+  - sin definir → **escala 2 por defecto** (ventana en el escritorio);
   - `VPA_SCALE=1` → 640×480 nativo (sin escalar);
-  - `VPA_SCALE=N` (2…8) → N× (recortado a lo que cabe en pantalla);
-  - `VPA_SCALE=fullscreen` → la mayor escala entera que cabe en la pantalla.
+  - `VPA_SCALE=N` (2…8) → ventana N× (recortado a lo que cabe en pantalla), siempre como **ventana** en el escritorio;
+  - `VPA_SCALE=fullscreen` → **pantalla completa real**: usa el ajuste 4:3 más grande que cabe (mismo número de píxeles que el `N` equivalente, nítido) y pide al gestor `_NET_WM_STATE_FULLSCREEN`, de modo que la ventana queda **por encima del panel del escritorio** (resuelve el scroll hacia abajo en escritorios con panel inferior). Las zonas 16:9 sobrantes quedan a los lados (4:3). Se sale con **Alt-X** como siempre. Es seguro y recuperable: la pantalla completa se aplica a la **propia ventana de VPA** (no cambia el modo de vídeo del monitor). El centrado exacto lo decide el gestor de ventanas.
 
 ### Fase 3 — Entrada: ratón y teclado
 - [x] Reescrito `UNIT/MOUSE.PAS` sobre `ptcmouse` (sondeo de eventos con `PollMouse`) en lugar de INT 33h + handler en asm. Detecta flancos (move, press/release de cada botón) comparando estado previo/actual y despacha a `HandlerTable`.

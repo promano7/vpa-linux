@@ -11,6 +11,7 @@ interface
 
 function  FullscreenRequested: boolean;
 function  ResolveScale: longint;
+function  WantFullscreen: boolean;
 procedure ApplyWindowScale;
 procedure RequestFullscreen;
 procedure MapMouseToSurface(var x, y: longint);
@@ -36,6 +37,7 @@ var
   gWinW: cint = 0;               { tamano de la ventana (cache para escalar el raton) }
   gWinH: cint = 0;
   gSizeCnt: integer = 0;         { throttle de la consulta de tamano }
+  gWantFullscreen: boolean = False;  { VPA_SCALE=fullscreen: pedir pantalla completa al gestor }
 
 function FullscreenRequested: boolean;
 begin
@@ -71,10 +73,14 @@ begin
   if maxfit < 1 then maxfit := 1;
   if maxfit > 8 then maxfit := 8;
 
+  gWantFullscreen := False;
   if v = '' then
     n := 2                                  { por defecto: ventana mas grande }
   else if (v = 'fullscreen') or (v = 'full') or (v = 'max') then
-    n := maxfit
+  begin
+    n := maxfit;                            { ajuste 4:3 mas grande que cabe }
+    gWantFullscreen := True;                { + estado pantalla completa (tapa el panel) }
+  end
   else
   begin
     Val(v, n, code);
@@ -85,7 +91,12 @@ begin
   ResolveScale := n;
   if gXDebug then
     Writeln(StdErr, 'xfocus: VPA_SCALE="', v, '" -> escala ', n,
-            ' (max que cabe en pantalla ', maxfit, ')');
+            ' fullscreen=', gWantFullscreen, ' (max que cabe en pantalla ', maxfit, ')');
+end;
+
+function WantFullscreen: boolean;
+begin
+  WantFullscreen := gWantFullscreen;
 end;
 
 { La ventana mas grande la crea ya ptcgraph parcheado (VENDOR/ptcgraph + VPA_SCALE),
@@ -152,9 +163,11 @@ procedure MapMouseToSurface(var x, y: longint);
 begin
   if not gFullscreen then exit;
   if (gDpy = nil) or (gWin = 0) then exit;
-  { refrescar el tamano de ventana de vez en cuando (el gestor la agranda async) }
-  if (gSizeCnt = 0) or (gWinW <= 0) then UpdateWindowSize;
-  gSizeCnt := (gSizeCnt + 1) and 63;
+  { gWinW/gWinH = tamano de la CONSOLA de ptc (donde vive el contenido 640x480
+    escalado), fijado en ApplyWindowScale. No se reconsulta: si el gestor
+    redimensiona la ventana al activar pantalla completa, ptc sigue pintando a
+    tamano de consola, asi que el raton debe seguir referido a la consola. }
+  if (gWinW <= 0) or (gWinH <= 0) then UpdateWindowSize;
   if (gWinW > 0) and (gWinH > 0) then
   begin
     x := (x * 640) div gWinW;

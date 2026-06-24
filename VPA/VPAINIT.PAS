@@ -1732,7 +1732,8 @@ function StartVPA : boolean;
       { (apagaba CapsLock via BIOS; no aplica en Linux) }
       OpenGraph;
       {$IFDEF UNIX}GrabInputFocus;{$ENDIF}   { reclamar foco de teclado para la ventana ptcgraph }
-      {$IFDEF UNIX}ApplyWindowScale;{$ENDIF}  { ventana mas grande opcional (VPA_SCALE=N), redimensionando NUESTRA ventana }
+      {$IFDEF UNIX}ApplyWindowScale;{$ENDIF}  { detectar ventana grande y activar escalado del raton }
+      {$IFDEF UNIX}if xfocus.WantFullscreen then RequestFullscreen;{$ENDIF}  { VPA_SCALE=fullscreen: pantalla completa via gestor (tapa el panel) }
       InitMouse;
       if NewTurn then CheckOutMap;
     end;
