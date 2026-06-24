@@ -151,9 +151,12 @@ procedure SetMouseRange (x1,y1,x2,y2:word);
   end;
 
 procedure MoveMouse (x,y:word);
+  var wx, wy: longint;
   begin
-    SetMousePos(x, y);
-    MouseX := x; MouseY := y;
+    wx := x; wy := y;
+    {$IFDEF UNIX}xfocus.MapSurfaceToWindow(wx, wy);{$ENDIF}  { superficie->ventana para el warp }
+    SetMousePos(wx, wy);
+    MouseX := x; MouseY := y;   { la posicion logica sigue en coords de superficie }
   end;
 
 procedure AllocateStatusBuffer;

@@ -14,6 +14,21 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
  **********************************************************************}
+
+{ =====================================================================
+  MODIFICADO PARA VPA-Linux (port de VGA Planets Assistant a GNU/Linux).
+  Cambios respecto al original de Free Pascal:
+    1. Variable publica VPAForceScale y, en ptc_InternalOpen, lectura de la
+       escala (VPAForceScale o la env VPA_SCALE): agranda la consola de ptc
+       manteniendo la superficie en 640x480 (ptc la escala), dando una ventana
+       mas grande opcional sin cambiar el modo de video.
+    2. Anadida la directiva de modo objfpc (el build de VPA usa modo tp).
+    3. Anadida la unidad sysutils al uses (para GetEnvironmentVariable y Val).
+  El resto del fichero es el original de FPC. Sigue bajo la LGPL modificada
+  con excepcion de enlazado estatico de Free Pascal; se conservan intactos los
+  avisos de copyright de arriba. Este aviso cumple el requisito de la LGPL de
+  marcar de forma visible los ficheros modificados.
+  ===================================================================== }
 unit ptcgraph;
 
 { VPA: el build de VPA usa -Mtp; esta unidad necesita modo objfpc (igual que
@@ -36,6 +51,12 @@ type
 {$endif}
 
 {$i graphh.inc}
+
+{ VPA: escala de ventana resuelta por la aplicacion (1..8). Si es >0 tiene
+  prioridad sobre la variable de entorno VPA_SCALE. La fija VPA antes de
+  InitGraph (ver xfocus.ResolveScale). 0 = usar VPA_SCALE del entorno. }
+var
+  VPAForceScale: LongInt = 0;
 
 {Driver number for PTC.}
 const
@@ -635,16 +656,22 @@ begin
   end;
 
   { VPA: ventana mas grande opcional. El surface sigue AWidth x AHeight; la
-    consola (ventana) se agranda y ptc escala el surface para llenarla. }
-  vpaScaleStr := GetEnvironmentVariable('VPA_SCALE');
-  if vpaScaleStr <> '' then
+    consola (ventana) se agranda y ptc escala el surface para llenarla.
+    Prioridad: VPAForceScale (resuelto por VPA) y, si es 0, la env VPA_SCALE. }
+  vpaScale := VPAForceScale;
+  if vpaScale <= 0 then
   begin
-    Val(vpaScaleStr, vpaScale, vpaCode);
-    if (vpaCode = 0) and (vpaScale > 1) and (vpaScale <= 8) then
+    vpaScaleStr := GetEnvironmentVariable('VPA_SCALE');
+    if vpaScaleStr <> '' then
     begin
-      ConsoleWidth := AWidth * vpaScale;
-      ConsoleHeight := AHeight * vpaScale;
+      Val(vpaScaleStr, vpaScale, vpaCode);
+      if vpaCode <> 0 then vpaScale := 1;
     end;
+  end;
+  if (vpaScale > 1) and (vpaScale <= 8) then
+  begin
+    ConsoleWidth := AWidth * vpaScale;
+    ConsoleHeight := AHeight * vpaScale;
   end;
 
   if FullscreenGraph then

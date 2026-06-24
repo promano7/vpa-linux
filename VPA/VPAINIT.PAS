@@ -1262,6 +1262,12 @@ procedure OpenGraph;
           modo nativo directamente. 640x480, 256 colores. --- }
     gd := D8bit;
     gm := m640x480;
+    {$IFDEF UNIX}
+    { Resolver la escala de ventana (VPA_SCALE: defecto 2, 1=nativo, fullscreen,
+      o N) y pasarla a ptcgraph antes de abrir la ventana. ptcgraph agranda la
+      "consola" manteniendo la superficie en 640x480 (ptc la escala). }
+    ptcgraph.VPAForceScale := xfocus.ResolveScale;
+    {$ENDIF}
     InitGraph(gd, gm, '');
     GrErr(-1);
     GrMode:=Yes;

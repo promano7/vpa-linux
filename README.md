@@ -115,6 +115,40 @@ en gran parte los datos del juego (`hullfunc.txt`, `shiplist.txt`, `auxdata.hst`
 nave saldrá vacía); se reimplementará en Pascal autocontenido tomando el PDK/PCC2 como
 referencia, conservando los avisos de copyright correspondientes.
 
+### Ficheros vendorizados de Free Pascal (`VENDOR/`)
+
+Para ofrecer una **ventana más grande opcional** (variable `VPA_SCALE`) sin cambios
+peligrosos de modo de vídeo ni "fullscreen" del gestor de ventanas, el port incluye en
+`VENDOR/` una copia de varios ficheros de **Free Pascal** y **aplica un parche mínimo**
+a uno de ellos:
+
+| Fichero | Estado | Para qué |
+|---|---|---|
+| `ptcgraph.pp` | **Modificado** (parche VPA) | Lee la escala (`VPAForceScale`/`VPA_SCALE`) y crea la "consola" de `ptc` más grande manteniendo la superficie en 640×480; `ptc` la escala. Lleva además `{$mode objfpc}` y `sysutils` para compilar dentro del build de VPA. La cabecera incluye un **aviso visible de modificación** (lo exige la LGPL). |
+| `ptcmouse.pp`, `ptccrt.pp` | **Sin modificar** | Necesarios para recompilar `ptcgraph` de forma autocontenida (FPC los reconstruye contra el `ptcgraph` parcheado, evitando un desajuste de versión de `.ppu`). |
+| `graphh.inc`, `graph.inc`, `clip.inc`, `fills.inc`, `fontdata.inc`, `gtext.inc`, `modes.inc`, `palette.inc` | **Sin modificar** | Includes que arrastra `ptcgraph`. |
+
+**Licencia de estos ficheros:** son parte de la **Free Pascal run-time library**, bajo la
+**LGPL modificada con excepción de enlazado estático** (la misma con la que se distribuye
+FPC). Se conservan **íntegras todas las cabeceras de copyright** (Nikolay Nikolov, Daniel
+Mantione y el equipo de FPC). El único fichero modificado, `ptcgraph.pp`, lleva en su
+cabecera un aviso de modificación, tal como exige la LGPL.
+
+**Por qué no rompe el objetivo de licencia:** la LGPL (con excepción de enlazado) es
+**compatible con GPL**: estos ficheros pueden combinarse y redistribuirse dentro de un
+proyecto que en su conjunto sea GPL. Vendorizar copias (en lugar de solo enlazar contra el
+FPC del sistema) es legítimo bajo la LGPL siempre que —como aquí— se conserven los avisos y
+se marquen los cambios. En la práctica:
+
+- Las partes **propias del port** (código de VPA traducido/adaptado, `UNIT/xfocus.pas`,
+  arreglos…) quedan bajo la **licencia libre elegida para el port** (compatible con GPL).
+- Los ficheros de `VENDOR/` **siguen bajo su LGPL modificada** original; no se relicencian.
+- El binario final enlaza con `libX11`/FPC, todo bajo licencias libres compatibles.
+
+> Si se prefiere **no vendorizar**: basta con borrar `VENDOR/` y quitar `-FuVENDOR`/
+> `-FiVENDOR` de `vpa.cfg`. El port vuelve a enlazar contra el `ptcgraph` del sistema y la
+> ventana queda fija en 640×480 (se pierde solo la opción `VPA_SCALE`).
+
 *Aviso: este análisis es informativo, no asesoramiento legal.*
 
 ---
@@ -217,6 +251,11 @@ verificable al final de cada una.
 - [ ] Reescribir `GREETS.ASM` en Pascal o eliminarla.
 - [ ] Portar la cadena del núcleo gráfico (`SCREEN`, `VPADATA`, `Global`…) hasta compilar.
 - [ ] **Hito:** arrancar en modo gráfico y dibujar el mapa estelar.
+- [x] **Ventana más grande opcional (`VPA_SCALE`).** La superficie de dibujo sigue siendo 640×480 (toda la UI de VPA está diseñada para ese tamaño); para agrandar la ventana sin cambiar el modo de vídeo ni usar "fullscreen" del gestor (ambos provocaron cuelgues), se **vendoriza un `ptcgraph` con un parche mínimo** que crea la "consola" de `ptc` más grande y deja que `ptc` escale la superficie 640×480 para llenarla (ver `VENDOR/` y §1). El ratón se reescala en ambos sentidos (`xfocus.MapMouseToSurface`/`MapSurfaceToWindow`) para que el clic y las flechas mantengan la precisión píxel a píxel. Opciones (variable de entorno):
+  - sin definir → **escala 2 por defecto**;
+  - `VPA_SCALE=1` → 640×480 nativo (sin escalar);
+  - `VPA_SCALE=N` (2…8) → N× (recortado a lo que cabe en pantalla);
+  - `VPA_SCALE=fullscreen` → la mayor escala entera que cabe en la pantalla.
 
 ### Fase 3 — Entrada: ratón y teclado
 - [x] Reescrito `UNIT/MOUSE.PAS` sobre `ptcmouse` (sondeo de eventos con `PollMouse`) en lugar de INT 33h + handler en asm. Detecta flancos (move, press/release de cada botón) comparando estado previo/actual y despacha a `HandlerTable`.

@@ -10,9 +10,11 @@ unit xfocus;
 interface
 
 function  FullscreenRequested: boolean;
+function  ResolveScale: longint;
 procedure ApplyWindowScale;
 procedure RequestFullscreen;
 procedure MapMouseToSurface(var x, y: longint);
+procedure MapSurfaceToWindow(var x, y: longint);
 procedure GrabInputFocus;
 procedure ReleaseInputFocus;
 procedure DbgKey(w: word);
@@ -39,6 +41,51 @@ function FullscreenRequested: boolean;
 begin
   FullscreenRequested := (GetEnvironmentVariable('VPA_FULLSCREEN') <> '') or
                          (LowerCase(GetEnvironmentVariable('VPA_VIDEO')) = 'fullscreen');
+end;
+
+{ Resuelve la escala de ventana deseada (1..8):
+    - VPA_SCALE sin definir  -> 2 (por defecto, ventana mas grande)
+    - VPA_SCALE=1            -> 1 (640x480 nativo, sin escalar)
+    - VPA_SCALE=fullscreen   -> la mayor escala entera que cabe en la pantalla
+    - VPA_SCALE=N (2..8)     -> N
+  Siempre se recorta a lo que cabe en pantalla (4:3, escala entera, nitido).
+  VPA pasa el resultado a ptcgraph.VPAForceScale antes de InitGraph. }
+function ResolveScale: longint;
+var
+  v: string;
+  n, code, scr, sw, sh, maxfit: longint;
+  dpy: PDisplay;
+begin
+  v := LowerCase(Trim(GetEnvironmentVariable('VPA_SCALE')));
+  maxfit := 1;
+  dpy := XOpenDisplay(nil);
+  if dpy <> nil then
+  begin
+    scr := XDefaultScreen(dpy);
+    sw := XDisplayWidth(dpy, scr);
+    sh := XDisplayHeight(dpy, scr);
+    maxfit := sw div 640;
+    if (sh div 480) < maxfit then maxfit := sh div 480;
+    XCloseDisplay(dpy);
+  end;
+  if maxfit < 1 then maxfit := 1;
+  if maxfit > 8 then maxfit := 8;
+
+  if v = '' then
+    n := 2                                  { por defecto: ventana mas grande }
+  else if (v = 'fullscreen') or (v = 'full') or (v = 'max') then
+    n := maxfit
+  else
+  begin
+    Val(v, n, code);
+    if (code <> 0) or (n < 1) then n := 1;
+  end;
+  if n > maxfit then n := maxfit;           { recortar a lo que cabe }
+  if n < 1 then n := 1;
+  ResolveScale := n;
+  if gXDebug then
+    Writeln(StdErr, 'xfocus: VPA_SCALE="', v, '" -> escala ', n,
+            ' (max que cabe en pantalla ', maxfit, ')');
 end;
 
 { La ventana mas grande la crea ya ptcgraph parcheado (VENDOR/ptcgraph + VPA_SCALE),
@@ -114,6 +161,23 @@ begin
     y := (y * 480) div gWinH;
     if x < 0 then x := 0 else if x > 639 then x := 639;
     if y < 0 then y := 0 else if y > 479 then y := 479;
+  end;
+end;
+
+{ Inverso de MapMouseToSurface: superficie 640x480 -> pixeles de ventana, para
+  reposicionar el cursor fisico (XWarpPointer espera coords de ventana). Lo usa
+  MoveMouse (flechas, enganche del cursor). Sin escalado (640x480) no hace nada. }
+procedure MapSurfaceToWindow(var x, y: longint);
+begin
+  if not gFullscreen then exit;
+  if (gDpy = nil) or (gWin = 0) then exit;
+  if (gWinW <= 0) or (gWinH <= 0) then UpdateWindowSize;
+  if (gWinW > 0) and (gWinH > 0) then
+  begin
+    x := (x * gWinW) div 640;
+    y := (y * gWinH) div 480;
+    if x < 0 then x := 0 else if x > gWinW - 1 then x := gWinW - 1;
+    if y < 0 then y := 0 else if y > gWinH - 1 then y := gWinH - 1;
   end;
 end;
 
