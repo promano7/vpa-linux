@@ -201,6 +201,12 @@ procedure SetMousePos(x,y: LongInt);
 begin
   if InGraphMode then
     PTCWrapperObject.MoveMouseTo(x, y);
+  { Actualizar tambien la posicion interna: ptcmouse es basado en eventos y, sin
+    esto, GetMouseState seguiria devolviendo la posicion anterior (0,0 al arrancar)
+    hasta que llegue un evento real de raton, lo que dejaba el cursor logico en una
+    esquina y disparaba el auto-scroll del mapa al cargar. (Modificacion VPA) }
+  MouseX := x;
+  MouseY := y;
 end;
 
 begin
