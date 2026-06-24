@@ -2989,15 +2989,28 @@ function IsShipFunc (const sh:SRec; f:HullFuncs):boolean;
     IsShipFunc := (IsHullFunc(sh.hull, f) <> 0);
   end;
 function ShipOrHullDoes(sid:integer; f1,f2,f3:integer):boolean;
+  { La nave sid (o su casco) tiene alguna de las funciones f1/f2/f3 (codigos SPC_*)?
+    VPA usa el modelo antiguo de hull-functions (array HullFunc^, funciones 0..19,
+    cargado en CONFIG), que ya combina casco + ajustes del host. Para ese modelo
+    IsHullFunc equivale al hullHasSpecial del PDK; aqui solo puenteamos los SPC_*. }
   begin
-    { stub compat: la deteccion real (SPC_*) requiere CC/HULLFUNC.PAS (PCC2).
-      Devuelve False hasta reimplementar HULLFUNC; ver README seccion 1. }
     ShipOrHullDoes := False;
+    if (sid>=1) and (sid<=999) and (TTurn<>nil) and (TTurn^.data<>nil)
+       and (TTurn^.data^.ship[sid]<>nil) then
+      ShipOrHullDoes := IsShipFunc3(TTurn^.data^.ship[sid]^, f1, f2, f3);
   end;
 function IsShipFunc3 (const sh:SRec; a,b,c:int):boolean;
+  { Tiene la nave alguna de las funciones a/b/c (codigos SPC_*)? Los SPC_* 0..19
+    coinciden con el ordinal de HullFuncs; los >=20 (ChunnelSelf/Others/Target,
+    HardenedCloak...) son refinamientos de PHost que el modelo antiguo de VPA no
+    distingue (los agrupa en hfChunneling/hfCloak), asi que se ignoran. }
+  var r : boolean;
   begin
-    { stub compat: idem; requiere HULLFUNC (PCC2). False hasta reimplementar. }
-    IsShipFunc3 := False;
+    r := False;
+    if (a>=0) and (a<=ord(hfGloryDeviceH)) then r := r or IsShipFunc(sh, HullFuncs(a));
+    if (b>=0) and (b<=ord(hfGloryDeviceH)) then r := r or IsShipFunc(sh, HullFuncs(b));
+    if (c>=0) and (c<=ord(hfGloryDeviceH)) then r := r or IsShipFunc(sh, HullFuncs(c));
+    IsShipFunc3 := r;
   end;
 {$ENDIF}
 
