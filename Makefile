@@ -8,20 +8,35 @@ CFG   = vpa.cfg
 MAIN  = VPA/VPA.PAS
 BIN   = build/VPA
 
-.PHONY: all build clean run help hlp data
+# Backend ptc vendorizado y recompilado SIN la extension X11 DGA (ver VENDOR/ptc).
+# Se recompila a build/ptcunits y vpa.cfg lo antepone al ptc del sistema, de modo
+# que el binario no dependa de la obsoleta libXxf86dga (retirada de Arch).
+PTCSRC   = VENDOR/ptc
+PTCUNITS = build/ptcunits
+
+.PHONY: all build clean run help hlp data ptc
 
 all: build
 
 ## build : compila el ejecutable en build/VPA
-build:
+build: ptc
 	@mkdir -p build
 	$(FPC) @$(CFG) $(MAIN)
 	@cp -f VPA/LITT_VPA.CHR build/ 2>/dev/null || true
 	@echo ""
 	@echo ">> Listo: $(BIN)"
 
+## ptc  : recompila el backend ptc SIN la extension DGA (evita depender de
+##        libXxf86dga). Se reconstruye solo si cambia el fuente vendorizado.
+##        Nota: ptc es codigo FPC normal (no -Mtp), por eso NO usa @vpa.cfg.
+ptc: $(PTCUNITS)/ptc.ppu
+$(PTCUNITS)/ptc.ppu: $(PTCSRC)/ptc.pp $(PTCSRC)/x11/x11extensions.inc
+	@mkdir -p $(PTCUNITS)
+	$(FPC) -O2 -Fi$(PTCSRC) -Fi$(PTCSRC)/x11 -Fi$(PTCSRC)/core -FU$(PTCUNITS) $(PTCSRC)/ptc.pp
+	@echo ">> ptc recompilado sin DGA en $(PTCUNITS)/"
+
 ## debug : compila con info de linea (-gl) para depurar con gdb (backtraces)
-debug:
+debug: ptc
 	@mkdir -p build
 	$(FPC) @$(CFG) -gl -O- $(MAIN)
 	@echo ""

@@ -147,12 +147,13 @@ a uno de ellos:
 |---|---|---|
 | `ptcgraph.pp` | **Modificado** (parche VPA) | Lee la escala (`VPAForceScale`/`VPA_SCALE`) y crea la "consola" de `ptc` más grande manteniendo la superficie en 640×480; `ptc` la escala. Lleva además `{$mode objfpc}` y `sysutils` para compilar dentro del build de VPA. La cabecera incluye un **aviso visible de modificación** (lo exige la LGPL). |
 | `ptcmouse.pp`, `ptccrt.pp` | **Sin modificar** | Necesarios para recompilar `ptcgraph` de forma autocontenida (FPC los reconstruye contra el `ptcgraph` parcheado, evitando un desajuste de versión de `.ppu`). |
+| `ptc/` (`core/` + `x11/`, ~556 KB) | **1 fichero modificado** (`x11/x11extensions.inc`) | Backend que hay debajo de `ptcgraph`. Se vendoriza para recompilarlo **sin las extensiones X11 DGA** y que el binario no dependa de `libXxf86dga` (retirada de Arch). Solo se tocan los dos `{$DEFINE …XF86DGA1/2}` de `x11extensions.inc` (comentados), con su aviso de modificación; el resto va íntegro. El `Makefile` (objetivo `ptc`) lo recompila a `build/ptcunits/`. |
 | `graphh.inc`, `graph.inc`, `clip.inc`, `fills.inc`, `fontdata.inc`, `gtext.inc`, `modes.inc`, `palette.inc` | **Sin modificar** | Includes que arrastra `ptcgraph`. |
 
 **Licencia de estos ficheros:** son parte de la **Free Pascal run-time library**, bajo la
 **LGPL modificada con excepción de enlazado estático** (la misma con la que se distribuye
 FPC). Se conservan **íntegras todas las cabeceras de copyright** (Nikolay Nikolov, Daniel
-Mantione y el equipo de FPC). El único fichero modificado, `ptcgraph.pp`, lleva en su
+Mantione y el equipo de FPC). Los ficheros modificados —`ptcgraph.pp` y `ptc/x11/x11extensions.inc`— llevan en su
 cabecera un aviso de modificación, tal como exige la LGPL.
 
 **Por qué no rompe el objetivo de licencia:** la LGPL (con excepción de enlazado) es
@@ -314,7 +315,7 @@ verificable al final de cada una.
 - [ ] Empaquetar (binario + ficheros de soporte: `vpa.hlp`, `vpa.msg`, recursos).
 - [ ] Cerrar el tema de licencia si se publica.
 - [ ] *(Opcional, fase posterior)* Evaluar 256 colores / resoluciones mayores, o un backend SDL para modernización real.
-- [ ] **Eliminar la dependencia de `libXxf86dga`** recompilando `ptcgraph` sin DGA (comentar `ENABLE_X11_EXTENSION_XF86DGA1`/`_XF86DGA2` en `x11extensions.inc`), para que el binario distribuible no requiera una librería retirada de los repos.
+- [x] **Eliminada la dependencia de `libXxf86dga`.** Se vendoriza el backend `ptc` (solo `core/` + `x11/`, ~556 KB) en `VENDOR/ptc/` con las extensiones X11 `XF86DGA1`/`XF86DGA2` desactivadas en `x11/x11extensions.inc`; el `Makefile` (objetivo `ptc`) lo recompila a `build/ptcunits/` y `vpa.cfg` lo antepone al `ptc` del sistema. Verificado con `ldd`: el binario ya **no** enlaza `libXxf86dga` (VPA siempre usa la consola X11 en ventana, nunca DGA, así que no se pierde nada).
 
 ---
 
@@ -333,15 +334,15 @@ Comprobado de forma efectiva sobre FPC **3.2.2** en Ubuntu 24.04 (x86_64).
 - En tiempo de ejecución el binario depende de **libX11** (aplicación X11; en Wayland
   funciona vía XWayland, normalmente ya presente).
 - **Dependencias de enlazado (X) y `gcc`:** al enlazar, FPC pasa `-lX11 -lXext -lXfixes
-  -lXi -lXrandr -lXxf86dga -lXxf86vm`, y necesita los objetos `crt*.o` de **gcc**. En
-  distros minimalistas (Arch) hay que instalarlas explícitamente.
-- **Aviso Arch — `libXxf86dga`:** Arch **retiró `libxxf86dga`** de los repos oficiales en
-  2019 (limpieza de Xorg), pero `ptcgraph` de FPC 3.2.2 aún la enlaza. Solución rápida:
-  instalarla desde el Arch Linux Archive
-  (`sudo pacman -U https://archive.archlinux.org/packages/l/libxxf86dga/libxxf86dga-1.1.5-1-x86_64.pkg.tar.zst`).
-  Solución limpia para el port final (ver Fase 7): **recompilar `ptcgraph` sin DGA**
-  comentando `ENABLE_X11_EXTENSION_XF86DGA1`/`_XF86DGA2` en `ptc/src/x11/x11extensions.inc`,
-  con lo que el binario deja de depender de esa librería obsoleta.
+  -lXi -lXrandr -lXxf86vm` (ya **no** `-lXxf86dga`, ver el aviso de Arch más abajo) y
+  necesita los objetos `crt*.o` de **gcc**. En distros minimalistas (Arch) hay que
+  instalarlas explícitamente.
+- **`libXxf86dga` (RESUELTO).** Arch **retiró `libxxf86dga`** de los repos oficiales en
+  2019 (limpieza de Xorg), pero el `ptc` de FPC 3.2.2 la enlazaba por las extensiones X11
+  DGA. **Ya no hace falta** ningún paquete extra: el port **vendoriza `ptc` sin DGA** (ver
+  §1 y Fase 7) — el `Makefile` lo recompila con `XF86DGA1`/`DGA2` desactivados y el binario
+  resultante no enlaza `libXxf86dga`. (El antiguo apaño de instalarla desde el Arch Linux
+  Archive ya no es necesario.)
 
 > **Nota:** en Linux **no existe la unit `graph`** de Borland; `ptcgraph` *es* el
 > reemplazo compatible con BGI. Al migrar, los `uses Graph` pasarán a `uses ptcgraph, ptccrt`.
@@ -454,7 +455,7 @@ categoría (esto es la hoja de ruta de las Fases 2–4):
 
 | Fase | Estado | Notas |
 |---|---|---|
-| 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Resuelto el caso `libXxf86dga` (AUR). Pendiente solo admin: `git init` + rama + licencia. |
+| 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Caso `libXxf86dga` resuelto del todo (ptc vendorizado sin DGA, ver Fase 7). Pendiente solo admin: `git init` + rama + licencia. |
 | 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya OFF. `vpa.cfg` generado. **Units portadas: `STRF`, `AUXF`** (compilan + validadas). `AUXF` ahora exporta `MaxAvail`/`MemAvail` (heap DOS→valor grande en Linux), centralizado para todo el núcleo. Receta de port en §6. |
 | 2 — Capa gráfica (`ptcgraph`) | 🟡 En curso | Swap aplicado; SVGA fuera; `vpa.cfg`. **`SCREEN`, `TCOMBAT`, `MESSAGES` y `VPAINIT` portados y compilan.** `VPAINIT`: registro de drivers BGI → `InitGraph(D8bit, m640x480, '')` directo; quitados `mem[Seg0040]`, asm muerto y reset de CapsLock. Geometría/atributos de texto: a afinar viendo el binario. Frente actual: asm de `MSGREAD.PAS`. |
 | — Features *stubeadas* (restaurar luego) | 📝 Anotado | (1) **Hull-functions**: `IsShipFunc3`/`ShipOrHullDoes` **implementados** sobre el modelo antiguo (ver §1 y «Estado actual»); solo la capa `Enum*` estilo PCC2 sigue bajo `{$IFDEF VPACC}` (off). (2) **`KbdFlags`** (Shift/Ctrl) → 0. (3) **`TCOMBAT.LoadPic`**: el decodificador de sprites VGA planares (4 planos) + paleta + rotación del visor de combate **ya está portado** a Pascal (ver «Estado actual (runtime)»); `SetPal` implementado. |
