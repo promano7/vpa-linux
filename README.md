@@ -103,6 +103,7 @@ la lógica y el formato de datos para referencia:
 |---|---|---|
 | **PCC2** (`pcc-v2`, 2025) | `game/hullfunc.cc/.h` (lógica hull-functions en C++) | **Permisiva tipo BSD** ("PCC II License Terms": retener copyright, marcar modificaciones). © 2001-2024 Stefan Reuther & contributors. **No es GPL.** |
 | **PDK** (`pdk`, 2010) | `hullfunc.c`, `pconfig.c` (`hullHasSpecial`, `HullDoesAlchemy`, `HullCanHyperwarp`…) | **GPL v2 o posterior.** © 1995-2000 Andrew Sterian, Thomas Voigt, Steffen Pietsch (+ M. van Rees, S. Reuther). |
+| **PCC2ng** (`c2ng`, 2025) | `game/vcr/classic/pvcralgorithm.cpp` (algoritmo de combate **PHost** y su interfaz `Visualizer`) — base del visor de combate nativo (ver §7) | **Permisiva tipo BSD** (*PCC II License Terms*). © Stefan Reuther & contributors. **No es GPL.** |
 | **cpluslib** (2025) | utilidades C++ (plantillas de contenedores) | **Dominio público.** |
 
 **Implicación de licencia (a la luz de la intención del proyecto):** como el port será
@@ -471,6 +472,87 @@ Leyenda: ⬜ Pendiente · 🟡 En curso · ✅ Completada
 
 > **Nota:** la tabla de fases anterior es el histórico del *port* inicial. El estado
 > real **a día de hoy** es el de las dos secciones siguientes.
+
+## 7. Visor de combate PHost nativo (port de `pvcralgorithm` de PCC2ng)
+
+VPA tiene un visor de combate propio (`VPA/TCOMBAT.PAS`: `Combat(var vcr:VCRData; …)`,
+con `Battle`, `FireBeam`, `FireTorpedo`, `LaunchFighter`, `MoveFighters`, `Hit`,
+`DrawShield`, `Beam`, `Torpedo`, `Fighter`, `Gauge`, `Blast`…) y ya **reproduce VCRs de
+forma nativa** (`MESSAGES.PAS` llama `Combat(vcr,Yes,…)`). El problema: ese algoritmo es el
+**clásico de THost con constantes fijas** — no lee la configuración de combate de PHost —,
+así que para partidas **PHost** (como las del autor, PHost 4.1h) es *aproximado*, no exacto.
+Por eso el VPA original ofrecía además lanzar el visor externo `PVCR.EXE` (de PHost), que no
+es open source y solo existe para DOS.
+
+### Decisión: portar el algoritmo, no empaquetar un binario externo
+
+Se evaluaron dos vías (ambas sugeridas por Stefan Reuther):
+
+| | **Opción A — `playvcr` (PCC2 1.x)** | **Opción B — portar `pvcralgorithm` (PCC2ng)** |
+|---|---|---|
+| En el repo | PCC2 1.x + cpluslib (~20 MB C++) | ~1673 líneas de Pascal nuevas |
+| Runtime | **SDL 1.2** (`sdl12-compat`) + recursos de PCC2 | **nada nuevo** (usa `ptcgraph` + sprites `RESOURCE.PLN`) |
+| Aspecto | programa SDL aparte, estética PCC2 | **integrado** en VPA, su ventana y sprites |
+| Exactitud PHost | exacta | exacta si se porta bien |
+| Esfuerzo | bajo (empaquetar) | alto (portar matemática + validar) |
+
+Se eligió la **Opción B**: encaja con el espíritu del port (autocontenido, sin dependencias
+nuevas — justo después de habernos quitado `libXxf86dga`), y aprovecha que VPA **ya tiene la
+visualización**; solo le falta el algoritmo PHost-exacto. PCC2ng separa limpiamente ambas
+cosas: `game/vcr/classic/pvcralgorithm.cpp` (~1673 líneas de combate puro) emite **8 eventos**
+a una interfaz `Visualizer` (`startFighter`, `landFighter`, `killFighter`, `fireBeam`,
+`fireTorpedo`, `updateBeam`, `updateLauncher`, `killObject`) que mapean casi 1:1 con las
+rutinas de dibujo que VPA ya tiene. Se porta el algoritmo a Pascal y se conecta a `TCOMBAT`.
+
+> **Verificado de paso** que la Opción A *era* viable (PCC2 1.x + `playvcr` compilan limpio
+> en g++ 13, binario de ~2,9 MB que solo necesita SDL 1.2). Se descarta por huella y por dejar
+> un satélite ajeno, no por inviable.
+
+### Licencia
+
+`pvcralgorithm` viene de **PCC2ng** (`c2ng`), © Stefan Reuther, bajo los mismos *PCC II License
+Terms* (permisiva tipo BSD: retener copyright y marcar modificaciones; **no** es GPL). Es
+compatible con el objetivo de licencia del port. Las units Pascal portadas **conservarán la
+cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
+
+### Plan por fases
+
+- **Fase A — Andamiaje y mapeo de datos** (sin matemática aún):
+  - Unit nueva (p. ej. `VPA/PVCRALG.PAS`) con el esqueleto: tipos `Object`/`Status` y firmas
+    `initBattle` / `playCycle` / `playFastForward` / `doneBattle`.
+  - Interfaz "visualizador" como conjunto de *callbacks* que VPA implementa con sus rutinas
+    de `TCOMBAT` (los 8 eventos).
+  - Mapear el registro VCR de VPA (`VCRx.DAT` clásico) → `Object` del algoritmo; verificar
+    que **todos** los campos de combate están disponibles (tipo de beam/torpedo, masa, bahías,
+    munición, raza, experiencia…).
+  - **Extender el parser de `PCONFIG.SRC`** (`CONFIG.PAS`): hoy VPA lee solo un subconjunto;
+    el algoritmo necesita `BeamHitOdds`, `BeamRechargeRate`, `TubeRechargeRate`,
+    `FighterBeamExplosive`, escalados de escudo/tripulación, `StrikesPerFighter`, etc.
+- **Fase B — Portar el algoritmo** (la matemática), por bloques de menor a mayor dependencia:
+  1. `initBattle` + precálculo de config (hit odds, recharge rates, kill/damage).
+  2. RNG de PHost (debe ser **bit-exacto**) y recarga de beams/launchers/bahías.
+  3. Beams: `fireBeam` + aplicación de daño/escudo/tripulación (`hit`).
+  4. Torpedos (`fireTorpedo`).
+  5. Fighters (lanzar/mover/aterrizar/derribar, combate inter-fighter).
+  6. `playCycle` (orquesta el turno de combate) + condición de fin + `doneBattle`
+     (explosiones finales). Validar contra un *null visualizer* (solo la matemática).
+- **Fase C — Conectar el visualizador a `TCOMBAT`:** implementar los 8 eventos llamando a las
+  rutinas de dibujo existentes (`Beam`/`Torpedo`/`Fighter`/`Hit`/`Gauge`/`Blast`…), con el
+  *timing* y la animación de VPA. Soportar el modo "sin animación" (resultado rápido).
+- **Fase D — Integración en VPA:** enrutar el visor — en partidas **PHost** usar el algoritmo
+  portado; en **THost** mantener el `Battle` clásico de VPA (o portar también
+  `hostalgorithm.cpp` más adelante). Eliminar la llamada externa a `PVCR.EXE`/`VCR.EXE` y
+  limpiar los *flags* `pvcr`/`pvcrexe`.
+- **Fase E — Validación (crítica):** comparar resultado (ganador, daño final, supervivientes,
+  munición) contra combates reales de una partida PHost 4.1h y, si hace falta, contra
+  `PVCR.EXE` en DOSBox. Banco de pruebas con varios VCR conocidos; iterar hasta bit-exacto.
+- **Fase F — Pulido y opcionales:** death rays, niveles de experiencia (PHost 4.x), y —si se
+  quisiera— el combate multi-nave **FLAK** (`game/vcr/flak/` de PCC2ng), que es un módulo
+  aparte. Documentación y limpieza.
+
+> **Estado:** planificado. Es la tarea más grande del afinado (port de matemática de combate
+> intrincada + validación bit-exacta), así que irá por fases verificables. Stefan Reuther
+> queda disponible para dudas de detalle del algoritmo.
 
 ### Estado actual (runtime)
 
