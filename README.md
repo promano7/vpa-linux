@@ -278,8 +278,7 @@ verificable al final de cada una.
   - `VPA_SCALE=1` → 640×480 nativo (sin escalar);
   - `VPA_SCALE=N` (2…8) → ventana N× (recortado a lo que cabe en pantalla), siempre como **ventana** en el escritorio;
   - `VPA_SCALE=fullscreen` → **pantalla completa real**: usa el ajuste 4:3 más grande que cabe (mismo número de píxeles que el `N` equivalente, nítido) y pide al gestor `_NET_WM_STATE_FULLSCREEN`, de modo que la ventana queda **por encima del panel del escritorio** (resuelve el scroll hacia abajo en escritorios con panel inferior). Las zonas 16:9 sobrantes quedan a los lados (4:3). Se sale con **Alt-X** como siempre. Es seguro y recuperable: la pantalla completa se aplica a la **propia ventana de VPA** (no cambia el modo de vídeo del monitor) y al cerrar se libera explícitamente, así que el panel reaparece.
-    - Por defecto la ventana se **agranda hasta llenar la pantalla** (algunos gestores solo ocultan el panel si la ventana cubre todo el monitor); como `ptc` pinta su contenido en la esquina superior izquierda, queda pegado a la izquierda con negro a la derecha.
-    - Con **`VPA_FS_CENTER=1`** se mantiene la ventana 4:3 de tamaño fijo para que el **gestor la centre** (la mayoría de escritorios lo hacen y ocultan el panel igual), quedando centrada con barras negras a ambos lados. Si en algún gestor el panel reapareciese, no usar esta variable.
+    - La ventana se **agranda hasta llenar la pantalla** (algunos gestores solo ocultan el panel si la ventana cubre todo el monitor); como `ptc` pinta su contenido en la esquina superior izquierda, el contenido 4:3 queda pegado a la izquierda con una franja negra a la derecha (se ve completo y sin distorsión).
 
 ### Fase 3 — Entrada: ratón y teclado
 - [x] Reescrito `UNIT/MOUSE.PAS` sobre `ptcmouse` (sondeo de eventos con `PollMouse`) en lugar de INT 33h + handler en asm. Detecta flancos (move, press/release de cada botón) comparando estado previo/actual y despacha a `HandlerTable`.
