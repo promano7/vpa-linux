@@ -344,6 +344,56 @@ function ReadConfigFile (fnm:str79; sec:cfgSec) : boolean;
                              else a[i]:=Value(s1);
       end;
     end;
+  procedure GetArrayL (var a:LArr11);
+    { como GetArray pero 32-bit, para distancias/rangos de combate }
+    var i : byte;
+    begin
+      for i:=1 to 11 do
+      begin
+        Parse(s,s1,',');
+        if (ls1=0) and (i>1) then a[i]:=a[i-1]
+                             else a[i]:=Value(s1);
+      end;
+    end;
+  procedure ReadCombatKey;
+    { s1=nombre de clave (mayusculas), s=valor. Captura las claves de combate de
+      PHost que el visor nativo (PVCRALG) necesita y que NO estan en la tabla
+      posicional KeyNames, sin acoplarlas a ella. Por jugador con GetArray;
+      escalares con Value/YesNo. Las claves EMod* (experiencia) se difieren a la
+      fase F y aqui se ignoran (caen por el final del if sin asignar). }
+    begin
+      with CombatCfg do
+      if      s1='BEAMHITODDS'           then GetArray(BeamHitOdds)
+      else if s1='BEAMHITBONUS'          then GetArray(BeamHitBonus)
+      else if s1='BEAMRECHARGERATE'      then GetArray(BeamRechargeRate)
+      else if s1='BEAMRECHARGEBONUS'     then GetArray(BeamRechargeBonus)
+      else if s1='TORPHITODDS'           then GetArray(TorpHitOdds)
+      else if s1='TORPHITBONUS'          then GetArray(TorpHitBonus)
+      else if s1='TUBERECHARGERATE'      then GetArray(TubeRechargeRate)
+      else if s1='TUBERECHARGEBONUS'     then GetArray(TubeRechargeBonus)
+      else if s1='BAYRECHARGERATE'       then GetArray(BayRechargeRate)
+      else if s1='BAYRECHARGEBONUS'      then GetArray(BayRechargeBonus)
+      else if s1='BAYLAUNCHINTERVAL'     then GetArray(BayLaunchInterval)
+      else if s1='SHIELDDAMAGESCALING'   then GetArray(ShieldDamageScaling)
+      else if s1='SHIELDKILLSCALING'     then GetArray(ShieldKillScaling)
+      else if s1='HULLDAMAGESCALING'     then GetArray(HullDamageScaling)
+      else if s1='CREWKILLSCALING'       then GetArray(CrewKillScaling)
+      else if s1='MAXFIGHTERSLAUNCHED'   then GetArray(MaxFightersLaunched)
+      else if s1='STRIKESPERFIGHTER'     then GetArray(StrikesPerFighter)
+      else if s1='FIGHTERMOVEMENTSPEED'  then GetArray(FighterMovementSpeed)
+      else if s1='FIGHTERBEAMEXPLOSIVE'  then GetArray(FighterBeamExplosive)
+      else if s1='FIGHTERBEAMKILL'       then GetArray(FighterBeamKill)
+      else if s1='FIGHTERFIRINGRANGE'    then GetArrayL(FighterFiringRange)
+      else if s1='FIGHTERKILLODDS'       then GetArray(FighterKillOdds)
+      else if s1='BEAMFIRINGRANGE'       then GetArrayL(BeamFiringRange)
+      else if s1='BEAMHITFIGHTERRANGE'   then GetArrayL(BeamHitFighterRange)
+      else if s1='BEAMHITFIGHTERCHARGE'  then GetArray(BeamHitFighterCharge)
+      else if s1='BEAMHITSHIPCHARGE'     then GetArray(BeamHitShipCharge)
+      else if s1='TORPFIRINGRANGE'       then GetArrayL(TorpFiringRange)
+      else if s1='STANDOFFDISTANCE'      then StandoffDistance:=Value(s)
+      else if s1='FIREONATTACKFIGHTERS'  then FireOnAttackFighters:=YesNo
+      else if s1='PLANETSHAVETUBES'      then PlanetsHaveTubes:=YesNo;
+    end;
   procedure GetWraparoundRectangle;
     var i  : byte;
         xy : array[1..4] of integer;
@@ -634,7 +684,8 @@ function ReadConfigFile (fnm:str79; sec:cfgSec) : boolean;
                 kmWrap          : MapWrap:=YesNo;
                 kmExplMap       : ExplMap:=YesNo;
               end;
-            end;
+            end
+            else if sec=sPHOST then ReadCombatKey;
         end;
     end;
     Close(f);
@@ -878,8 +929,43 @@ procedure ReadConfig1;
     ReadMIT;
   end;
 
+procedure InitCombatCfgDefaults;
+  { Fija en CombatCfg los valores por defecto de PHost (los usados por el visor
+    nativo PVCRALG) ANTES de leer pconfig.src, de modo que las claves ausentes
+    del fichero queden con el default de PHost. Valores tomados de PCC2ng
+    (game/config/hostconfiguration.cpp, setDefaultValues). }
+  procedure F (var a:IArr11; v:int);
+    var i : byte;
+    begin for i:=1 to 11 do a[i]:=v; end;
+  procedure FL (var a:LArr11; v:longint);
+    var i : byte;
+    begin for i:=1 to 11 do a[i]:=v; end;
+  begin
+    with CombatCfg do begin
+      F(BeamHitOdds,100);          F(BeamHitBonus,0);
+      F(BeamRechargeRate,8);       F(BeamRechargeBonus,0);
+      F(TorpHitOdds,65);           F(TorpHitBonus,0);
+      F(TubeRechargeRate,45);      F(TubeRechargeBonus,0);
+      F(BayRechargeRate,52);       F(BayRechargeBonus,2);
+      F(BayLaunchInterval,3);
+      F(ShieldDamageScaling,80);   F(ShieldKillScaling,0);
+      F(HullDamageScaling,80);     F(CrewKillScaling,80);
+      F(MaxFightersLaunched,19);   F(StrikesPerFighter,7);
+      F(FighterMovementSpeed,235);
+      F(FighterBeamExplosive,2);   F(FighterBeamKill,2);
+      FL(FighterFiringRange,3000); F(FighterKillOdds,20);
+      FL(BeamFiringRange,20000);   FL(BeamHitFighterRange,100000);
+      F(BeamHitFighterCharge,500); F(BeamHitShipCharge,600);
+      FL(TorpFiringRange,30000);
+      StandoffDistance     := 3000;
+      FireOnAttackFighters := No;
+      PlanetsHaveTubes     := No;
+    end;
+  end;
+
 procedure ReadConfig2 (RWMode:boolean);
   begin
+    InitCombatCfgDefaults;
     if PHOST then PHOSTget:=PHOSTget or byte(not ReadConfigFile(addir+PCONFIG_SRC,sPHOST))
     else begin
       if (not ReadConfigFile(addir+HCONFIG_INI,sConfig)) and RWMode then WriteHConfig;

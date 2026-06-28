@@ -517,17 +517,31 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
 
 ### Plan por fases
 
-- **Fase A — Andamiaje y mapeo de datos** (sin matemática aún):
-  - Unit nueva (p. ej. `VPA/PVCRALG.PAS`) con el esqueleto: tipos `Object`/`Status` y firmas
-    `initBattle` / `playCycle` / `playFastForward` / `doneBattle`.
-  - Interfaz "visualizador" como conjunto de *callbacks* que VPA implementa con sus rutinas
-    de `TCOMBAT` (los 8 eventos).
-  - Mapear el registro VCR de VPA (`VCRx.DAT` clásico) → `Object` del algoritmo; verificar
-    que **todos** los campos de combate están disponibles (tipo de beam/torpedo, masa, bahías,
-    munición, raza, experiencia…).
-  - **Extender el parser de `PCONFIG.SRC`** (`CONFIG.PAS`): hoy VPA lee solo un subconjunto;
-    el algoritmo necesita `BeamHitOdds`, `BeamRechargeRate`, `TubeRechargeRate`,
-    `FighterBeamExplosive`, escalados de escudo/tripulación, `StrikesPerFighter`, etc.
+- **Fase A — Andamiaje y mapeo de datos** (sin matemática aún) — ✅ **COMPLETADA**:
+  - ✅ Unit nueva `VPA/PVCRALG.PAS` con el esqueleto: tipo `TVcrObject` (el combatiente,
+    equivalente a `game::vcr::Object` de PCC2ng) y firmas `InitBattle` / `PlayCycle` /
+    `PlayFastForward` / `DoneBattle` (stubs) + consultas de estado `Get*`.
+  - ✅ Interfaz "visualizador" `TVcrVisualizer`: los **8 eventos** como *callbacks*
+    (`startFighter` / `landFighter` / `killFighter` / `fireBeam` / `fireTorpedo` /
+    `updateBeam` / `updateLauncher` / `killObject`), que `TCOMBAT` rellenará en la Fase C.
+  - ✅ `MapVCR`: mapea el registro VCR de VPA (`VCRData`, leído tal cual de `VCRx.DAT`) →
+    `TVcrObject`. **Verificado campo a campo por offset** contra el layout clásico de PCC2ng
+    (`Vcr` = 100 bytes, `VcrObject` = 42), incluido el desempaquetado de munición de
+    `database.cpp`. Todos los campos de combate están disponibles.
+  - ✅ **Parser de `PCONFIG.SRC` extendido** (`CONFIG.PAS`): se capturan las **30 claves de
+    combate** de PHost que el algoritmo necesita (`BeamHitOdds`, `BeamHitBonus`,
+    `BeamRechargeRate/Bonus`, `TorpHitOdds/Bonus`, `TubeRechargeRate/Bonus`,
+    `BayRechargeRate/Bonus`, `BayLaunchInterval`, escalados de escudo/daño/tripulación,
+    `MaxFightersLaunched`, `StrikesPerFighter`, `FighterMovementSpeed`,
+    `FighterBeamExplosive/Kill`, `FighterFiringRange`, `FighterKillOdds`, `BeamFiringRange`,
+    `BeamHitFighterRange/Charge`, `BeamHitShipCharge`, `TorpFiringRange`,
+    `FireOnAttackFighters`, `StandoffDistance`, `PlanetsHaveTubes`). Se guardan en el registro
+    `CombatCfg : TCombatCfg` (VPADATA), casi todas **por jugador** (`IArr11`); las distancias
+    y rangos en `LArr11` (32-bit, porque superan 16 bits — p. ej. `BeamHitFighterRange`=100000).
+    `InitCombatCfgDefaults` fija los **defaults de PHost** (de PCC2ng) antes de leer el fichero.
+    Implementado con un despachador `ReadCombatKey` enganchado al bucle de parseo **sin tocar la
+    tabla posicional `KeyNames`** (riesgo cero para la config existente). Las claves `EMod*`
+    (experiencia) se difieren a la Fase F.
 - **Fase B — Portar el algoritmo** (la matemática), por bloques de menor a mayor dependencia:
   1. `initBattle` + precálculo de config (hit odds, recharge rates, kill/damage).
   2. RNG de PHost (debe ser **bit-exacto**) y recarga de beams/launchers/bahías.

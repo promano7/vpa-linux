@@ -751,6 +751,34 @@ type
                     shld        : array [LRType] of int;
                   end;
 
+        { Config de combate de PHost para el visor nativo (PVCRALG). Casi todas
+          las opciones son por jugador (IArr11; la convencion PHost de "un valor
+          se repite a los 11" la aplica GetArray en CONFIG.PAS). Los defaults los
+          fija InitCombatCfgDefaults (CONFIG.PAS) antes de leer pconfig.src.
+          Ver README seccion 7. }
+        LArr11  = array [1..11] of longint;
+        TCombatCfg = record
+          { 16-bit: caben en los limites que PHost admite para estas opciones }
+          BeamHitOdds, BeamHitBonus,
+          BeamRechargeRate, BeamRechargeBonus,
+          TorpHitOdds, TorpHitBonus,
+          TubeRechargeRate, TubeRechargeBonus,
+          BayRechargeRate, BayRechargeBonus, BayLaunchInterval,
+          ShieldDamageScaling, ShieldKillScaling, HullDamageScaling, CrewKillScaling,
+          MaxFightersLaunched, StrikesPerFighter, FighterMovementSpeed,
+          FighterBeamExplosive, FighterBeamKill, FighterKillOdds,
+          BeamHitFighterCharge, BeamHitShipCharge : IArr11;
+          { 32-bit: distancias/rangos en metros; pueden superar 32767 (p.ej.
+            BeamHitFighterRange por defecto = 100000) }
+          FighterFiringRange, BeamFiringRange,
+          BeamHitFighterRange, TorpFiringRange    : LArr11;
+          StandoffDistance     : longint;
+          FireOnAttackFighters : boolean;
+          PlanetsHaveTubes     : boolean;
+        end;
+
+var     CombatCfg : TCombatCfg;
+
 const
         VCSpeed : byte = 5;
         VCSet   : byte = 8;
