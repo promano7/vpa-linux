@@ -577,6 +577,13 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
      `Hit` (modelo ya verificado); `torp_kill`/`torp_damage` ya llevan el ×2 de no-AC del
      precálculo. Emite `updateLauncher`/`fireTorpedo`. Reusa piezas ya verificadas bit-exactas.
   5. Fighters (lanzar/mover/aterrizar/derribar, combate inter-fighter).
+     ✅ **Portado**: `FighterLaunch` (uno por llamada desde una bahía cargada),
+     `FighterMove` (atacantes hacia el enemigo; los que vuelven aterrizan al llegar a su nave),
+     `FighterAttack` (golpea con `Hit` cuando está en rango; retirada si rebasó al enemigo) y
+     `FighterIntercept` (combate inter-fighter). Este último **verificado bit-exacto** contra
+     una referencia C++ (mismos fighters derribados y misma semilla final en los casos con
+     match y degenerado), validando el hash de posición (`shr` lógico ≡ `>>` con signo de C
+     para lo que importa), el emparejamiento por bins y el orden crítico de llamadas al RNG.
   6. `playCycle` (orquesta el turno de combate) + condición de fin + `doneBattle`
      (explosiones finales). Validar contra un *null visualizer* (solo la matemática).
 - **Fase C — Conectar el visualizador a `TCOMBAT`:** implementar los 8 eventos llamando a las

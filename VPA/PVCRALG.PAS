@@ -731,6 +731,170 @@ begin
     end;
 end;
 
+{ ---------------------------------------------------------------------------
+  Fighters (bloque 5). Lanzar (uno por llamada), mover (atacantes hacia el
+  enemigo, los que vuelven aterrizan), atacar (con Hit) e intercepcion
+  inter-fighter (con RNG). En FighterIntercept el ORDEN de llamadas al RNG es
+  critico, incluido el caso degenerado que consume RandomRange100 lcount veces.
+  El hash de posicion usa shr (logico): da el mismo resultado que el >> con
+  signo de C para lo que aqui importa (igualdad de hash + bits bajos).
+  --------------------------------------------------------------------------- }
+procedure FighterLaunch (var st : TSideStatus);
+  var bay, bay_mx, track : int;
+begin
+  if (st.r.obj.numFighters = 0)
+     or (st.r.m_activeFighters >= st.f.MaxFightersLaunched)
+     or (st.r.m_launchCountdown > 0) then exit;
+  bay_mx := st.r.obj.numBays;
+  for bay := 0 to bay_mx-1 do
+    if st.r.m_bayStatus[bay] >= 1000 then
+      for track := 0 to st.f.MaxFightersLaunched-1 do
+        if st.r.m_fighterStatus[track] = FighterIdle then
+        begin
+          st.r.m_fighterStatus[track]      := FighterAttacks;
+          st.r.m_fighterX[track]           := st.r.m_objectX;
+          st.r.m_fighterStrikesLeft[track] := st.f.StrikesPerFighter;
+          st.r.m_bayStatus[bay]            := 0;
+          Inc(st.r.m_activeFighters);
+          Dec(st.r.obj.numFighters);
+          st.r.m_launchCountdown := st.f.BayLaunchInterval;
+          if Assigned(gVis.startFighter) then gVis.startFighter(st.f.side, track);
+          exit;   { un fighter por llamada }
+        end;
+end;
+
+procedure FighterMove (var st : TSideStatus);
+  var track, limit : int; dir : longint;
+begin
+  if st.r.m_activeFighters = 0 then exit;
+  if st.f.side = vsLeft then dir := st.f.FighterMovementSpeed
+                        else dir := -st.f.FighterMovementSpeed;
+  limit := st.f.MaxFightersLaunched;
+  for track := 0 to limit-1 do
+    if st.r.m_fighterStatus[track] = FighterAttacks then
+      st.r.m_fighterX[track] := st.r.m_fighterX[track] + dir
+    else if st.r.m_fighterStatus[track] = FighterReturns then
+    begin
+      st.r.m_fighterX[track] := st.r.m_fighterX[track] - dir;
+      if ( (st.f.side = vsLeft)  and (st.r.m_fighterX[track] < st.r.m_objectX) )
+      or ( (st.f.side = vsRight) and (st.r.m_fighterX[track] > st.r.m_objectX) ) then
+      begin
+        Dec(st.r.m_activeFighters);
+        Inc(st.r.obj.numFighters);
+        if Assigned(gVis.landFighter) then gVis.landFighter(st.f.side, track);
+        st.r.m_fighterStatus[track] := FighterIdle;
+      end;
+    end;
+end;
+
+function FighterAttack (var st, opp : TSideStatus) : boolean;
+  var i, limit : int; enemy_x : longint; hitres : boolean;
+begin
+  FighterAttack := false;
+  if st.r.m_activeFighters = 0 then exit;
+  enemy_x := opp.r.m_objectX;
+  limit := st.f.MaxFightersLaunched;
+  for i := 0 to limit-1 do
+    if st.r.m_fighterStatus[i] = FighterAttacks then
+    begin
+      if Abs(st.r.m_fighterX[i] - enemy_x) <= st.f.FighterFiringRange then
+      begin
+        Dec(st.r.m_fighterStrikesLeft[i]);
+        if st.r.m_fighterStrikesLeft[i] = 0 then st.r.m_fighterStatus[i] := FighterReturns;
+        hitres := Hit(opp, st.f.FighterBeamKill, st.f.FighterBeamExplosive, false);
+        if Assigned(gVis.fireBeam) then
+          gVis.fireBeam(st.f.side, i, -1, 1, st.f.FighterBeamExplosive, st.f.FighterBeamKill);
+        if hitres then begin FighterAttack := true; exit; end;
+      end
+      else if (m_capabilities and cBeamCapability) <> 0 then
+      begin
+        { si el fighter rebaso al enemigo, retirada }
+        if ( (st.f.side = vsLeft)  and (st.r.m_fighterX[i] > enemy_x + st.f.FighterFiringRange) )
+        or ( (st.f.side = vsRight) and (st.r.m_fighterX[i] < enemy_x - st.f.FighterFiringRange) ) then
+        begin
+          st.r.m_fighterStrikesLeft[i] := 0;
+          st.r.m_fighterStatus[i] := FighterReturns;
+        end;
+      end;
+    end;
+end;
+
+procedure FighterIntercept;
+  const NEVER = -16384;   { -0x4000 }
+  var lmatch, rmatch : array [0..VCR_MAX_FTRS-1] of smallint;
+      lslot, rslot   : array [0..VCR_MAX_FTRS-1] of shortint;
+      bins           : array [0..15] of dword;
+      lcount, rcount, i, limit, ls, rs, lf, rf : int;
+      hash : longint;
+      found : boolean;
+begin
+  if (m_status[vsLeft].r.m_activeFighters = 0)
+     or (m_status[vsRight].r.m_activeFighters = 0) then exit;
+  for i := 0 to 15 do bins[i] := 0;
+  lcount := 0;  rcount := 0;
+  { posiciones izquierda; marca slots ocupados }
+  limit := m_status[vsLeft].f.MaxFightersLaunched;
+  for i := 0 to limit-1 do
+    if m_status[vsLeft].r.m_fighterStatus[i] <> FighterIdle then
+    begin
+      hash := m_status[vsLeft].r.m_fighterX[i] shr 7;
+      lslot[lcount]  := i;
+      lmatch[lcount] := hash;       { trunca a 16 bits, como int16_t }
+      Inc(lcount);
+      bins[(hash shr 5) and 15] := bins[(hash shr 5) and 15] or (dword(1) shl (hash and 31));
+    end;
+  { posiciones derecha; elimina las imposibles }
+  limit := m_status[vsRight].f.MaxFightersLaunched;
+  for i := 0 to limit-1 do
+    if m_status[vsRight].r.m_fighterStatus[i] <> FighterIdle then
+    begin
+      hash := m_status[vsRight].r.m_fighterX[i] shr 7;
+      if (bins[(hash shr 5) and 15] and (dword(1) shl (hash and 31))) <> 0 then
+      begin
+        rslot[rcount]  := i;
+        rmatch[rcount] := hash;
+        Inc(rcount);
+      end;
+    end;
+  { caso degenerado: sin match -> consumir RNG lcount veces y salir }
+  if rcount = 0 then
+  begin
+    for ls := 0 to lcount-1 do RandomRange100;
+    exit;
+  end;
+  { version completa }
+  for ls := 0 to lcount-1 do
+    if RandomRange100LT(m_interceptProbability) then
+    begin
+      rs := 0;  found := false;
+      while (rs < rcount) and (not found) do
+      begin
+        if rmatch[rs] = lmatch[ls] then
+        begin
+          lf := lslot[ls];  rf := rslot[rs];
+          if RandomRange100LT(m_rightProbability) then
+          begin
+            if Assigned(gVis.fireBeam) then
+              gVis.fireBeam(vsRight, rf, lf, 1, m_status[vsRight].f.FighterBeamExplosive, m_status[vsRight].f.FighterBeamKill);
+            Dec(m_status[vsLeft].r.m_activeFighters);
+            if Assigned(gVis.killFighter) then gVis.killFighter(vsLeft, lf);
+            m_status[vsLeft].r.m_fighterStatus[lf] := FighterIdle;
+          end
+          else begin
+            if Assigned(gVis.fireBeam) then
+              gVis.fireBeam(vsLeft, lf, rf, 1, m_status[vsLeft].f.FighterBeamExplosive, m_status[vsLeft].f.FighterBeamKill);
+            Dec(m_status[vsRight].r.m_activeFighters);
+            if Assigned(gVis.killFighter) then gVis.killFighter(vsRight, rf);
+            m_status[vsRight].r.m_fighterStatus[rf] := FighterIdle;
+            rmatch[rs] := NEVER;
+          end;
+          found := true;
+        end;
+        Inc(rs);
+      end;
+    end;
+end;
+
 function PlayCycle : boolean;
 begin
   { STUB: la matematica del turno (recarga, disparo, fighters, hits, fin) se
