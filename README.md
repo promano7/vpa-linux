@@ -572,6 +572,10 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
      y `GetDistance`. Detalle crítico replicado: el `missing` del path de fighter consume RNG
      aunque no haya fighter. `SetCapabilities` fija los flags del VCR (DeathRay/Beam).
   4. Torpedos (`fireTorpedo`).
+     ✅ **`TorpsFire` portado**: dispara un torpedo por llamada desde el primer tubo cargado
+     (`status>=1000`), gasta munición, tira `RandomRange100` y si `rr <= torp_hit_odds` aplica
+     `Hit` (modelo ya verificado); `torp_kill`/`torp_damage` ya llevan el ×2 de no-AC del
+     precálculo. Emite `updateLauncher`/`fireTorpedo`. Reusa piezas ya verificadas bit-exactas.
   5. Fighters (lanzar/mover/aterrizar/derribar, combate inter-fighter).
   6. `playCycle` (orquesta el turno de combate) + condición de fin + `doneBattle`
      (explosiones finales). Validar contra un *null visualizer* (solo la matemática).

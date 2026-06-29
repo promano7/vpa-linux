@@ -697,6 +697,40 @@ begin
   end;
 end;
 
+{ ---------------------------------------------------------------------------
+  Torpedos (bloque 4). Dispara como mucho un torpedo por llamada desde el primer
+  tubo cargado (status>=1000): gasta un torpedo, consume RNG (RandomRange100) y,
+  si rr <= torp_hit_odds, aplica Hit. torp_kill/torp_damage ya llevan el x2 de
+  no-AC aplicado en InitBattle. Devuelve True si el combate termina.
+  --------------------------------------------------------------------------- }
+function TorpsFire (var st, opp : TSideStatus) : boolean;
+  var launcher, limit, rr, kill, damage : int;
+begin
+  TorpsFire := false;
+  if (GetDistance > st.f.TorpFiringRange) or (st.r.obj.numTorps = 0) then exit;
+  limit := st.r.obj.numLaunchers;
+  for launcher := 0 to limit-1 do
+    if st.r.m_launcherStatus[launcher] >= 1000 then
+    begin
+      rr := RandomRange100;
+      Dec(st.r.obj.numTorps);
+      st.r.m_launcherStatus[launcher] := 0;
+      if Assigned(gVis.updateLauncher) then gVis.updateLauncher(st.f.side, launcher);
+      if rr <= st.f.torp_hit_odds then
+      begin
+        kill   := st.f.torp_kill;
+        damage := st.f.torp_damage;
+        TorpsFire := Hit(opp, kill, damage, damage = 0);
+        if Assigned(gVis.fireTorpedo) then gVis.fireTorpedo(st.f.side, rr, launcher);
+        exit;
+      end
+      else begin
+        if Assigned(gVis.fireTorpedo) then gVis.fireTorpedo(st.f.side, -1-rr, launcher);
+        exit;
+      end;
+    end;
+end;
+
 function PlayCycle : boolean;
 begin
   { STUB: la matematica del turno (recarga, disparo, fighters, hits, fin) se
