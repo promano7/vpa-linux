@@ -99,13 +99,76 @@ function  RandomRange100LT(comp:int) : boolean;   { rnd[0,100) < comp }
 
 Implementation
 
+const
+  { limites de PCC2ng }
+  VCR_MAX_BEAMS = 20;
+  VCR_MAX_TORPS = 20;
+  VCR_MAX_FTRS  = 50;
+  VCR_MAX_BAYS  = 50;
+  { tasas "Nu" del Object: VPA solo maneja PHost/THost (no Nu), asi que son las
+    constantes por defecto de PCC2ng (object.cpp) }
+  cBeamKillRate    = 1;
+  cBeamChargeRate  = 1;
+  cTorpMissRate    = 35;
+  cTorpChargeRate  = 1;
+  cCrewDefenseRate = 0;
+  { estados de fighter }
+  FighterIdle    = 0;
+  FighterAttacks = 1;
+  FighterReturns = 2;
+
+type
+  { Valores precalculados que no cambian durante el combate (por lado).
+    Modelo entero (PVCR_INTEGER, siempre activo en PCC2ng). Los recharge se
+    guardan como el 'max' que se pasa a RandomRange (modelo no-prepared). }
+  TFixedStatus = record
+    side          : TVcrSide;
+    beam_recharge, bay_recharge, torp_recharge : longint;
+    beam_hit_odds, torp_hit_odds : longint;   { pueden superar 16-bit con bonus altos }
+    beam_kill, beam_damage, torp_kill, torp_damage : int;
+    scale, max_scaled, damage_limit_scaled, mass_plus1 : longint;
+    ShieldDamageScaling, ShieldKillScaling, HullDamageScaling, CrewKillScaling : int;
+    MaxFightersLaunched, StrikesPerFighter, BayLaunchInterval, FighterMovementSpeed : int;
+    FighterBeamExplosive, FighterBeamKill, BeamHitFighterCharge, BeamHitShipCharge : int;
+    FighterFiringRange, BeamHitFighterRange, BeamFiringRange,
+    TorpFiringRange, ShipMovementSpeed : longint;
+  end;
+
+  { Valores que cambian durante el combate (por lado). }
+  TRunningStatus = record
+    obj              : TVcrObject;
+    m_beamStatus     : array [0..VCR_MAX_BEAMS-1] of longint;  { [0,~1000] }
+    m_launcherStatus : array [0..VCR_MAX_TORPS-1] of longint;
+    m_bayStatus      : array [0..VCR_MAX_BAYS-1]  of longint;
+    m_fighterStatus  : array [0..VCR_MAX_FTRS-1]  of byte;     { 0..2 }
+    m_fighterStrikesLeft : array [0..VCR_MAX_FTRS-1] of longint;
+    m_fighterX       : array [0..VCR_MAX_FTRS-1] of longint;
+    m_objectX        : longint;                                { posicion baseship, en metros }
+    m_activeFighters : int;
+    m_launchCountdown: int;
+    shield_scaled    : longint;   { escalado con scale }
+    damage_scaled2   : longint;   { escalado con scale*100 }
+    crew_scaled2     : longint;   { escalado con scale*100 }
+  end;
+
+  TSideStatus = record
+    f : TFixedStatus;
+    r : TRunningStatus;
+  end;
+
 var
-  { Estado del combate activo (un combate a la vez). La Fase B lo ampliara con
-    los arrays de estado de beams/launchers/bays/fighters, el RNG, etc. }
-  gLeft, gRight : TVcrObject;
+  { Estado del combate activo (un combate a la vez). }
+  m_status      : array [TVcrSide] of TSideStatus;
   gVis          : TVcrVisualizer;
-  gSeed         : word;
-  m_seed        : dword;   { semilla del RNG de PHost (32-bit) }
+  m_seed        : dword;     { semilla del RNG de PHost (32-bit) }
+  m_alternativeCombat    : boolean;
+  m_fireOnAttackFighters : boolean;
+  m_standoffDistance     : longint;
+  m_phost3Flag           : boolean;   { PHost 3 vs 4 (afecta intercept de fighters) }
+  m_interceptProbability : int;
+  m_rightProbability     : int;
+  m_done                 : boolean;
+  m_time                 : longint;
 
 { --------------------------------------------------------------------------- }
 procedure MapVCR (var vcr: VCRData;
@@ -201,53 +264,264 @@ begin
   RandomRange100LT := i < dword(comp) * dword(655);
 end;
 
+{ ---------------------------------------------------------------------------
+  Precalculo (bloque 1 de la Fase B): port de initBattle de pvcralgorithm.cpp
+  con PVCR_INTEGER (modelo entero, siempre activo en PCC2ng). Specs de armas:
+  Beams[]/Torps[] de VPA (campo kill = kill power; expl = damage/destructive).
+  --------------------------------------------------------------------------- }
+
+function DivRound (a, b : longint) : longint;
+  { util::divideAndRound / ccvcr.pas:RDiv : (a + b/2) / b (trunc hacia cero) }
+begin DivRound := (a + (b div 2)) div b; end;
+
+function PlayerRace (owner : int) : int;
+  { getPlayerRaceNumber(owner): VPA mapea jugador->raza via Race[] }
+begin
+  if (owner >= 1) and (owner <= 11) then PlayerRace := Race[owner]
+                                    else PlayerRace := owner;
+end;
+
+function EMV (var opt:IArr11; owner, lo, hi : int) : int;
+  { getExperienceModifiedValue sin experiencia (EMod diferido a Fase F):
+    clamp(opt[owner], lo, hi). }
+  var v : int;
+begin
+  if (owner >= 1) and (owner <= 11) then v := opt[owner] else v := opt[1];
+  { Fase F: if obj.experience<>0 then v := v + EModOpt[experience]; }
+  if v < lo then v := lo else if v > hi then v := hi;
+  EMV := v;
+end;
+
+{ Formulas documentadas de PHost. bkill/bdmg = kill+damage power del arma. }
+function ComputeBeamHitOdds (bkill, bdmg : int; var o:TVcrObject) : longint;
+  var i : longint;
+begin
+  i := longint(EMV(CombatCfg.BeamHitBonus, o.owner, -4095, 4095)) * (bkill + bdmg) div 100
+       + EMV(CombatCfg.BeamHitOdds, o.owner, 0, 100);
+  if i < 0 then i := 0;
+  ComputeBeamHitOdds := i;
+end;
+
+function ComputeBeamRechargeRate (bkill, bdmg : int; var o:TVcrObject) : longint;
+  var i : longint;
+begin
+  i := ( longint(bkill + bdmg) * EMV(CombatCfg.BeamRechargeBonus, o.owner, -4095, 4095) div 100
+         + EMV(CombatCfg.BeamRechargeRate, o.owner, 0, 16384) ) * cBeamChargeRate;
+  if i < 1 then i := 1;
+  ComputeBeamRechargeRate := i;
+end;
+
+function ComputeTorpHitOdds (tkill, tdmg : int; var o:TVcrObject) : longint;
+  var i : longint;
+begin
+  i := longint(EMV(CombatCfg.TorpHitBonus, o.owner, -4095, 4095)) * (tkill + tdmg) div 100
+       + EMV(CombatCfg.TorpHitOdds, o.owner, 0, 100);
+  if i < 0 then i := 0;
+  ComputeTorpHitOdds := i;
+end;
+
+function ComputeTubeRechargeRate (tkill, tdmg : int; var o:TVcrObject) : longint;
+  var i : longint;
+begin
+  i := ( longint(EMV(CombatCfg.TubeRechargeBonus, o.owner, -4095, 4095)) * (tkill + tdmg) div 100
+         + EMV(CombatCfg.TubeRechargeRate, o.owner, 0, 16384) ) * cTorpChargeRate;
+  if i < 1 then i := 1;
+  ComputeTubeRechargeRate := i;
+end;
+
+function ComputeBayRechargeRate (num : int; var o:TVcrObject) : longint;
+  var i : longint;
+begin
+  i := longint(EMV(CombatCfg.BayRechargeBonus, o.owner, -500, 500)) * num
+       + EMV(CombatCfg.BayRechargeRate, o.owner, 0, 16384);
+  if i < 1 then i := 1;
+  ComputeBayRechargeRate := i;
+end;
+
 { --------------------------------------------------------------------------- }
 procedure InitBattle (var left, right: TVcrObject; seed: word;
                       var vis: TVcrVisualizer);
+
+  procedure PrepSide (var st : TSideStatus; var o : TVcrObject);
+    var i, owner, bt, tt, j, charge : int;
+    begin
+      st.r.obj := o;
+      if m_alternativeCombat then st.f.scale := o.mass + 1
+                             else st.f.scale := 1;
+      st.r.shield_scaled  := longint(o.shield) * st.f.scale;
+      st.r.crew_scaled2   := longint(o.crew)   * st.f.scale * 100;
+      st.r.damage_scaled2 := longint(o.damage) * st.f.scale * 100;
+      st.f.max_scaled     := longint(10000) * st.f.scale;
+      st.f.mass_plus1     := longint(o.mass) + 1;
+      owner := o.owner;
+      { --- beams --- }
+      if o.numBeams > 0 then begin
+        bt := o.beamType;
+        if (bt >= 1) and (bt <= 10) then begin
+          st.f.beam_hit_odds := ComputeBeamHitOdds(Beams[bt].kill, Beams[bt].expl, o);
+          st.f.beam_recharge := ComputeBeamRechargeRate(Beams[bt].kill, Beams[bt].expl, o);
+          st.f.beam_kill     := Beams[bt].kill;
+          st.f.beam_damage   := Beams[bt].expl;
+        end else begin
+          st.f.beam_hit_odds := 0; st.f.beam_recharge := 1;
+          st.f.beam_kill := 0; st.f.beam_damage := 0;
+        end;
+      end else begin
+        st.f.beam_hit_odds := 0; st.f.beam_recharge := 1;
+        st.f.beam_kill := 0; st.f.beam_damage := 0;
+      end;
+      { --- torpedos --- }
+      if o.numLaunchers > 0 then begin
+        tt := o.torpType;
+        if (tt >= 1) and (tt <= 10) then begin
+          st.f.torp_hit_odds := ComputeTorpHitOdds(Torps[tt].kill, Torps[tt].expl, o);
+          st.f.torp_recharge := ComputeTubeRechargeRate(Torps[tt].kill, Torps[tt].expl, o);
+          st.f.torp_kill     := Torps[tt].kill;
+          st.f.torp_damage   := Torps[tt].expl;
+        end else begin
+          st.f.torp_hit_odds := 0; st.f.torp_recharge := 1;
+          st.f.torp_kill := 0; st.f.torp_damage := 0;
+        end;
+        if not m_alternativeCombat then begin
+          st.f.torp_kill   := st.f.torp_kill   * 2;
+          st.f.torp_damage := st.f.torp_damage * 2;
+        end;
+      end else begin
+        st.f.torp_hit_odds := 0; st.f.torp_recharge := 1;
+        st.f.torp_kill := 0; st.f.torp_damage := 0;
+      end;
+      { --- bahias --- }
+      if o.numBays > 0 then st.f.bay_recharge := ComputeBayRechargeRate(o.numBays, o)
+                       else st.f.bay_recharge := 0;
+      { --- estado inicial --- }
+      if o.shield >= 100 then charge := 1000 else charge := 0;
+      for i := 0 to VCR_MAX_BEAMS-1 do st.r.m_beamStatus[i]     := charge;
+      for i := 0 to VCR_MAX_TORPS-1 do st.r.m_launcherStatus[i] := charge;
+      for i := 0 to VCR_MAX_BAYS-1  do st.r.m_bayStatus[i]      := 0;
+      for i := 0 to VCR_MAX_FTRS-1  do begin
+        st.r.m_fighterStatus[i]      := FighterIdle;
+        st.r.m_fighterX[i]           := 0;
+        st.r.m_fighterStrikesLeft[i] := 0;
+      end;
+      st.r.m_launchCountdown := 0;
+      st.r.m_activeFighters  := 0;
+      { --- damage limit (entero): Lizard (raza 2) llega a 150, resto a 100 --- }
+      if PlayerRace(owner) = 2 then st.f.damage_limit_scaled := longint(150*2-1) * 50 * st.f.scale
+                               else st.f.damage_limit_scaled := longint(100*2-1) * 50 * st.f.scale;
+      { --- config cacheada/ajustada --- }
+      if (owner>=1) and (owner<=11) then j := owner else j := 1;
+      st.f.ShieldDamageScaling  := EMV(CombatCfg.ShieldDamageScaling, owner, 0, 32767);
+      st.f.ShieldKillScaling    := EMV(CombatCfg.ShieldKillScaling,   owner, 0, 32767);
+      st.f.HullDamageScaling    := EMV(CombatCfg.HullDamageScaling,   owner, 0, 32767);
+      st.f.MaxFightersLaunched  := EMV(CombatCfg.MaxFightersLaunched, owner, 0, VCR_MAX_FTRS);
+      st.f.StrikesPerFighter    := EMV(CombatCfg.StrikesPerFighter,   owner, 1, 100);
+      st.f.BayLaunchInterval    := CombatCfg.BayLaunchInterval[j];
+      st.f.FighterMovementSpeed := EMV(CombatCfg.FighterMovementSpeed, owner, 1, 10000);
+      st.f.FighterBeamExplosive := EMV(CombatCfg.FighterBeamExplosive, owner, 1, 1000);
+      st.f.FighterBeamKill      := EMV(CombatCfg.FighterBeamKill,      owner, 1, 1000);
+      st.f.BeamHitFighterCharge := EMV(CombatCfg.BeamHitFighterCharge, owner, 1, 1000);
+      st.f.FighterFiringRange   := CombatCfg.FighterFiringRange[j];
+      st.f.BeamHitFighterRange  := CombatCfg.BeamHitFighterRange[j];
+      st.f.BeamFiringRange      := CombatCfg.BeamFiringRange[j];
+      st.f.BeamHitShipCharge    := CombatCfg.BeamHitShipCharge[j];
+      st.f.TorpFiringRange      := CombatCfg.TorpFiringRange[j];
+      st.f.ShipMovementSpeed    := CombatCfg.ShipMovementSpeed[j];
+      st.f.CrewKillScaling      := DivRound( longint(100 - cCrewDefenseRate) *
+                                    EMV(CombatCfg.CrewKillScaling, owner, 0, 32767), 100);
+      { TorpFiringRange += 100*getFiringRangeBonus(): VPA no carga ese bonus
+        (extension de PHost), asi que se asume 0. TODO si hiciera falta. }
+    end;
+
+  var left_odds, right_odds, left_f, right_f : longint;
 begin
-  gLeft := left;  gRight := right;
-  gVis  := vis;   gSeed  := seed;
+  gVis   := vis;
+  m_done := false;
+  m_time := 0;
   RngSeed(seed);
-  { STUB Fase A: la Fase B precalcula config (hit odds, recharge rates,
-    kill/damage) e inicializa el estado de beams/launchers/bays. }
+  m_alternativeCombat    := AllowAlternativeCombat;          { boolean de VPADATA }
+  m_fireOnAttackFighters := CombatCfg.FireOnAttackFighters;
+  m_standoffDistance     := CombatCfg.StandoffDistance;
+  { TODO: checkBattle (validar combate) e initActivityDetector (bloque 6). }
+
+  m_status[vsLeft ].f.side := vsLeft;
+  m_status[vsRight].f.side := vsRight;
+  m_status[vsLeft ].r.m_objectX := -29000;
+  m_status[vsRight].r.m_objectX := +29000;
+  PrepSide(m_status[vsLeft ], left);
+  PrepSide(m_status[vsRight], right);
+
+  { --- probabilidad de intercepcion de fighters (FighterKillOdds) --- }
+  if (m_status[vsLeft ].r.obj.owner>=1) and (m_status[vsLeft ].r.obj.owner<=11)
+    then left_odds  := CombatCfg.FighterKillOdds[m_status[vsLeft ].r.obj.owner]
+    else left_odds  := CombatCfg.FighterKillOdds[1];
+  if (m_status[vsRight].r.obj.owner>=1) and (m_status[vsRight].r.obj.owner<=11)
+    then right_odds := CombatCfg.FighterKillOdds[m_status[vsRight].r.obj.owner]
+    else right_odds := CombatCfg.FighterKillOdds[1];
+  if m_phost3Flag then begin
+    left_f  := (100 - left_odds)  * right_odds;
+    right_f := (100 - right_odds) * left_odds;
+    m_interceptProbability := (left_f + right_f) div 100;
+    if m_interceptProbability = 0 then m_rightProbability := 50
+                                  else m_rightProbability := left_f div m_interceptProbability;
+  end else begin
+    m_interceptProbability := CombatCfg.FighterKillOdds[1];
+    m_rightProbability     := 50;
+  end;
 end;
 
 function PlayCycle : boolean;
 begin
-  { STUB Fase A: la Fase B ejecuta un turno de combate (recarga, disparo de
-    beams/torps, fighters, hits, comprobacion de fin) emitiendo los eventos. }
-  PlayCycle := False;   { 'terminado' por ahora }
+  { STUB: la matematica del turno (recarga, disparo, fighters, hits, fin) se
+    porta en los bloques 2-6 de la Fase B. }
+  PlayCycle := False;
 end;
 
 procedure PlayFastForward;
 begin
-  { STUB Fase A: la Fase B ejecuta hasta el final sin emitir animacion. }
+  { STUB: bloque 6. }
 end;
 
+{ --------------------------------------------------------------------------- }
 procedure DoneBattle (var left, right: TVcrObject);
+
+  procedure Back (var st:TSideStatus; var o:TVcrObject);
+  begin
+    o := st.r.obj;
+    if m_alternativeCombat then begin
+      o.damage := DivRound(st.r.damage_scaled2, st.f.scale * 100);
+      o.crew   := DivRound(st.r.crew_scaled2,   st.f.scale * 100);
+      o.shield := DivRound(st.r.shield_scaled,  st.f.scale);
+    end else begin
+      o.damage := DivRound(st.r.damage_scaled2, 100);
+      o.crew   := DivRound(st.r.crew_scaled2,   100);
+      o.shield := st.r.shield_scaled;          { scale = 1 }
+    end;
+    if o.damage > 100 then o.damage := 100;
+    { TODO (bloque 6): fijar resultado ganador/perdedor (canStillFight). }
+  end;
+
 begin
-  { STUB Fase A: la Fase B hace las explosiones finales y copia el estado
-    resultante (damage/crew/shield/municion) de vuelta a los objetos. }
-  left := gLeft;  right := gRight;
+  Back(m_status[vsLeft ], left);
+  Back(m_status[vsRight], right);
 end;
 
-{ --- Consulta de estado (STUB Fase A; la Fase B lee el estado real). --- }
+{ --- Consulta de estado en curso (modelo entero: des-escala los valores). --- }
 function GetShield      (side:TVcrSide): int;
-begin if side=vsLeft then GetShield:=gLeft.shield else GetShield:=gRight.shield; end;
+begin GetShield := DivRound(m_status[side].r.shield_scaled, m_status[side].f.scale); end;
 
 function GetDamage      (side:TVcrSide): int;
-begin if side=vsLeft then GetDamage:=gLeft.damage else GetDamage:=gRight.damage; end;
+begin GetDamage := DivRound(m_status[side].r.damage_scaled2, m_status[side].f.scale * 100); end;
 
 function GetCrew        (side:TVcrSide): int;
-begin if side=vsLeft then GetCrew:=gLeft.crew else GetCrew:=gRight.crew; end;
+begin GetCrew := DivRound(m_status[side].r.crew_scaled2, m_status[side].f.scale * 100); end;
 
 function GetNumTorps    (side:TVcrSide): int;
-begin if side=vsLeft then GetNumTorps:=gLeft.numTorps else GetNumTorps:=gRight.numTorps; end;
+begin GetNumTorps := m_status[side].r.obj.numTorps; end;
 
 function GetNumFighters (side:TVcrSide): int;
-begin if side=vsLeft then GetNumFighters:=gLeft.numFighters else GetNumFighters:=gRight.numFighters; end;
+begin GetNumFighters := m_status[side].r.obj.numFighters; end;
 
 function GetObjectX     (side:TVcrSide): int;
-begin GetObjectX := 0; end;   { STUB: posicion la calcula la Fase B }
+begin GetObjectX := m_status[side].r.m_objectX; end;
 
 end.

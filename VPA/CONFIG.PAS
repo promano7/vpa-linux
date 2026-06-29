@@ -390,6 +390,7 @@ function ReadConfigFile (fnm:str79; sec:cfgSec) : boolean;
       else if s1='BEAMHITFIGHTERCHARGE'  then GetArray(BeamHitFighterCharge)
       else if s1='BEAMHITSHIPCHARGE'     then GetArray(BeamHitShipCharge)
       else if s1='TORPFIRINGRANGE'       then GetArrayL(TorpFiringRange)
+      else if s1='SHIPMOVEMENTSPEED'     then GetArray(ShipMovementSpeed)
       else if s1='STANDOFFDISTANCE'      then StandoffDistance:=Value(s)
       else if s1='FIREONATTACKFIGHTERS'  then FireOnAttackFighters:=YesNo
       else if s1='PLANETSHAVETUBES'      then PlanetsHaveTubes:=YesNo;
@@ -951,7 +952,7 @@ procedure InitCombatCfgDefaults;
       F(ShieldDamageScaling,80);   F(ShieldKillScaling,0);
       F(HullDamageScaling,80);     F(CrewKillScaling,80);
       F(MaxFightersLaunched,19);   F(StrikesPerFighter,7);
-      F(FighterMovementSpeed,235);
+      F(FighterMovementSpeed,235); F(ShipMovementSpeed,75);
       F(FighterBeamExplosive,2);   F(FighterBeamKill,2);
       FL(FighterFiringRange,3000); F(FighterKillOdds,20);
       FL(BeamFiringRange,20000);   FL(BeamHitFighterRange,100000);

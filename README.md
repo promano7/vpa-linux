@@ -544,6 +544,15 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
     (experiencia) se difieren a la Fase F.
 - **Fase B — Portar el algoritmo** (la matemática), por bloques de menor a mayor dependencia:
   1. `initBattle` + precálculo de config (hit odds, recharge rates, kill/damage).
+     ✅ **Precálculo portado y verificado bit-exacto** (`InitBattle` en `PVCRALG.PAS`,
+     modelo entero `PVCR_INTEGER`): estructuras de estado `TFixedStatus`/`TRunningStatus`
+     por lado; `ComputeBeamHitOdds`/`ComputeBeamRechargeRate`/`ComputeTorpHitOdds`/
+     `ComputeTubeRechargeRate`/`ComputeBayRechargeRate` (fórmulas de PHost), `DivRound`
+     (`ccvcr.pas:RDiv`), `EMV` (`getExperienceModifiedValue` sin experiencia) y la caché de
+     opciones de config; specs de armas desde `Beams[]`/`Torps[]` de VPA (`kill`/`expl` =
+     kill/damage power). Validado contra una referencia C++ con varias entradas (incluidos
+     casos que rebosan 16-bit → `beam_hit_odds`/`torp_hit_odds` son 32-bit, como en PCC2ng).
+     Añadido `ShipMovementSpeed` al parser de config (faltaba en Fase A).
   2. RNG de PHost (debe ser **bit-exacto**) y recarga de beams/launchers/bahías.
      ✅ **RNG portado y verificado bit-exacto** (`Random64k`/`RandomRange`/`RandomRange100`/
      `RandomRange100LT` en `PVCRALG.PAS`): generador congruencial lineal de 32 bits sembrado

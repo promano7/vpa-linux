@@ -767,7 +767,7 @@ type
           ShieldDamageScaling, ShieldKillScaling, HullDamageScaling, CrewKillScaling,
           MaxFightersLaunched, StrikesPerFighter, FighterMovementSpeed,
           FighterBeamExplosive, FighterBeamKill, FighterKillOdds,
-          BeamHitFighterCharge, BeamHitShipCharge : IArr11;
+          BeamHitFighterCharge, BeamHitShipCharge, ShipMovementSpeed : IArr11;
           { 32-bit: distancias/rangos en metros; pueden superar 32767 (p.ej.
             BeamHitFighterRange por defecto = 100000) }
           FighterFiringRange, BeamFiringRange,
