@@ -545,6 +545,10 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
 - **Fase B — Portar el algoritmo** (la matemática), por bloques de menor a mayor dependencia:
   1. `initBattle` + precálculo de config (hit odds, recharge rates, kill/damage).
   2. RNG de PHost (debe ser **bit-exacto**) y recarga de beams/launchers/bahías.
+     ✅ **RNG portado y verificado bit-exacto** (`Random64k`/`RandomRange`/`RandomRange100`/
+     `RandomRange100LT` en `PVCRALG.PAS`): generador congruencial lineal de 32 bits sembrado
+     con `seed shl 16`, idéntico a `pvcr.pas`/`VcrPlayerPHost`. Validado comparando secuencias
+     contra una referencia C++ extraída de `pvcralgorithm.cpp` (salidas idénticas).
   3. Beams: `fireBeam` + aplicación de daño/escudo/tripulación (`hit`).
   4. Torpedos (`fireTorpedo`).
   5. Fighters (lanzar/mover/aterrizar/derribar, combate inter-fighter).

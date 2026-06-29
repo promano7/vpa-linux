@@ -88,6 +88,15 @@ function  GetNumTorps    (side:TVcrSide): int;
 function  GetNumFighters (side:TVcrSide): int;
 function  GetObjectX     (side:TVcrSide): int;   { posicion del baseship, en metros }
 
+{ --- RNG de PHost (bit-exacto). Generador congruencial lineal de 32 bits, el
+  mismo de PHost (pvcr.pas / VcrPlayerPHost). Expuesto para poder validarlo y
+  porque el algoritmo (InitBattle/PlayCycle) lo usa. --- }
+procedure RngSeed         (seed:word);            { m_seed := seed shl 16 }
+function  Random64k       : dword;                { LCG base }
+function  RandomRange     (max:dword) : dword;    { uniforme en [0,max) }
+function  RandomRange100  : int;                  { uniforme en [0,100) }
+function  RandomRange100LT(comp:int) : boolean;   { rnd[0,100) < comp }
+
 Implementation
 
 var
@@ -96,6 +105,7 @@ var
   gLeft, gRight : TVcrObject;
   gVis          : TVcrVisualizer;
   gSeed         : word;
+  m_seed        : dword;   { semilla del RNG de PHost (32-bit) }
 
 { --------------------------------------------------------------------------- }
 procedure MapVCR (var vcr: VCRData;
@@ -150,14 +160,56 @@ begin
   MapSide(Right, robj);
 end;
 
+{ ---------------------------------------------------------------------------
+  RNG de PHost, bit-exacto. Aritmetica unsigned de 32 bits (dword); el wrap a
+  2^32 se produce en la asignacion a m_seed (con overflow checks off, como el
+  build). Referencias: pvcralgorithm.cpp (random64k/randomRange/...), pvcr.pas.
+  --------------------------------------------------------------------------- }
+procedure RngSeed (seed:word);
+begin
+  m_seed := dword(seed) shl 16;        { m_seed = uint32_t(seed) << 16 }
+end;
+
+function Random64k : dword;
+begin
+  { m_seed = 13489*65536 + m_seed * (-259), todo en uint32 (envuelve a 2^32) }
+  m_seed := dword(13489*65536) + m_seed * dword(-259);
+  Random64k := m_seed;
+end;
+
+function RandomRange (max:dword) : dword;
+  var divisor, i : dword;
+begin
+  divisor := (dword(65535) div max) * dword(65536);
+  repeat i := Random64k div divisor until i < max;
+  RandomRange := i;
+end;
+
+function RandomRange100 : int;
+  var i : dword;
+begin
+  repeat i := Random64k until i < dword(65500)*dword(65536);
+  RandomRange100 := i div (dword(65536)*dword(655));
+end;
+
+function RandomRange100LT (comp:int) : boolean;
+  var i : dword;
+begin
+  repeat i := Random64k until i < dword(65500)*dword(65536);
+  i := i shr 16;
+  { comp puede ser >100; 65536*655*comp rebosaria, asi que se desplaza i antes }
+  RandomRange100LT := i < dword(comp) * dword(655);
+end;
+
 { --------------------------------------------------------------------------- }
 procedure InitBattle (var left, right: TVcrObject; seed: word;
                       var vis: TVcrVisualizer);
 begin
   gLeft := left;  gRight := right;
   gVis  := vis;   gSeed  := seed;
+  RngSeed(seed);
   { STUB Fase A: la Fase B precalcula config (hit odds, recharge rates,
-    kill/damage), inicializa el RNG y el estado de beams/launchers/bays. }
+    kill/damage) e inicializa el estado de beams/launchers/bays. }
 end;
 
 function PlayCycle : boolean;
