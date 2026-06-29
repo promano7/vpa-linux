@@ -74,6 +74,7 @@ procedure MapVCR (var vcr: VCRData;
                   var seed, signature, flags, battleType: word);
 
 { --- Algoritmo (STUB en Fase A; se implementa en la Fase B). --- }
+procedure SetPhost3   (flag:boolean);  { PHost 3 vs 4 (afecta intercept de fighters); def. False }
 procedure InitBattle (var left, right: TVcrObject; seed: word;
                       var vis: TVcrVisualizer);
 function  PlayCycle : boolean;      { ejecuta un turno; False cuando el combate termina }
@@ -339,6 +340,10 @@ begin
 end;
 
 { --------------------------------------------------------------------------- }
+procedure SetPhost3 (flag:boolean);
+begin m_phost3Flag := flag; end;
+
+{ --------------------------------------------------------------------------- }
 procedure InitBattle (var left, right: TVcrObject; seed: word;
                       var vis: TVcrVisualizer);
 
@@ -467,6 +472,46 @@ begin
     m_interceptProbability := CombatCfg.FighterKillOdds[1];
     m_rightProbability     := 50;
   end;
+end;
+
+{ ---------------------------------------------------------------------------
+  Recarga (bloque 2). Cada tick, lo que no esta a tope (<1000) gana
+  RandomRange(rate). RandomRange asume rate <= 65535 (igual que PHost: con un
+  rate mayor su RNG se rompe, asi que los juegos validos no llegan ahi). El
+  ORDEN de las llamadas al RNG (izq/der, beam/torp/bay) lo fija playCycle
+  (bloque 6) y es lo que mantiene la bit-exactitud.
+  --------------------------------------------------------------------------- }
+procedure BeamRecharge (var st : TSideStatus);
+  var i, mx : int;
+begin
+  mx := st.r.obj.numBeams;
+  for i := 0 to mx-1 do
+    if st.r.m_beamStatus[i] < 1000 then
+    begin
+      st.r.m_beamStatus[i] := st.r.m_beamStatus[i] + longint(RandomRange(st.f.beam_recharge));
+      if Assigned(gVis.updateBeam) then gVis.updateBeam(st.f.side, i);
+    end;
+end;
+
+procedure TorpsRecharge (var st : TSideStatus);
+  var i, mx : int;
+begin
+  mx := st.r.obj.numLaunchers;
+  for i := 0 to mx-1 do
+    if st.r.m_launcherStatus[i] < 1000 then
+    begin
+      st.r.m_launcherStatus[i] := st.r.m_launcherStatus[i] + longint(RandomRange(st.f.torp_recharge));
+      if Assigned(gVis.updateLauncher) then gVis.updateLauncher(st.f.side, i);
+    end;
+end;
+
+procedure FighterRecharge (var st : TSideStatus);
+  var i, mx : int;
+begin
+  mx := st.r.obj.numBays;
+  for i := 0 to mx-1 do
+    if st.r.m_bayStatus[i] < 1000 then
+      st.r.m_bayStatus[i] := st.r.m_bayStatus[i] + longint(RandomRange(st.f.bay_recharge));
 end;
 
 function PlayCycle : boolean;

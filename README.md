@@ -558,6 +558,10 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
      `RandomRange100LT` en `PVCRALG.PAS`): generador congruencial lineal de 32 bits sembrado
      con `seed shl 16`, idéntico a `pvcr.pas`/`VcrPlayerPHost`. Validado comparando secuencias
      contra una referencia C++ extraída de `pvcralgorithm.cpp` (salidas idénticas).
+     ✅ **Recarga portada** (`BeamRecharge`/`TorpsRecharge`/`FighterRecharge`): cada tick, lo
+     que no está a tope (`<1000`) gana `RandomRange(rate)` con los `*_recharge` precalculados;
+     notifica al visualizador (`updateBeam`/`updateLauncher`). El orden de llamadas al RNG
+     (lo fija `playCycle`, bloque 6) es lo que conserva la bit-exactitud.
   3. Beams: `fireBeam` + aplicación de daño/escudo/tripulación (`hit`).
   4. Torpedos (`fireTorpedo`).
   5. Fighters (lanzar/mover/aterrizar/derribar, combate inter-fighter).
