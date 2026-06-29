@@ -563,6 +563,14 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
      notifica al visualizador (`updateBeam`/`updateLauncher`). El orden de llamadas al RNG
      (lo fija `playCycle`, bloque 6) es lo que conserva la bit-exactitud.
   3. Beams: `fireBeam` + aplicación de daño/escudo/tripulación (`hit`).
+     ✅ **Modelo de daño portado y verificado bit-exacto** (`Hit` + `ComputeShieldDamageS`/
+     `ComputeHullDamageS`/`ComputeCrewKilledS`, con las variantes Regular y Alternative de
+     `pvcralgorithm.cpp`, modelo entero): golpea escudo, desborda a casco y mata tripulación
+     sobre los valores escalados; validado contra una referencia C++ en ambos modos de combate
+     (escudo, casco y tripulación — salidas idénticas). ✅ **`BeamFire`** (un beam por llamada:
+     fighter o nave, gasto de carga, eventos `fireBeam`/`killFighter`), `BeamFindNearestFighter`
+     y `GetDistance`. Detalle crítico replicado: el `missing` del path de fighter consume RNG
+     aunque no haya fighter. `SetCapabilities` fija los flags del VCR (DeathRay/Beam).
   4. Torpedos (`fireTorpedo`).
   5. Fighters (lanzar/mover/aterrizar/derribar, combate inter-fighter).
   6. `playCycle` (orquesta el turno de combate) + condición de fin + `doneBattle`

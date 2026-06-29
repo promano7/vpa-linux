@@ -75,6 +75,7 @@ procedure MapVCR (var vcr: VCRData;
 
 { --- Algoritmo (STUB en Fase A; se implementa en la Fase B). --- }
 procedure SetPhost3   (flag:boolean);  { PHost 3 vs 4 (afecta intercept de fighters); def. False }
+procedure SetCapabilities (caps:word); { flags del VCR (capabilities); 0 por defecto }
 procedure InitBattle (var left, right: TVcrObject; seed: word;
                       var vis: TVcrVisualizer);
 function  PlayCycle : boolean;      { ejecuta un turno; False cuando el combate termina }
@@ -117,6 +118,10 @@ const
   FighterIdle    = 0;
   FighterAttacks = 1;
   FighterReturns = 2;
+  { bits de capability del VCR (game/v3/structures.hpp) }
+  cDeathRayCapability   = 1;
+  cExperienceCapability = 2;
+  cBeamCapability       = 4;   { comportamiento beam/fighter nuevo desde 4.0k }
 
 type
   { Valores precalculados que no cambian durante el combate (por lado).
@@ -166,6 +171,7 @@ var
   m_fireOnAttackFighters : boolean;
   m_standoffDistance     : longint;
   m_phost3Flag           : boolean;   { PHost 3 vs 4 (afecta intercept de fighters) }
+  m_capabilities         : word;      { flags del VCR: DeathRay/Experience/Beam }
   m_interceptProbability : int;
   m_rightProbability     : int;
   m_done                 : boolean;
@@ -343,6 +349,9 @@ end;
 procedure SetPhost3 (flag:boolean);
 begin m_phost3Flag := flag; end;
 
+procedure SetCapabilities (caps:word);
+begin m_capabilities := caps; end;
+
 { --------------------------------------------------------------------------- }
 procedure InitBattle (var left, right: TVcrObject; seed: word;
                       var vis: TVcrVisualizer);
@@ -512,6 +521,180 @@ begin
   for i := 0 to mx-1 do
     if st.r.m_bayStatus[i] < 1000 then
       st.r.m_bayStatus[i] := st.r.m_bayStatus[i] + longint(RandomRange(st.f.bay_recharge));
+end;
+
+{ ---------------------------------------------------------------------------
+  Beams y modelo de dano (bloque 3). Compute*S y Hit aplican el dano al escudo,
+  casco y tripulacion (valores escalados, PVCR_INTEGER). beamFire dispara como
+  mucho un beam por llamada. CRITICO para bit-exactitud: el 'missing' del path
+  de fighter consume RNG aunque luego no haya fighter al que disparar.
+  --------------------------------------------------------------------------- }
+
+function MinL (a, b : longint) : longint;
+begin if a < b then MinL := a else MinL := b; end;
+
+function ComputeShieldDamageS (expl, kill : int; var st : TSideStatus) : longint;
+begin
+  if m_alternativeCombat then
+    ComputeShieldDamageS := MinL( longint(st.f.ShieldDamageScaling)*expl
+                                + longint(st.f.ShieldKillScaling)*kill, st.f.max_scaled )
+  else
+    ComputeShieldDamageS := MinL( DivRound( longint(st.f.ShieldDamageScaling)*expl
+                                + longint(st.f.ShieldKillScaling)*kill, st.f.mass_plus1 ) + 1, 10000 );
+end;
+
+function ComputeHullDamageS (expl, kill : int; var st : TSideStatus) : longint;
+begin
+  if m_alternativeCombat then
+    ComputeHullDamageS := MinL( longint(expl) * st.f.HullDamageScaling, st.f.max_scaled )
+  else
+    ComputeHullDamageS := MinL( DivRound( ComputeShieldDamageS(expl,kill,st) * st.f.HullDamageScaling,
+                                st.f.mass_plus1 ) + 1, 10000 );
+end;
+
+function ComputeCrewKilledS (kill : int; death : boolean; var st : TSideStatus) : longint;
+  var rv : longint;
+begin
+  if m_alternativeCombat then
+    ComputeCrewKilledS := longint(st.f.CrewKillScaling) * kill
+  else begin
+    rv := DivRound( longint(st.f.CrewKillScaling) * kill, st.f.mass_plus1 );
+    if death and (rv = 0) then rv := 1;
+    ComputeCrewKilledS := rv;
+  end;
+end;
+
+{ Aplica un impacto. Devuelve True si el objetivo queda destruido. }
+function Hit (var st : TSideStatus; kill, expl : int; is_death_ray : boolean) : boolean;
+  var damage_rate, damage_s, killed_s : longint;
+begin
+  Hit := false;
+  if kill <= 0 then kill := 1;
+  if expl <= 0 then expl := 1;
+  if (m_capabilities and cDeathRayCapability) = 0 then is_death_ray := false;
+  damage_rate := 100;
+  if not is_death_ray then
+  begin
+    { golpear escudos }
+    if st.r.shield_scaled > 0 then
+    begin
+      damage_s := ComputeShieldDamageS(expl, kill, st);
+      if st.r.shield_scaled < damage_s then
+      begin
+        damage_rate := (damage_s - st.r.shield_scaled) * 100 div damage_s;
+        st.r.shield_scaled := 0;
+      end
+      else begin
+        damage_rate := 0;
+        st.r.shield_scaled := st.r.shield_scaled - damage_s;
+      end;
+      if damage_rate <= 0 then exit;
+    end;
+    { escudos a cero -> dano al casco }
+    st.r.damage_scaled2 := st.r.damage_scaled2 + ComputeHullDamageS(expl, kill, st) * damage_rate;
+    if st.r.damage_scaled2 >= st.f.damage_limit_scaled then begin Hit := true; exit; end;
+  end;
+  if not st.r.obj.isPlanet then
+  begin
+    killed_s := ComputeCrewKilledS(kill, is_death_ray, st) * damage_rate;
+    st.r.crew_scaled2 := st.r.crew_scaled2 - killed_s;
+    if st.r.crew_scaled2 < 50*st.f.scale then
+    begin
+      st.r.crew_scaled2 := 0;
+      Hit := true;
+    end;
+  end;
+end;
+
+function GetDistance : longint;
+begin GetDistance := m_status[vsRight].r.m_objectX - m_status[vsLeft].r.m_objectX; end;
+
+{ Indice del fighter enemigo mas cercano dentro de BeamHitFighterRange, o -1. }
+function BeamFindNearestFighter (var st, opp : TSideStatus) : int;
+  var fighter, retreatingFighter, i, limit, fs : int;
+      mindist, my_x, d : longint;
+      foaf, hasAttackingFighter : boolean;
+begin
+  fighter := -1;
+  if opp.r.m_activeFighters <> 0 then
+  begin
+    mindist := st.f.BeamHitFighterRange + 1;
+    my_x := st.r.m_objectX;
+    foaf := m_fireOnAttackFighters;
+    retreatingFighter := -1;
+    hasAttackingFighter := false;
+    limit := opp.f.MaxFightersLaunched;
+    for i := 0 to limit-1 do
+    begin
+      fs := opp.r.m_fighterStatus[i];
+      if fs <> FighterIdle then
+      begin
+        if fs = FighterAttacks then hasAttackingFighter := true;
+        if (fs = FighterAttacks) or (not foaf) then
+        begin
+          d := Abs(my_x - opp.r.m_fighterX[i]);
+          if d < mindist then begin mindist := d; fighter := i; end;
+        end;
+        if (fs <> FighterAttacks) and (retreatingFighter < 0) and foaf then
+          retreatingFighter := i;
+      end;
+    end;
+    if foaf and (not hasAttackingFighter) then fighter := retreatingFighter;
+  end;
+  BeamFindNearestFighter := fighter;
+end;
+
+{ Dispara los beams de un lado. Devuelve True si el combate termina. }
+function BeamFire (var st, opp : TSideStatus) : boolean;
+  var beam, beam_mx, fighter, kill, dest : int;
+      missing, hitr : boolean;
+begin
+  BeamFire := false;
+  beam_mx := st.r.obj.numBeams;
+  for beam := 0 to beam_mx-1 do
+  begin
+    { fuego a un fighter }
+    if st.r.m_beamStatus[beam] >= st.f.BeamHitFighterCharge then
+    begin
+      missing := not RandomRange100LT(st.f.beam_hit_odds);  { RNG: consumido aunque no haya fighter }
+      fighter := BeamFindNearestFighter(st, opp);
+      if fighter >= 0 then
+      begin
+        st.r.m_beamStatus[beam] := 0;
+        if Assigned(gVis.updateBeam) then gVis.updateBeam(st.f.side, beam);
+        if Assigned(gVis.fireBeam) then
+          if missing then gVis.fireBeam(st.f.side, -1-beam, fighter, -1, st.f.beam_damage, st.f.beam_kill)
+                     else gVis.fireBeam(st.f.side, -1-beam, fighter, +1, st.f.beam_damage, st.f.beam_kill);
+        if not missing then
+        begin
+          if Assigned(gVis.killFighter) then gVis.killFighter(opp.f.side, fighter);
+          opp.r.m_fighterStatus[fighter] := FighterIdle;
+          Dec(opp.r.m_activeFighters);
+        end;
+        exit;   { BeamFire = false }
+      end;
+    end;
+    { fuego a la nave enemiga }
+    if ( (opp.r.m_activeFighters <= 0) or ((m_capabilities and cBeamCapability) <> 0) )
+       and (st.r.m_beamStatus[beam] >= st.f.BeamHitShipCharge)
+       and (GetDistance <= st.f.BeamFiringRange) then
+    begin
+      missing := not RandomRange100LT(st.f.beam_hit_odds);
+      kill := (longint(st.f.beam_kill)   * (st.r.m_beamStatus[beam] div 10) div 100) * cBeamKillRate;
+      dest := (longint(st.f.beam_damage) * (st.r.m_beamStatus[beam] div 10) div 100);
+      st.r.m_beamStatus[beam] := 0;
+      if Assigned(gVis.updateBeam) then gVis.updateBeam(st.f.side, beam);
+      if not missing then
+      begin
+        hitr := Hit(opp, kill, dest, st.f.beam_damage = 0);
+        if Assigned(gVis.fireBeam) then gVis.fireBeam(st.f.side, -1-beam, -1, 1, dest, kill);
+        if hitr then begin BeamFire := true; exit; end;
+      end
+      else
+        if Assigned(gVis.fireBeam) then gVis.fireBeam(st.f.side, -1-beam, -1, -1, dest, kill);
+      exit;   { BeamFire = false }
+    end;
+  end;
 end;
 
 function PlayCycle : boolean;
