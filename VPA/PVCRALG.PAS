@@ -45,6 +45,12 @@ type
   { Lado del combate (left/right del registro). }
   TVcrSide = (vsLeft, vsRight);
 
+  { Resultado del combate (flags). leftCaptured/rightCaptured solo aplican a
+    naves (los planetas se destruyen, no se capturan). }
+  TVcrResult = record
+    leftDestroyed, leftCaptured, rightDestroyed, rightCaptured : boolean;
+  end;
+
   { --- Interfaz "visualizador": los 8 eventos que el algoritmo emite. VPA los
     implementara con sus rutinas de TCOMBAT (Fase C), inyectandolas en este
     record. En el momento del evento, el implementador puede consultar el estado
@@ -81,6 +87,7 @@ procedure InitBattle (var left, right: TVcrObject; seed: word;
 function  PlayCycle : boolean;      { ejecuta un turno; False cuando el combate termina }
 procedure PlayFastForward;          { ejecuta hasta el final sin emitir animacion }
 procedure DoneBattle (var left, right: TVcrObject);
+function  BattleResult : TVcrResult;   { ganador/perdedor tras DoneBattle }
 
 { --- Consulta de estado en curso (la usa el visualizador). STUB en Fase A. --- }
 function  GetShield      (side:TVcrSide): int;
@@ -122,6 +129,9 @@ const
   cDeathRayCapability   = 1;
   cExperienceCapability = 2;
   cBeamCapability       = 4;   { comportamiento beam/fighter nuevo desde 4.0k }
+  { detector de inactividad (evita combates infinitos; no cambia resultados) }
+  DET_MOVEMENT_TIMER    = 100;
+  DET_INACTIVITY_TIMER  = 5000;
 
 type
   { Valores precalculados que no cambian durante el combate (por lado).
@@ -162,6 +172,12 @@ type
     r : TRunningStatus;
   end;
 
+  { Snapshot para el detector de inactividad (estancamiento). }
+  TDetectorStatus = record
+    shield_scaled, damage_scaled, crew_scaled : longint;
+    fighters, torps : int;
+  end;
+
 var
   { Estado del combate activo (un combate a la vez). }
   m_status      : array [TVcrSide] of TSideStatus;
@@ -176,6 +192,10 @@ var
   m_rightProbability     : int;
   m_done                 : boolean;
   m_time                 : longint;
+  m_detectorValid        : boolean;
+  m_detectorTimer        : longint;
+  m_detectorStatus       : array [TVcrSide] of TDetectorStatus;
+  gResult                : TVcrResult;
 
 { --------------------------------------------------------------------------- }
 procedure MapVCR (var vcr: VCRData;
@@ -455,7 +475,12 @@ begin
   m_alternativeCombat    := AllowAlternativeCombat;          { boolean de VPADATA }
   m_fireOnAttackFighters := CombatCfg.FireOnAttackFighters;
   m_standoffDistance     := CombatCfg.StandoffDistance;
-  { TODO: checkBattle (validar combate) e initActivityDetector (bloque 6). }
+  { reset del detector de inactividad y del resultado }
+  m_detectorValid := false;
+  m_detectorTimer := DET_MOVEMENT_TIMER;
+  gResult.leftDestroyed := false;  gResult.leftCaptured := false;
+  gResult.rightDestroyed := false; gResult.rightCaptured := false;
+  { TODO: checkBattle (validar combate) -> Fase E. }
 
   m_status[vsLeft ].f.side := vsLeft;
   m_status[vsRight].f.side := vsRight;
@@ -895,41 +920,196 @@ begin
     end;
 end;
 
-function PlayCycle : boolean;
+{ ---------------------------------------------------------------------------
+  Orquestacion del turno (bloque 6). PlayCycle ejecuta un turno completo en el
+  ORDEN EXACTO de PHost (recarga -> lanzar -> atacar/disparar -> intercept ->
+  mover), con el cortocircuito del 'or' replicado explicitamente (el orden y el
+  paro en el primer True deciden cuantas llamadas al RNG se hacen). Es lo que
+  ata la bit-exactitud de los bloques 2-5.
+  --------------------------------------------------------------------------- }
+
+function CanStillFight (var st, opp : TSideStatus) : boolean;
+  var drcheck : boolean;
 begin
-  { STUB: la matematica del turno (recarga, disparo, fighters, hits, fin) se
-    porta en los bloques 2-6 de la Fase B. }
-  PlayCycle := False;
+  drcheck := ((m_capabilities and cDeathRayCapability) = 0) or (not opp.r.obj.isPlanet);
+  CanStillFight :=
+       ( (st.r.obj.numBeams > 0) and (drcheck or (st.f.beam_damage <> 0)) )
+    or ( (st.r.obj.numFighters > 0) and (st.r.obj.numBays > 0) )
+    or ( st.r.m_activeFighters > 0 )
+    or ( (st.r.obj.numTorps > 0) and (drcheck or (st.f.torp_damage <> 0)) );
+end;
+
+procedure MoveObjects;
+  var remain, move_left, move_right : longint;
+begin
+  remain := GetDistance - m_standoffDistance;
+  if remain <= 0 then exit;
+  move_left := MinL(remain, m_status[vsLeft].f.ShipMovementSpeed);
+  m_status[vsLeft].r.m_objectX := m_status[vsLeft].r.m_objectX + move_left;
+  remain := remain - move_left;
+  if not m_status[vsRight].r.obj.isPlanet then
+  begin
+    move_right := MinL(remain, m_status[vsRight].f.ShipMovementSpeed);
+    m_status[vsRight].r.m_objectX := m_status[vsRight].r.m_objectX - move_right;
+  end;
+end;
+
+function CompareDetectorStatus (var a : TDetectorStatus; var st : TSideStatus) : boolean;
+begin
+  CompareDetectorStatus :=
+       (a.fighters = st.r.m_activeFighters + st.r.obj.numFighters)
+    and (a.torps = st.r.obj.numTorps)
+    and (a.shield_scaled = st.r.shield_scaled)
+    and (a.damage_scaled = st.r.damage_scaled2)
+    and (a.crew_scaled = st.r.crew_scaled2);
+end;
+
+procedure SetDetectorStatus (var a : TDetectorStatus; var st : TSideStatus);
+begin
+  a.fighters := st.r.m_activeFighters + st.r.obj.numFighters;
+  a.torps    := st.r.obj.numTorps;
+  a.shield_scaled := st.r.shield_scaled;
+  a.damage_scaled := st.r.damage_scaled2;
+  a.crew_scaled   := st.r.crew_scaled2;
+end;
+
+{ Detector de inactividad (PHost 4.1a): si el combate deja de progresar lo da
+  por terminado, para evitar bucles infinitos. No cambia resultados reales. }
+function CheckCombatActivity : boolean;
+  var interval, LL : longint; i : TVcrSide;
+begin
+  CheckCombatActivity := true;
+  if m_detectorTimer > m_time then exit;
+  if GetDistance > m_standoffDistance then
+  begin
+    m_detectorTimer := m_time + DET_MOVEMENT_TIMER;
+    exit;
+  end;
+  if m_detectorValid then
+    if CompareDetectorStatus(m_detectorStatus[vsLeft],  m_status[vsLeft])
+       and CompareDetectorStatus(m_detectorStatus[vsRight], m_status[vsRight]) then
+    begin
+      CheckCombatActivity := false;   { sin progreso -> fin }
+      exit;
+    end;
+  SetDetectorStatus(m_detectorStatus[vsLeft],  m_status[vsLeft]);
+  SetDetectorStatus(m_detectorStatus[vsRight], m_status[vsRight]);
+  m_detectorValid := true;
+  interval := DET_INACTIVITY_TIMER;
+  for i := vsLeft to vsRight do
+    if m_detectorStatus[i].fighters <> 0 then
+    begin
+      LL := m_status[i].f.BayLaunchInterval + 100;
+      if m_status[i].f.FighterMovementSpeed > 0 then
+        LL := LL + 2 * m_standoffDistance div m_status[i].f.FighterMovementSpeed;
+      if LL > interval then interval := LL;
+    end;
+  m_detectorTimer := m_time + interval;
+end;
+
+{ --------------------------------------------------------------------------- }
+function PlayCycle : boolean;
+  var ended : boolean;
+begin
+  if (not CanStillFight(m_status[vsLeft], m_status[vsRight]))
+     and (not CanStillFight(m_status[vsRight], m_status[vsLeft])) then
+    m_done := true
+  else if not CheckCombatActivity then
+    m_done := true;
+  if m_done then begin PlayCycle := false; exit; end;
+
+  Inc(m_time);
+  if m_status[vsLeft ].r.m_launchCountdown > 0 then Dec(m_status[vsLeft ].r.m_launchCountdown);
+  if m_status[vsRight].r.m_launchCountdown > 0 then Dec(m_status[vsRight].r.m_launchCountdown);
+
+  FighterRecharge(m_status[vsLeft ]);
+  FighterRecharge(m_status[vsRight]);
+  BeamRecharge(m_status[vsLeft ]);
+  BeamRecharge(m_status[vsRight]);
+  TorpsRecharge(m_status[vsLeft ]);
+  TorpsRecharge(m_status[vsRight]);
+  FighterLaunch(m_status[vsLeft ]);
+  FighterLaunch(m_status[vsRight]);
+
+  { cortocircuito explicito del 'or' de PHost }
+  ended := FighterAttack(m_status[vsLeft ], m_status[vsRight]);
+  if not ended then ended := FighterAttack(m_status[vsRight], m_status[vsLeft ]);
+  if not ended then ended := TorpsFire   (m_status[vsLeft ], m_status[vsRight]);
+  if not ended then ended := TorpsFire   (m_status[vsRight], m_status[vsLeft ]);
+  if not ended then ended := BeamFire    (m_status[vsLeft ], m_status[vsRight]);
+  if not ended then ended := BeamFire    (m_status[vsRight], m_status[vsLeft ]);
+
+  if ended then
+    m_done := true
+  else begin
+    FighterIntercept;
+    FighterMove(m_status[vsLeft ]);
+    FighterMove(m_status[vsRight]);
+    MoveObjects;
+  end;
+  PlayCycle := true;
 end;
 
 procedure PlayFastForward;
 begin
-  { STUB: bloque 6. }
+  { Bucle ingenuo: ejecuta turnos hasta el fin. PHost consulta el RNG en cada
+    tick, asi que correr todos los ticks da el mismo resultado bit-exacto que la
+    version optimizada de PCC2ng (que solo salta trabajo cuando no afecta al RNG). }
+  while PlayCycle do { nada } ;
 end;
 
 { --------------------------------------------------------------------------- }
 procedure DoneBattle (var left, right: TVcrObject);
 
-  procedure Back (var st:TSideStatus; var o:TVcrObject);
-  begin
-    o := st.r.obj;
-    if m_alternativeCombat then begin
-      o.damage := DivRound(st.r.damage_scaled2, st.f.scale * 100);
-      o.crew   := DivRound(st.r.crew_scaled2,   st.f.scale * 100);
-      o.shield := DivRound(st.r.shield_scaled,  st.f.scale);
-    end else begin
-      o.damage := DivRound(st.r.damage_scaled2, 100);
-      o.crew   := DivRound(st.r.crew_scaled2,   100);
-      o.shield := st.r.shield_scaled;          { scale = 1 }
+  procedure FinishSide (side, opp : TVcrSide; var o : TVcrObject);
+    var i : int;
+    begin
+      with m_status[side] do
+      begin
+        { des-escalar al obj interno }
+        if m_alternativeCombat then begin
+          r.obj.damage := DivRound(r.damage_scaled2, f.scale * 100);
+          r.obj.crew   := DivRound(r.crew_scaled2,   f.scale * 100);
+          r.obj.shield := DivRound(r.shield_scaled,  f.scale);
+        end
+        else begin
+          r.obj.damage := DivRound(r.damage_scaled2, 100);
+          r.obj.crew   := DivRound(r.crew_scaled2,   100);
+          r.obj.shield := r.shield_scaled;        { scale = 1 }
+        end;
+        if r.obj.damage > 100 then r.obj.damage := 100;
+        { si sobrevive, aterrizar los fighters que quedan fuera }
+        if CanStillFight(m_status[side], m_status[opp]) and (r.obj.damage < 100) then
+          for i := 0 to f.MaxFightersLaunched-1 do
+            if r.m_fighterStatus[i] <> FighterIdle then
+            begin
+              Inc(r.obj.numFighters);
+              Dec(r.m_activeFighters);
+              if Assigned(gVis.landFighter) then gVis.landFighter(side, i);
+              r.m_fighterStatus[i] := FighterIdle;
+            end;
+        r.m_activeFighters := 0;
+        o := r.obj;
+      end;
     end;
-    if o.damage > 100 then o.damage := 100;
-    { TODO (bloque 6): fijar resultado ganador/perdedor (canStillFight). }
-  end;
 
 begin
-  Back(m_status[vsLeft ], left);
-  Back(m_status[vsRight], right);
+  FinishSide(vsLeft,  vsRight, left);
+  FinishSide(vsRight, vsLeft,  right);
+  { resultado (los planetas se destruyen, no se capturan) }
+  gResult.leftDestroyed  := false;  gResult.leftCaptured  := false;
+  gResult.rightDestroyed := false;  gResult.rightCaptured := false;
+  if m_status[vsLeft].r.obj.damage >= 100 then gResult.leftDestroyed := true
+  else if m_status[vsLeft].r.obj.crew <= 0 then gResult.leftCaptured := true;
+  if m_status[vsRight].r.obj.damage >= 100 then gResult.rightDestroyed := true
+  else if (not m_status[vsRight].r.obj.isPlanet) and (m_status[vsRight].r.obj.crew <= 0) then
+    gResult.rightCaptured := true;
+  if gResult.leftDestroyed  and Assigned(gVis.killObject) then gVis.killObject(vsLeft);
+  if gResult.rightDestroyed and Assigned(gVis.killObject) then gVis.killObject(vsRight);
 end;
+
+function BattleResult : TVcrResult;
+begin BattleResult := gResult; end;
 
 { --- Consulta de estado en curso (modelo entero: des-escala los valores). --- }
 function GetShield      (side:TVcrSide): int;

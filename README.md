@@ -542,7 +542,7 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
     Implementado con un despachador `ReadCombatKey` enganchado al bucle de parseo **sin tocar la
     tabla posicional `KeyNames`** (riesgo cero para la config existente). Las claves `EMod*`
     (experiencia) se difieren a la Fase F.
-- **Fase B — Portar el algoritmo** (la matemática), por bloques de menor a mayor dependencia:
+- **Fase B — Portar el algoritmo** (la matemática), por bloques de menor a mayor dependencia — ✅ **COMPLETADA Y VALIDADA BIT-EXACTA**:
   1. `initBattle` + precálculo de config (hit odds, recharge rates, kill/damage).
      ✅ **Precálculo portado y verificado bit-exacto** (`InitBattle` en `PVCRALG.PAS`,
      modelo entero `PVCR_INTEGER`): estructuras de estado `TFixedStatus`/`TRunningStatus`
@@ -585,7 +585,18 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
      match y degenerado), validando el hash de posición (`shr` lógico ≡ `>>` con signo de C
      para lo que importa), el emparejamiento por bins y el orden crítico de llamadas al RNG.
   6. `playCycle` (orquesta el turno de combate) + condición de fin + `doneBattle`
-     (explosiones finales). Validar contra un *null visualizer* (solo la matemática).
+     (explosiones finales). ✅ **Portado y validado end-to-end**: `PlayCycle` ejecuta
+     el turno en el orden exacto de PHost (recarga → lanzar → atacar/disparar → intercept
+     → mover) con el cortocircuito del `or` replicado explícitamente; `CanStillFight`, el
+     detector de inactividad (`CheckCombatActivity`, anti-bucle-infinito), `MoveObjects`,
+     y `DoneBattle` (des-escalar, aterrizar fighters supervivientes, fijar resultado y
+     `killObject`), con `BattleResult` expuesto. **Batalla completa verificada bit-exacta**
+     contra una réplica C++ del algoritmo entero en 3 escenarios (combate regular,
+     combate alternativo `scale=mass+1`, y nave-vs-planeta): mismo nº de ticks, mismo
+     estado final de ambos objetos y **misma semilla final** en los tres. La verificación
+     destapó que los campos escalados (`max_scaled`, `damage_limit_scaled`) exceden 16 bits
+     en modo alternativo y exigen `longint` — ya estaban correctamente declarados así en
+     `TFixedStatus`/`TRunningStatus`.
 - **Fase C — Conectar el visualizador a `TCOMBAT`:** implementar los 8 eventos llamando a las
   rutinas de dibujo existentes (`Beam`/`Torpedo`/`Fighter`/`Hit`/`Gauge`/`Blast`…), con el
   *timing* y la animación de VPA. Soportar el modo "sin animación" (resultado rápido).
