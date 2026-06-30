@@ -631,13 +631,25 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
     (des-escalado en vivo), `VcrObjInfo`, `VcrDistance`, `VcrTime`. Los 8 callbacks ya estaban
     cableados en las funciones de disparo desde la Fase B. Son lecturas puras: no tocan la
     matemática (bit-exactitud intacta).
-  - **C2 (siguiente):** mapeo coordenadas del algoritmo (metros, `m_objectX` en `±29000`) →
-    píxeles de pantalla (estudiar la geometría del `Battle` antiguo en `TCOMBAT`).
-  - **C3:** escribir los 8 callbacks (unit nueva o en `TCOMBAT`) llamando a las primitivas, con
-    el estado leído por accessors y recordando el último valor mostrado para animar el barrido
-    `viejo→nuevo` de los `Gauge`.
-  - **C4:** driver `Combat`-PHost (InitBattle → bucle `PlayCycle` → `DoneBattle`) con animación y
-    el modo rápido (`PlayFastForward` + pintar estado final).
+  - **C2 ✅ (hecho):** mapeo de coordenadas derivado y verificado. Es **lineal, 100 metros por
+    píxel**: `pantalla_X = 320 + objectX/100`. El algoritmo usa `m_objectX` en `±29000` m
+    (standoff 3000 m); la pantalla, `SX[Left]=30 … SX[Right]=610` (centro 320, standoff 30 px).
+    La proporción coincide (58000/3000 = 580/30), así que el mapeo es exacto para nave-vs-nave.
+    Los fighters usan el mismo mapeo (`fighterX/100`).
+  - **C3 ✅ (hecho):** los 8 callbacks implementados en `TCOMBAT.PAS` (`pvStartFighter`,
+    `pvLandFighter`, `pvKillFighter`, `pvFireBeam`, `pvFireTorpedo`, `pvKillObject`;
+    `updateBeam`/`updateLauncher` quedan a `nil` — indicadores de carga diferidos). Leen el
+    estado real por accessors y dibujan con las primitivas puras; los gauges animan el barrido
+    `viejo→nuevo` reusando los globales `shld/dam/crew/tf` como "último valor mostrado".
+  - **C4 ✅ (hecho):** driver `CombatPHost` (mismo setup que `Combat` → `MapVCR` →
+    `SetCapabilities`/`SetPhost3` → `InitBattle` → bucle `while PlayCycle` con `pvUpdateShips`/
+    `pvUpdateFighters` + `Delay` + teclas → `DoneBattle` → vuelca resultados al VCR). **Compila y
+    enlaza** (build verde).
+  - **Salvedades (pulir en Fase E, requiere display):** movimiento del sprite de nave con clamp
+    simple (sin anti-solape del punto medio del `Battle` viejo); `pvKillObject` es un `Blast`
+    simple (falta la explosión/`SurrPic` completa); escalonado en Y de fighters aproximado;
+    `SetPhost3` fijado a `False` (la detección PHost 3-vs-4 es de la Fase D). **No verificado
+    visualmente todavía.**
 - **Fase D — Integración en VPA:** enrutar el visor — en partidas **PHost** usar el algoritmo
   portado; en **THost** mantener el `Battle` clásico de VPA (o portar también
   `hostalgorithm.cpp` más adelante). Eliminar la llamada externa a `PVCR.EXE`/`VCR.EXE` y

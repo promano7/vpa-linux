@@ -34,6 +34,7 @@ var     img     : array [LRtype] of ^IntArr;
 
 procedure convertImage(var sr; var dst:array of byte);
 procedure Combat (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyIntr:boolean);
+procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyIntr:boolean);
 procedure TCombatInit (VCRPalette:boolean);
 procedure TCombatFinish;
 procedure LoadPic (lr:LRtype; pic:byte; rot,fli,truncpal,process:boolean);
@@ -41,7 +42,7 @@ procedure SetPal;
 
 Implementation
 
-uses    ptcgraph,StrF,Screen,Keyboard;
+uses    ptcgraph,StrF,Screen,Keyboard,PVCRALG;
 
 const   SY      = 146;
         SR      = 30;
@@ -1568,6 +1569,276 @@ procedure TCombatFinish;
     FreeMem(img[Right],ImgSize);
         if useSVGA then
                 SetGraphMode(3);
+  end;
+
+
+{ ===========================================================================
+  Visor de combate PHost nativo (Fase C). Conecta el algoritmo bit-exacto de
+  PVCRALG con las primitivas de dibujo de esta unit. A diferencia del Battle
+  clasico (THost), aqui la MATEMATICA la hace PVCRALG; estos callbacks SOLO
+  renderizan su estado (leido por los accessors Vcr*), sin recalcular nada.
+  Mapeo de coordenadas: pantalla_X = 320 + metros/100 (ver README, Fase C2).
+  =========================================================================== }
+
+const pvMaxFtr = 50;   { = VCR_MAX_FTRS de PVCRALG }
+
+var   pvFX : array [TVcrSide, 0..pvMaxFtr-1] of int;  { ultima X en pantalla, -1=ausente }
+
+function pvSX (m:longint) : int;            { metros -> pixel X de pantalla }
+  begin pvSX := 320 + m div 100; end;
+
+function pvLR (side:TVcrSide) : LRtype;
+  begin if side=vsLeft then pvLR:=Left else pvLR:=Right; end;
+
+function pvFY (side:TVcrSide; track:int) : int;   { Y de un fighter (escalonado) }
+  begin
+    if side=vsLeft then pvFY := SY - 18 - (track mod 10)*FR
+                   else pvFY := SY + 18 + (track mod 10)*FR;
+  end;
+
+procedure pvDrawFighter (x,y,h,c:int);   { dibuja la nave-caza (espejo de Fighter()) }
+  begin
+    if not Show then Exit;
+    SetColor(c); h:=h*2-3;
+    Line(x+h,y-2,x+h,y+2); Line(x+h,y-2,x-h,y); Line(x+h,y+2,x-h,y);
+  end;
+
+procedure pvRefreshAmmo (side:TVcrSide);
+  var lr:LRtype; nf:int; oi:TVcrObject;
+  begin
+    lr:=pvLR(side); oi:=VcrObjInfo(side);
+    if oi.numBays>0 then nf:=oi.numFighters+VcrActiveFighters(side)
+                    else nf:=oi.numTorps;
+    if Show then
+    begin
+      Gauge(barX[lr],bamY,White,tf[lr],nf);
+      Str(nf:4,s); WriteXY(23+byte(lr)*40,22,s);
+    end;
+    tf[lr]:=nf;
+  end;
+
+procedure pvRefreshGauges (side:TVcrSide);   { escudo/dano/tripa desde el estado real }
+  var lr:LRtype; ns,nd,nc,xs:int;
+  begin
+    lr:=pvLR(side);
+    ns:=VcrCurShield(side); nd:=VcrCurDamage(side); nc:=VcrCurCrew(side);
+    if Show then
+    begin
+      xs:=23+byte(lr)*40;
+      DrawShield(lr,Off);
+      Gauge(barX[lr],bshY,_Green,shld[lr],ns);
+      Gauge(barX[lr],bdaY,_Red,dam[lr],nd);
+      if (lr=Left) or (planet=0) then Gauge(barX[lr],bcrY,_Yellow,crew[lr],nc);
+      shld[lr]:=ns; DrawShield(lr,On);
+      Str(ns:3,s); WriteXY(xs,19,s);
+      Str(nd:3,s); WriteXY(xs,20,s);
+      if (lr=Left) or (planet=0) then begin Str(nc:4,s); WriteXY(xs,21,s); end;
+    end;
+    shld[lr]:=ns; dam[lr]:=nd; crew[lr]:=nc;
+  end;
+
+{ --- los 8 eventos del visualizador (firmas = TVcrVisualizer de PVCRALG) --- }
+
+procedure pvStartFighter (side:TVcrSide; track:int);
+  begin
+    pvFX[side,track]:=-1;       { lo dibuja pvUpdateFighters en su posicion actual }
+    pvRefreshAmmo(side);
+  end;
+
+procedure pvLandFighter (side:TVcrSide; track:int);
+  begin
+    if pvFX[side,track]>=0 then pvDrawFighter(pvFX[side,track],pvFY(side,track),1,Black);
+    pvFX[side,track]:=-1;
+    pvRefreshAmmo(side);
+  end;
+
+procedure pvKillFighter (side:TVcrSide; track:int);
+  begin
+    if pvFX[side,track]>=0 then
+    begin
+      pvDrawFighter(pvFX[side,track],pvFY(side,track),1,Black);
+      Blast(pvFX[side,track],pvFY(side,track));
+    end;
+    pvFX[side,track]:=-1;
+    pvRefreshAmmo(side);
+  end;
+
+procedure pvFireBeam (side:TVcrSide; track,target,hit,damage,kill:int);
+  var opp:TVcrSide; x1,y1,x2,y2:int;
+  begin
+    if side=vsLeft then opp:=vsRight else opp:=vsLeft;
+    if Show then
+    begin
+      if track<0 then begin x1:=pvSX(VcrObjectX(side)); y1:=SY; end
+                 else begin x1:=pvSX(VcrFighterX(side,track)); y1:=pvFY(side,track); end;
+      if target<0 then begin x2:=pvSX(VcrObjectX(opp)); y2:=SY; end
+                  else begin x2:=pvSX(VcrFighterX(opp,target)); y2:=pvFY(opp,target); end;
+      Beam(x1,y1,x2,y2,IIF(hit>0,_Red,_Gray),0);
+    end;
+    if (hit>0) and (target<0) then pvRefreshGauges(opp);
+  end;
+
+procedure pvFireTorpedo (side:TVcrSide; hit,launcher:int);
+  var opp:TVcrSide; x1,y1,x2,y2:int;
+  begin
+    if side=vsLeft then opp:=vsRight else opp:=vsLeft;
+    if Show then
+    begin
+      x1:=pvSX(VcrObjectX(side)); y1:=SY;
+      x2:=pvSX(VcrObjectX(opp));  y2:=SY;
+      Torpedo(x1,y1,x2,y2,_Green,tl[pvLR(side)]);
+    end;
+    if hit>=0 then pvRefreshGauges(opp);
+    pvRefreshAmmo(side);
+  end;
+
+procedure pvKillObject (side:TVcrSide);
+  begin
+    if Show then Blast(pvSX(VcrObjectX(side)),SY);
+    { TODO (Fase E): animacion de explosion completa / SurrPic como el Battle clasico }
+  end;
+
+{ --- movimiento por tick (naves y fighters), leido del estado de PVCRALG --- }
+
+procedure pvUpdateShips;
+  var nx:int;
+  begin
+    if not Show then Exit;
+    SX[Left]:=pvSX(VcrObjectX(vsLeft));
+    SX[Right]:=pvSX(VcrObjectX(vsRight));
+    Dist:=SX[Right]-SX[Left];
+    Str(Dist:3,s); WriteXY(42,17,s);
+    nx:=SX[Left]-szx[Left] div 2; if nx<0 then nx:=0;
+    if nx<>x[Left] then begin DrawShield(Left,Off); x[Left]:=nx; end;
+    DrawShield(Left,On);
+    if useSVGA then begin convertImage(img[Left]^,img256); PutImage(x[Left],y[Left],img256,NormalPut); end
+               else PutImage(x[Left],y[Left],img[Left]^,NormalPut);
+    nx:=SX[Right]-szx[Right] div 2; if nx>640-szx[Right] then nx:=640-szx[Right];
+    if nx<>x[Right] then begin DrawShield(Right,Off); x[Right]:=nx; end;
+    DrawShield(Right,On);
+    if useSVGA then begin convertImage(img[Right]^,img256); PutImage(x[Right],y[Right],img256,NormalPut); end
+               else PutImage(x[Right],y[Right],img[Right]^,NormalPut);
+  end;
+
+procedure pvUpdateFighters;
+  var side:TVcrSide; track,nx,h,c,st:int;
+  begin
+    if not Show then Exit;
+    for side:=vsLeft to vsRight do
+      for track:=0 to pvMaxFtr-1 do
+      begin
+        st:=VcrFighterStatus(side,track);
+        if st<>0 then
+        begin
+          if pvFX[side,track]>=0 then pvDrawFighter(pvFX[side,track],pvFY(side,track),1,Black);
+          nx:=pvSX(VcrFighterX(side,track));
+          if st=1 then h:=IIF(side=vsLeft,1,2) else h:=IIF(side=vsLeft,2,1);
+          if side=vsLeft then c:=_Green else c:=_Yellow;
+          pvDrawFighter(nx,pvFY(side,track),h,c);
+          pvFX[side,track]:=nx;
+        end
+        else if pvFX[side,track]>=0 then
+        begin
+          pvDrawFighter(pvFX[side,track],pvFY(side,track),1,Black);
+          pvFX[side,track]:=-1;
+        end;
+      end;
+  end;
+
+{ --- driver principal: setup (= Combat) + InitBattle/PlayCycle/DoneBattle --- }
+
+procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyIntr:boolean);
+  var lobj,robj : TVcrObject;
+      seed,sig,flags,btype : word;
+      vis : TVcrVisualizer;
+      lr  : LRtype; xx : int; side:TVcrSide; track:int; ch:word;
+  begin
+    Show:=Animate; Beep:=Sounds; KeyStop:=KeyIntr; WAIT:=(10-speed)*DDelay;
+    planet:=vcr.planet; r:=vcr.K0;
+    for lr:=Left to Right do
+    begin
+      shpw[lr]:=vcr.shpw[lr]; dam[lr]:=vcr.dd[lr].dam; crew[lr]:=vcr.dd[lr].crew;
+      race[lr]:=vcr.dd[lr].race; pic[lr]:=vcr.dd[lr].pic; wl[lr]:=vcr.dd[lr].wl;
+      weaps[lr]:=Min(vcr.dd[lr].weaps,20); bays[lr]:=vcr.dd[lr].bays; tl[lr]:=vcr.dd[lr].tl;
+      tfn[lr]:=vcr.dd[lr].tfn; tf[lr]:=vcr.dd[lr].tfn; launs[lr]:=Min(vcr.dd[lr].launs,20);
+      shld[lr]:=Max(vcr.shld[lr],0); name[lr]:=vcr.dd[lr].name;
+    end;
+    if pic[Right]=0 then pic[Right]:=vcr.plnpic;
+    Trim(name[Left]); LPad(name[Left],20);
+    SX[Left]:=30; SX[Right]:=IIF(planet=0,$262,$23A); Dist:=SX[Right]-SX[Left];
+    for lr:=Left to Right do begin i:=Max(100-dam[lr],0); if i<shld[lr] then shld[lr]:=i; end;
+
+    if Show then
+    begin
+      LoadPic(Left,pic[Left],pic[Left] in RotPic,pic[Left] in FliPic,Yes,Yes); AnalysePic(Left,pic[Left]);
+      LoadPic(Right,pic[Right],pic[Right] in RotPic,not(pic[Right] in FliPic),Yes,Yes); AnalysePic(Right,pic[Right]);
+      ClearDevice; SetPal; TextAttr:=White;
+      WriteXY(10,0,name[Left]+'       versus       '+name[Right]);
+      WriteXY(32,17,'Distance:    00');
+      for lr:=Left to Right do
+      begin
+        xx:=TX[lr];
+        Str(shld[lr]:3,s); WriteXY(xx,19,'Shield:   '+s+'% ('+NStr0(shpw[lr])+'tw)');
+        Str(dam[lr]:3,s);  WriteXY(xx,20,'Damage:   '+s+'%');
+        if (lr=Left) or (planet=0) then begin Str(crew[lr]:4,s); WriteXY(xx,21,'Crew  :   '+s); end;
+        if (tl[lr]>0) and (launs[lr] or tf[lr]>0) then
+        begin
+          Str(tf[lr]:4,s); WriteXY(xx,22,'Torps :   '+s);
+          s:=Torps[tl[lr]].name; Trim(s);
+          WriteXY(xx,23,s+Proper(launs[lr],' tube')+' ('+NStr00(launs[lr],'NTP')+')');
+        end else
+        if bays[lr] or tf[lr]>0 then
+        begin
+          Str(tf[lr]:4,s); WriteXY(xx,22,'Fgtrs :   '+s);
+          WriteXY(xx,23,Proper(bays[lr],'Fighter bay')+' ('+NStr00(bays[lr],'NTP')+')');
+        end;
+        if weaps[lr]>0 then begin s:=Beams[wl[lr]].name; Trim(s); WriteXY(xx,25,Proper(weaps[lr],s)+' ('+NStr0(weaps[lr])+')'); end;
+        xx:=barX[lr];
+        Gauge(xx,bshY,_Green,0,shld[lr]);
+        Gauge(xx,bdaY,_Red,0,dam[lr]);
+        if (lr=Left) or (planet=0) then Gauge(xx,bcrY,_Yellow,0,crew[lr]);
+        Gauge(xx,bamY,White,0,tf[lr]);
+      end;
+      szx[Left]:=ImgW(Left); szx[Right]:=ImgW(Right);
+      szy[Left]:=ImgH(Left); szy[Right]:=ImgH(Right);
+      x[Left]:=SX[Left]-szx[Left] div 2; x[Right]:=SX[Right]-szx[Right] div 2;
+      y[Left]:=SY-szy[Left] div 2; y[Right]:=SY-szy[Right] div 2;
+    end;
+
+    for side:=vsLeft to vsRight do for track:=0 to pvMaxFtr-1 do pvFX[side,track]:=-1;
+    vis.startFighter:=pvStartFighter; vis.landFighter:=pvLandFighter; vis.killFighter:=pvKillFighter;
+    vis.fireBeam:=pvFireBeam; vis.fireTorpedo:=pvFireTorpedo;
+    vis.updateBeam:=nil; vis.updateLauncher:=nil; vis.killObject:=pvKillObject;
+    MapVCR(vcr,lobj,robj,seed,sig,flags,btype);
+    SetCapabilities(flags); SetPhost3(False);   { TODO Fase D: PHost 3 vs 4 segun version del host }
+    InitBattle(lobj,robj,seed,vis);
+
+    while PlayCycle do
+      if Show then
+      begin
+        pvUpdateShips;
+        pvUpdateFighters;
+        Delay(WAIT);
+        if KeyPressed then
+        begin
+          ch:=ReadKey;
+          case ch of
+            27                 : Show:=No;
+            ord('1')..ord('9') : WAIT:=(10-(ch-ord('0')))*DDelay;
+            ord('-')           : if WAIT<9*DDelay then inc(WAIT,DDelay);
+            ord('+')           : if WAIT>1*DDelay then dec(WAIT,DDelay);
+          end;
+        end;
+      end;
+
+    DoneBattle(lobj,robj);
+    pvRefreshGauges(vsLeft); pvRefreshGauges(vsRight);
+    if Animate then ClearDevice;
+
+    vcr.shld[Left]:=VcrCurShield(vsLeft);   vcr.shld[Right]:=VcrCurShield(vsRight);
+    vcr.dd[Left].dam:=VcrCurDamage(vsLeft); vcr.dd[Right].dam:=VcrCurDamage(vsRight);
+    vcr.dd[Left].crew:=VcrCurCrew(vsLeft);  vcr.dd[Right].crew:=VcrCurCrew(vsRight);
+    vcr.dd[Left].tfn:=VcrObjInfo(vsLeft).numFighters;   vcr.dd[Right].tfn:=VcrObjInfo(vsRight).numFighters;
   end;
 
 End.
