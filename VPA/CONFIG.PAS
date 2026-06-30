@@ -57,7 +57,7 @@ const ModeLine:array[1..8] of integer = (
 
 Implementation
 
-uses    Screen,ptcgraph,VPAData,Messages,VPAInit,RST_TRN,ExtFeat
+uses    Screen,ptcgraph,VPAData,Messages,VPAInit,RST_TRN,ExtFeat,Dos
 {$IFDEF VPACC},
         Hullfunc
 {$ENDIF};
@@ -320,6 +320,39 @@ BEGIN
   END;
 END;
 
+{ Resuelve mayusculas/minusculas de un nombre de fichero en sistemas de ficheros
+  sensibles a la caja (GNU/Linux). Los datos de una partida VGA Planets pueden
+  venir en cualquier caja (p.ej. GEN7.DAT en mayusculas pero pconfig.src en
+  minusculas, tipico de partidas generadas en host UNIX o por c2nu). Devuelve el
+  nombre real tal y como esta en disco; si no lo encuentra, el original. }
+function ResolveCase (fnm : str79) : str79;
+  var sr : SearchRec;
+      i  : integer;
+      dir, base, ub, cn : string;
+  begin
+    ResolveCase := fnm;
+    if fnm = '' then Exit;
+    { existe exactamente como se pidio? }
+    FindFirst(fnm, $3F, sr); i := DosError; FindClose(sr);
+    if i = 0 then Exit;
+    { separar directorio y nombre base }
+    i := Length(fnm);
+    while (i > 0) and not (fnm[i] in ['/','\']) do Dec(i);
+    dir  := Copy(fnm, 1, i);
+    base := Copy(fnm, i+1, 255);
+    if base = '' then Exit;
+    ub := base; Upper(ub);
+    { escanear el directorio comparando sin distinguir caja }
+    FindFirst(dir + '*', $3F, sr);
+    while DosError = 0 do
+    begin
+      cn := sr.Name; Upper(cn);
+      if cn = ub then begin ResolveCase := dir + sr.Name; FindClose(sr); Exit; end;
+      FindNext(sr);
+    end;
+    FindClose(sr);
+  end;
+
 function ReadConfigFile (fnm:str79; sec:cfgSec) : boolean;
   var   f       : text;
         s,s1    : string;
@@ -426,7 +459,7 @@ function ReadConfigFile (fnm:str79; sec:cfgSec) : boolean;
     end;
   begin
     ReadConfigFile:=No;
-    Assign(f,fnm);
+    Assign(f,ResolveCase(fnm));
     Reset(f);
     if IOResult<>0 then Exit;
     Writeln('Reading ',fnm,'...');
