@@ -1836,6 +1836,10 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
 
     DoneBattle(lobj,robj);
     pvRefreshGauges(vsLeft); pvRefreshGauges(vsRight);
+    { refrescar municion/cazas: tras DoneBattle los cazas en vuelo de un objeto
+      destruido se pierden (m_activeFighters:=0), asi que el contador mostrado
+      debe pasar de reserva+vuelo al valor final (solo reserva), como en PVCR. }
+    pvRefreshAmmo(vsLeft); pvRefreshAmmo(vsRight);
 
     vcr.shld[Left]:=VcrCurShield(vsLeft);   vcr.shld[Right]:=VcrCurShield(vsRight);
     vcr.dd[Left].dam:=VcrCurDamage(vsLeft); vcr.dd[Right].dam:=VcrCurDamage(vsRight);
