@@ -240,22 +240,32 @@ procedure MapVCR (var vcr: VCRData;
       o.numBays     := bays;                    { int @34 = numBays }
       o.torpType    := tl;                      { int @36 = torpedoType }
       o.isPlanet    := (lr = Right) and (vcr.planet <> 0);
-      { Desempaquetar municion (logica de database.cpp): tfn=ammo @38,
-        launs=numLaunchersPacked @40. }
+      { Desempaquetar municion (logica de database.cpp unpack()):
+        tfn=ammo @38, launs=numLaunchersPacked @40. }
       if launs <> 0 then
       begin
-        { TODO (fase config): si isPlanet y PlanetsHaveTubes, 'launs' codifica
-          launchers(byte bajo)+torps(byte alto) y la municion son fighters.
-          Por ahora se asume la rama de naves con torpedos. }
-        o.numLaunchers := launs;
-        o.numTorps     := tfn;
-        o.numFighters  := 0;
+        if o.isPlanet and CombatCfg.PlanetsHaveTubes then
+        begin
+          { planeta con tubos: launchers=byte bajo, torps=byte alto, ammo=fighters }
+          o.numLaunchers := launs and $FF;
+          o.numTorps     := (longint(word(launs)) shr 8) and $FF;
+          o.numFighters  := tfn;
+        end
+        else begin
+          { solo torpedos }
+          o.numLaunchers := launs;
+          o.numTorps     := tfn;
+          o.numFighters  := 0;
+        end;
       end
       else begin
         o.numLaunchers := 0;
         o.numTorps     := 0;
         if bays <> 0 then o.numFighters := tfn else o.numFighters := 0;
       end;
+      { Correcciones silenciosas de database.cpp (evitan municion fantasma) }
+      if o.beamType = 0 then o.numBeams := 0;
+      if o.torpType = 0 then begin o.numLaunchers := 0; o.numTorps := 0; end;
     end;
     o.mass   := vcr.shpw[lr];
     o.shield := vcr.shld[lr];
