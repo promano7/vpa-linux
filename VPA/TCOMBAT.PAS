@@ -1836,7 +1836,6 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
 
     DoneBattle(lobj,robj);
     pvRefreshGauges(vsLeft); pvRefreshGauges(vsRight);
-    if Animate then ClearDevice;
 
     vcr.shld[Left]:=VcrCurShield(vsLeft);   vcr.shld[Right]:=VcrCurShield(vsRight);
     vcr.dd[Left].dam:=VcrCurDamage(vsLeft); vcr.dd[Right].dam:=VcrCurDamage(vsRight);
@@ -1846,6 +1845,14 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
     res:=BattleResult;
     if res.leftDestroyed  then vcr.dd[Left].pic :=ExplPic else if res.leftCaptured  then vcr.dd[Left].pic :=SurrPic;
     if res.rightDestroyed then vcr.dd[Right].pic:=ExplPic else if res.rightCaptured then vcr.dd[Right].pic:=SurrPic;
+
+    if Show then    { pausa al final (como el Battle clasico) para ver el resultado }
+    begin
+      TextAttr:=_Yellow;
+      WriteXY(30,28,'PRESS ENTER TO RETURN');
+      ReadKey;
+    end;
+    if Animate then ClearDevice;
   end;
 
 End.
