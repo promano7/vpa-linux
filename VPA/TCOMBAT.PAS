@@ -586,6 +586,18 @@ procedure Gauge (bX,bY:int; c:byte; x1,x2:int);
     end;
   end;
 
+function Fmt1w (t:longint; w:byte) : string;
+  { tenths -> "X.Y" alineado a la derecha en w columnas (un decimal, como PVCR). }
+  var rs,p1,p2 : string; neg:boolean;
+  begin
+    neg := t<0; if neg then t:=-t;
+    Str(t div 10, p1); Str(t mod 10, p2);
+    rs := p1 + '.' + p2;
+    if neg then rs := '-' + rs;
+    while Length(rs) < w do rs := ' ' + rs;
+    Fmt1w := rs;
+  end;
+
 procedure DrawShield (lr:LRType; draw:boolean);
   var   ry      : int;
         a1,a2   : int;
@@ -1479,15 +1491,10 @@ begin
     for lr:=Left to Right do
     begin
       x:=TX[lr];
-      Str(shld[lr]:3,s);
-      WriteXY(x,19,'Shield:   '+s+'% ('+NStr0(shpw[lr])+'tw)');
-      Str(dam[lr]:3,s);
-      WriteXY(x,20,'Damage:   '+s+'%');
+      WriteXY(x,19,'Shield: '+Fmt1w(longint(shld[lr])*10,5)+'% ('+NStr0(shpw[lr])+'tw)');
+      WriteXY(x,20,'Damage: '+Fmt1w(longint(dam[lr])*10,5)+'%');
       if (lr=Left) or (planet=0) then
-      begin
-        Str(crew[lr]:4,s);
-        WriteXY(x,21,'Crew  :   '+s);
-      end;
+        WriteXY(x,21,'Crew  : '+Fmt1w(longint(crew[lr])*10,6));
       if (tl[lr]>0) and (launs[lr] or tf[lr]>0) then
       begin
         Str(tf[lr]:4,s);
@@ -1583,6 +1590,7 @@ procedure TCombatFinish;
 const pvMaxFtr = 50;   { = VCR_MAX_FTRS de PVCRALG }
 
 var   pvFX : array [TVcrSide, 0..pvMaxFtr-1] of int;  { ultima X en pantalla, -1=ausente }
+      pvFH : array [TVcrSide, 0..pvMaxFtr-1] of int;  { h con que se dibujo (para borrar igual y no dejar estela) }
 
 function pvSX (m:longint) : int;            { metros -> pixel X de pantalla }
   begin pvSX := 320 + m div 100; end;
@@ -1621,21 +1629,20 @@ procedure pvRefreshAmmo (side:TVcrSide);
   end;
 
 procedure pvRefreshGauges (side:TVcrSide);   { escudo/dano/tripa desde el estado real }
-  var lr:LRtype; ns,nd,nc,xs:int;
+  var lr:LRtype; ns,nd,nc:int;
   begin
     lr:=pvLR(side);
     ns:=VcrCurShield(side); nd:=VcrCurDamage(side); nc:=VcrCurCrew(side);
     if Show then
     begin
-      xs:=23+byte(lr)*40;
       DrawShield(lr,Off);
       Gauge(barX[lr],bshY,_Green,shld[lr],ns);
       Gauge(barX[lr],bdaY,_Red,dam[lr],nd);
       if (lr=Left) or (planet=0) then Gauge(barX[lr],bcrY,_Yellow,crew[lr],nc);
       shld[lr]:=ns; DrawShield(lr,On);
-      Str(ns:3,s); WriteXY(xs,19,s);
-      Str(nd:3,s); WriteXY(xs,20,s);
-      if (lr=Left) or (planet=0) then begin Str(nc:4,s); WriteXY(xs,21,s); end;
+      WriteXY(TX[lr]+8,19, Fmt1w(VcrCurShieldT(side),5));
+      WriteXY(TX[lr]+8,20, Fmt1w(VcrCurDamageT(side),5));
+      if (lr=Left) or (planet=0) then WriteXY(TX[lr]+8,21, Fmt1w(VcrCurCrewT(side),6));
     end;
     shld[lr]:=ns; dam[lr]:=nd; crew[lr]:=nc;
   end;
@@ -1650,7 +1657,7 @@ procedure pvStartFighter (side:TVcrSide; track:int);
 
 procedure pvLandFighter (side:TVcrSide; track:int);
   begin
-    if pvFX[side,track]>=0 then pvDrawFighter(pvFX[side,track],pvFY(side,track),1,Black);
+    if pvFX[side,track]>=0 then pvDrawFighter(pvFX[side,track],pvFY(side,track),pvFH[side,track],Black);
     pvFX[side,track]:=-1;
     pvRefreshAmmo(side);
   end;
@@ -1659,7 +1666,7 @@ procedure pvKillFighter (side:TVcrSide; track:int);
   begin
     if pvFX[side,track]>=0 then
     begin
-      pvDrawFighter(pvFX[side,track],pvFY(side,track),1,Black);
+      pvDrawFighter(pvFX[side,track],pvFY(side,track),pvFH[side,track],Black);
       Blast(pvFX[side,track],pvFY(side,track));
     end;
     pvFX[side,track]:=-1;
@@ -1733,16 +1740,16 @@ procedure pvUpdateFighters;
         st:=VcrFighterStatus(side,track);
         if st<>0 then
         begin
-          if pvFX[side,track]>=0 then pvDrawFighter(pvFX[side,track],pvFY(side,track),1,Black);
+          if pvFX[side,track]>=0 then pvDrawFighter(pvFX[side,track],pvFY(side,track),pvFH[side,track],Black);
           nx:=pvSX(VcrFighterX(side,track));
           if st=1 then h:=IIF(side=vsLeft,1,2) else h:=IIF(side=vsLeft,2,1);
           if side=vsLeft then c:=_Green else c:=_Yellow;
           pvDrawFighter(nx,pvFY(side,track),h,c);
-          pvFX[side,track]:=nx;
+          pvFX[side,track]:=nx; pvFH[side,track]:=h;
         end
         else if pvFX[side,track]>=0 then
         begin
-          pvDrawFighter(pvFX[side,track],pvFY(side,track),1,Black);
+          pvDrawFighter(pvFX[side,track],pvFY(side,track),pvFH[side,track],Black);
           pvFX[side,track]:=-1;
         end;
       end;
@@ -1809,7 +1816,7 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
       y[Left]:=SY-szy[Left] div 2; y[Right]:=SY-szy[Right] div 2;
     end;
 
-    for side:=vsLeft to vsRight do for track:=0 to pvMaxFtr-1 do pvFX[side,track]:=-1;
+    for side:=vsLeft to vsRight do for track:=0 to pvMaxFtr-1 do begin pvFX[side,track]:=-1; pvFH[side,track]:=1; end;
     vis.startFighter:=pvStartFighter; vis.landFighter:=pvLandFighter; vis.killFighter:=pvKillFighter;
     vis.fireBeam:=pvFireBeam; vis.fireTorpedo:=pvFireTorpedo;
     vis.updateBeam:=nil; vis.updateLauncher:=nil; vis.killObject:=pvKillObject;

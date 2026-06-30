@@ -103,6 +103,9 @@ function VcrLauncherStatus (side:TVcrSide; id:int) : longint; { carga del tubo [
 function VcrCurShield (side:TVcrSide) : int;   { escudo actual (des-escalado en vivo) }
 function VcrCurDamage (side:TVcrSide) : int;   { dano actual }
 function VcrCurCrew (side:TVcrSide) : int;     { tripulacion actual }
+function VcrCurShieldT (side:TVcrSide) : longint;  { escudo x10 (un decimal, como PVCR) }
+function VcrCurDamageT (side:TVcrSide) : longint;  { dano x10 }
+function VcrCurCrewT (side:TVcrSide) : longint;    { tripulacion x10 }
 function VcrObjInfo (side:TVcrSide) : TVcrObject; { copia del objeto: campos estaticos +
                                                     ammo en vivo (numFighters/numTorps).
                                                     OJO: shield/damage/crew de la copia estan
@@ -1098,7 +1101,7 @@ end;
 procedure DoneBattle (var left, right: TVcrObject);
 
   procedure FinishSide (side, opp : TVcrSide; var o : TVcrObject);
-    var i, lim : int;
+    var i : int;
     begin
       with m_status[side] do
       begin
@@ -1113,13 +1116,12 @@ procedure DoneBattle (var left, right: TVcrObject);
           r.obj.crew   := DivRound(r.crew_scaled2,   100);
           r.obj.shield := r.shield_scaled;        { scale = 1 }
         end;
-        { Limite de dano MOSTRADO: el Lizard (raza 2) combate hasta 150%, el
-          resto hasta 100%. No saturar siempre a 100 o se perderia el dano real
-          del Lizard; PVCR.EXE muestra el valor crudo (p.ej. 127). }
-        if PlayerRace(r.obj.owner) = 2 then lim := 150 else lim := 100;
-        if r.obj.damage > lim then r.obj.damage := lim;
+        { r.obj.damage es el dano REPORTADO para la logica de resultado (destruido
+          si >=100); PCC2ng lo satura a 100 aqui. El dano MOSTRADO al usuario sale
+          de VcrCurDamage (crudo, sin tope) para reflejar 104/127 como PVCR.EXE. }
+        if r.obj.damage > 100 then r.obj.damage := 100;
         { si sobrevive, aterrizar los fighters que quedan fuera }
-        if CanStillFight(m_status[side], m_status[opp]) and (r.obj.damage < lim) then
+        if CanStillFight(m_status[side], m_status[opp]) and (r.obj.damage < 100) then
           for i := 0 to f.MaxFightersLaunched-1 do
             if r.m_fighterStatus[i] <> FighterIdle then
             begin
@@ -1185,13 +1187,13 @@ begin
 end;
 
 function VcrCurDamage (side:TVcrSide) : int;
-  var d : longint; lim : int;
+  var d : longint;
 begin
   if m_alternativeCombat then d := DivRound(m_status[side].r.damage_scaled2, m_status[side].f.scale * 100)
                          else d := DivRound(m_status[side].r.damage_scaled2, 100);
-  { Lizard (raza 2) combate hasta 150%; el resto hasta 100%. }
-  if PlayerRace(m_status[side].r.obj.owner) = 2 then lim := 150 else lim := 100;
-  if d > lim then d := lim;
+  { Sin tope: PVCR.EXE muestra el valor crudo al destruirse (p.ej. 104 en un
+    planeta o 127 en un Lizard). El destino del objeto lo decide la logica
+    interna (damage_limit_scaled), no este valor mostrado. }
   VcrCurDamage := d;
 end;
 
@@ -1199,6 +1201,28 @@ function VcrCurCrew (side:TVcrSide) : int;
 begin
   if m_alternativeCombat then VcrCurCrew := DivRound(m_status[side].r.crew_scaled2, m_status[side].f.scale * 100)
                          else VcrCurCrew := DivRound(m_status[side].r.crew_scaled2, 100);
+end;
+
+{ --- versiones x10 (tenths) para mostrar un decimal como PVCR.EXE. Forma
+  des-escalada elegida para evitar overflow de 32 bits en valores altos. --- }
+function VcrCurShieldT (side:TVcrSide) : longint;
+begin
+  if m_alternativeCombat then VcrCurShieldT := DivRound(longint(m_status[side].r.shield_scaled)*10, m_status[side].f.scale)
+                         else VcrCurShieldT := longint(m_status[side].r.shield_scaled)*10;
+end;
+
+function VcrCurDamageT (side:TVcrSide) : longint;
+  var d : longint;
+begin
+  if m_alternativeCombat then d := DivRound(m_status[side].r.damage_scaled2, m_status[side].f.scale * 10)
+                         else d := DivRound(m_status[side].r.damage_scaled2, 10);
+  VcrCurDamageT := d;
+end;
+
+function VcrCurCrewT (side:TVcrSide) : longint;
+begin
+  if m_alternativeCombat then VcrCurCrewT := DivRound(m_status[side].r.crew_scaled2, m_status[side].f.scale * 10)
+                         else VcrCurCrewT := DivRound(m_status[side].r.crew_scaled2, 10);
 end;
 
 function VcrObjInfo (side:TVcrSide) : TVcrObject;

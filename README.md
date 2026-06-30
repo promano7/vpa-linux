@@ -301,7 +301,13 @@ verificable al final de cada una.
 - [ ] **Endianness:** validar lectura de los binarios (x86 era little-endian; vigilar si se compila para ARM).
 - [x] **Separador de rutas DOS→Linux (RESUELTO).** `OpenRW`/`OpenData` anteponen el directorio de partida (`addir`) a cada nombre, y `VPAINIT` le añadía un `\` de DOS → `LUPUS4\GEN5.DAT` no existe en Linux. Cambiado a `/`. (`OpenData` ya prueba `addir+name` y cae a `name` en el directorio actual, así que los ficheros maestros como `PLANET.NM` se localizan bien.)
 - [x] **Comprobaciones de runtime (RESUELTO).** El `BPC.CFG` original desactivaba E/S, rango, overflow y pila (`/$I-,R-,S-,Q-`) globalmente; el código asume `{$I-}` (comprueba `IOResult` tras `Reset`, sin excepciones). Sin ello, un fichero ausente lanzaba `EInOutError 217` al arrancar. Replicado en `vpa.cfg` con `-Ci- -Cr- -Co- -Ct-` (aplica a todas las units, también las que no incluyen `switches.inc` como `INI`). Verificado: el binario arranca, escribe su config y lee los datos de la partida desde el directorio indicado.
-- [ ] **Rutas:** manejar mayúsculas/minúsculas, separador `\`→`/` y nombres 8.3 de forma tolerante en Linux.
+- [x] **Rutas mayúsculas/minúsculas (RESUELTO).** Las partidas reales mezclan mayúsculas y
+  minúsculas (p. ej. PHOENIX4 trae `GEN7.DAT` en mayúsculas pero `pconfig.src`, `beamspec.dat`,
+  `torpspec.dat`, `race.nm`… en minúsculas). VPA construía los nombres en mayúsculas y en un
+  sistema de ficheros sensible a may/min **no abría** esos datos → caía a valores por defecto
+  (¡incluido `AllowAlternativeCombat=No`!), alterando el combate. Solución: `ResolveCase` en
+  `CONFIG.PAS` y `VPADATA.PAS` (resuelve el nombre real escaneando el directorio sin distinguir
+  may/min); aplicado en `ReadConfigFile`, `OpenData`, `Exists` y `OpenRW`.
 - [ ] Adaptar el manejo de errores de Borland (`ExitProc`, `ExitCode`, `ErrorAddr`, procedimientos `far`) al equivalente de FPC.
 
 ### Fase 6 — Primer binario nativo
@@ -616,8 +622,9 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
     tripulación arrasada en vez de por daño, y desaparece el bonus → cambia el combate). Los
     otros cuatro *rates* (`BeamChargeRate`, `TorpMissRate`, `TorpChargeRate`, `CrewDefenseRate`)
     coinciden con `database.cpp` y quedan como constantes. ✅
-  - *Pendiente (Fase E)*: los dos *silent fixes* de `database.cpp` (si `beamType=0` → `numBeams=0`;
-    si `torpType=0` → `numLaunchers=0`/`numTorps=0`), parte de `checkSide`.
+  - *Silent fixes de `checkSide` (`database.cpp`)*: ✅ portados en `MapSide` (si `beamType=0` →
+    `numBeams=0`; si `torpType=0` → `numLaunchers=0`/`numTorps=0`; planeta con tubos desempaqueta
+    la munición). No eran la causa de la discrepancia, pero quedan fieles a PCC2ng.
 - **Fase C — Conectar el visualizador a `TCOMBAT`:** 🟡 *en curso.* Implementar los 8 eventos
   con las primitivas de dibujo de VPA, con el *timing*/animación de VPA y un modo "sin animación".
   - **Decisión de diseño (importante):** se usan **solo las primitivas puras de dibujo**
@@ -648,8 +655,8 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
   - **Salvedades (pulir en Fase E, requiere display):** movimiento del sprite de nave con clamp
     simple (sin anti-solape del punto medio del `Battle` viejo); `pvKillObject` es un `Blast`
     simple (falta la explosión/`SurrPic` completa); escalonado en Y de fighters aproximado;
-    `SetPhost3` fijado a `False` (la detección PHost 3-vs-4 es de la Fase D). **No verificado
-    visualmente todavía.**
+    `SetPhost3` fijado a `False` (la detección PHost 3-vs-4 es de la Fase D). **Verificado
+    visualmente** contra `PVCR.EXE` en la Fase E.
 - **Fase D — Integración en VPA:** ✅ *hecho.* El visor PHost nativo está enrutado en
   `MESSAGES.PAS`:
   - **`ViewVCR`** (ver una batalla): en **PHost** (`pvcr`) llama a `CombatPHost(vcr,Yes,…)`
@@ -670,19 +677,31 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
     `false=PHost 2.x, true=PHost 3.x/4.x`. PHost 3 y 4 usan la misma rama (`true`); solo el
     obsoleto PHost 2.x usaría `false`. Correcto para la partida 4.1h de Pablo.
   - Build verde; arranca bajo Xvfb. **Falta solo la verificación visual** (Fase E).
-- **Fase E — Validación (crítica):** comparar resultado (ganador, daño final, supervivientes,
-  munición) contra combates reales de una partida PHost 4.1h y, si hace falta, contra
-  `PVCR.EXE` en DOSBox. Banco de pruebas con varios VCR conocidos; iterar hasta bit-exacto.
-  Incluye la **verificación visual** del visor (animación de naves/cazas/beams/torpedos) y las
-  dos correcciones silenciosas de `checkSide` (`beamType=0`→`numBeams=0`; `torpType=0`→
-  `numLaunchers`/`numTorps=0`).
+- **Fase E — Validación (crítica):** ✅ *hecha.* Validado **bit-exacto contra `PVCR.EXE`**
+  (DOSBox) sobre combates reales de la partida PHOENIX4 (PHost 4.1h), comparando fotograma a
+  fotograma de un vídeo: ganador, daño final, supervivientes, munición, escudo/tripa y cuenta
+  de cazas coinciden (p. ej. combate 2: nave Crystalline vs planeta Empire → la nave gana con
+  65 torpedos, el planeta muere con 18 cazas en reserva; escudo nave 9.8, tripa 1035).
+  - **Causa raíz encontrada y corregida:** los combates de portaaviones/planeta salían
+    *invertidos* respecto a `PVCR.EXE` **no** por la matemática, sino porque VPA no abría
+    `pconfig.src` (minúsculas) en Linux → usaba config por defecto con `AllowAlternativeCombat=No`.
+    Resuelto con `ResolveCase` (ver Fase 5). Con la config real cargada, el resultado coincide.
+  - **Banco de pruebas reproducible** (`/tmp/t2/*.pas`): arneses que ejecutan el `PVCRALG` real
+    sobre `VCR7.DAT` cargando `beamspec.dat`/`torpspec.dat`, con tabla 4-vías (config×altcombat)
+    que aísla la variable decisiva, y un paso a paso por `PlayCycle` que imprime reserva/vuelo de
+    cazas a cada distancia para el cotejo con los fotogramas.
+  - **Cazas en reserva:** el contador muestra **solo** los cazas en bahía (`numFighters`), no los
+    que están en vuelo, igual que `PVCR.EXE` (verificado: 21 en reserva a 35600 m, no 51).
+  - **Estelas de cazas:** corregido el borrado (cada caza se borra con la misma forma `h` con que
+    se dibujó, vía `pvFH`); ya no deja rastro al moverse.
 - **Fase F — Pulido y opcionales:** death rays, niveles de experiencia (PHost 4.x), y —si se
   quisiera— el combate multi-nave **FLAK** (`game/vcr/flak/` de PCC2ng), que es un módulo
   aparte. Documentación y limpieza.
 
-> **Estado:** planificado. Es la tarea más grande del afinado (port de matemática de combate
-> intrincada + validación bit-exacta), así que irá por fases verificables. Stefan Reuther
-> queda disponible para dudas de detalle del algoritmo.
+> **Estado:** ✅ **funcional y validado bit-exacto contra `PVCR.EXE`.** El visor PHost nativo
+> sustituye por completo a `PVCR.EXE`: mismo desarrollo, mismos contadores fotograma a fotograma
+> y mismo desenlace. Quedan solo retoques estéticos (ver *Limitaciones*). Stefan Reuther queda
+> disponible para dudas de detalle del algoritmo.
 
 ### Estado actual (runtime)
 
@@ -729,6 +748,8 @@ hacían parecer que el programa estaba "congelado":
 | Diana propia del ratón | 📝 Pendiente | VPA dibuja su propia cruz blanca (`MouseMotionHandler`, `if mdraw`); de momento sirve el puntero de Linux. |
 | Nombres de planeta gigantes | 📝 Pendiente | Usan `OutTextXY` + `SetTextStyle(SmallFont,…,4)`; `SmallFont` es vectorial BGI (`.CHR`) y no está en `ptcgraph` → cae a la fuente por defecto escalada ×4. Solo aparecen al acercar el zoom (umbral `PNRatio`, por diseño). |
 | Modificadores Shift/Ctrl/Alt | 📝 Pendiente | `KbdFlags` devuelve 0, así que Shift/Ctrl no se detectan en algún zoom y atajo del mapa. (La salida **Ctrl-Alt-X** sí funciona: se resuelve con un indicador propio fijado en la pulsación, no vía `KbdFlags`.) |
+| Planetas como disco | 📝 Pendiente | En el visor de combate el planeta se carga con `LoadPic` (su sprite de `RESOURCE.PLN`), así que se ve como una nave; `PVCR.EXE` lo dibuja como un disco. Falta una rutina que genere una imagen de disco en `img[Right]` cuando `planet=1` en lugar de cargar el sprite. |
+| Decimales del combate | ⚠️ Parcial | El visor ya muestra escudo/daño/tripa con un decimal (como `PVCR.EXE`) y la **parte entera coincide** (p. ej. escudo 9.8). Pero el primer decimal puede diferir ~±0.5: `PVCR.EXE` acumula la fracción sub-unidad distinto a PCC2ng (coinciden en los cruces enteros — de ahí la bit-exactitud del resultado — pero no en la fracción). Igualar el decimal exacto exigiría abandonar el algoritmo fiel a PCC2ng. Se muestra el valor correcto del algoritmo. |
 
 ### Fuentes de mapa de bits (`.FNT`)
 
