@@ -671,7 +671,7 @@ procedure DrawMessage (var m:Msg);
         if MessageIsKilled(m_In, msgn[m_In]) then WriteKey('Unkill')
                                              else WriteKey('Kill');
       end;
-      if (msgvcr<>0) and ((not pvcr) or pvcrexe) then WriteKey('View');
+      if (msgvcr<>0) then WriteKey('View');
     end;
   end;
 
@@ -1306,13 +1306,7 @@ procedure GetVCRMessage (n:word; var m:Msg);
         VTResult(5, Right, pres^.u.outcome2);
       end;
      {$ENDIF}
-      if not pvcrexe then
-      begin
-	m.text[6]:='';
-	m.text[7]:='Copy '+PVCR_EXE+' to your PLANETS directory';
-	m.text[8]:='to view PHOST-generated battles';
-	m.lines:=8;
-      end;
+      { Fase D: el visor PHost es nativo; ya no hace falta PVCR.EXE ni el aviso. }
     end;
     msgvcr:=n;
     Seek(g,objoffs);
@@ -1329,10 +1323,13 @@ procedure GetVCRMessage (n:word; var m:Msg);
 	if TTurn^.data^.ship[dd[lr].id]<>nil then msgobj:=dd[lr].id or LockS;
     end;
     if IOResult=0 then ;
-    if pvcr then exit;
     DrawMessage(m);
-    for lr:=Left to Right do vcr.dd[lr].race:=Race[vcr.dd[lr].race];
-    Combat(vcr,No,9,Off,Yes);
+    if pvcr then
+      CombatPHost(vcr,No,9,Off,Yes)              { resultado PHost nativo (Fase D); vcr CRUDO }
+    else begin
+      for lr:=Left to Right do vcr.dd[lr].race:=Race[vcr.dd[lr].race];
+      Combat(vcr,No,9,Off,Yes);
+    end;
     if not KeyPressed then
     begin
       m.text[4]:='';
@@ -1425,13 +1422,8 @@ function CheckObj : int;
   end;
 
 procedure ViewVCR (n:word);
-  var	vcr,vcrp: VCRData;
-	v	: file;
-	i,ii	: word;
-        magic   : word;
-	a,b	: int;
+  var	vcr	: VCRData;
 	lr	: LRType;
-	vs	: string[79];
 	errr	: boolean;
   begin
     if n>nm[m_VCR] then Exit;
@@ -1446,66 +1438,15 @@ procedure ViewVCR (n:word);
       TCombatFinish;
       LockReservedMemory;
     end
-    else begin
-     GetVCR(1, vcrp);
-     magic := vcrp.plnpic;
-     if pvcrlast then GetVCR(nm[m_VCR],vcrp);
-     CloseData(f);	{ must close! it is renamed for PVCR }
-     repeat		{ try }
-      vs:=addir+'VCR'+plstr+'.';
-      Assign(v,vs+'TMP');
-      Erase(v); if IOResult=0 then ;
-      if DFiles then
-      begin
-	Assign(v,vs+'DAT');
-	Rename(v,vs+'TMP');
-	if IOResult<>0 then
-	begin
-	  TextAttr:=LightRed;
-	  WriteXY(PVEX,PVEY,'Can''t rename file '+vs+'DAT to *.TMP');
-	  errr:=Yes;
-	  Break;
-	end;
-      end;
-     { Construct a temporary VCR file. We must have two copies of the
-       battle: according to pvcr.htm, `pvcr -b 1' plays the first battle.
-       In 3.3e and before, that option is broken; -b 1 means the second
-       one and -b 0 is ignored. This works both for the broken and the
-       good PVCR.  --sr }
-      Assign(v,vs+'DAT');
-      Rewrite(v,1);
-      i:=IIF(pvcrlast,3,2);
-      BlockWrite(v,i,2);
-      vcr.int0:=48879-vcr.K0;
-      vcr.plnpic := magic;       { needed by PVCR 4.0+ }
-      BlockWrite(v,vcr,SizeOf(VCRData));
-      vcr.int0:=0;
-      vcr.plnpic := 0;
-      BlockWrite(v,vcr,SizeOf(VCRData));
-      if pvcrlast then BlockWrite(v,vcrp,SizeOf(VCRData));
-      BlockWrite(v,vs[1],10);
-      CloseData(v);
-      {$IFDEF VPAMM}IF HeapPtr<>NIL THEN{$ENDIF} SwapVectors;
-      Exec(PVCR_EXE,'-b 1 -p '+plstr+' -s '+addir);
-      a:=DosError;
-      b:=DosExitCode;
-      {$IFDEF VPAMM}IF HeapPtr<>NIL THEN{$ENDIF} SwapVectors;
-      Erase(v); if IOResult<>0 then ;
-      if DFiles then
-      begin
-	Assign(v,vs+'TMP');
-	Rename(v,vs+'DAT'); if IOResult<>0 then ;
-      end;
-      if a<>0 then
-      begin
-	TextAttr:=LightRed;
-	WriteXY(PVEX,PVEY,'Can''t run '+PVCR_EXE+' (DOS Error '+NStr0(a)+')');
-	errr:=Yes;
-	Break;
-      end;
-     until True;	{ finally }
-     OpenMsgFile;
-    end;
+     else begin
+      { Visor PHost nativo (Fase D): algoritmo portado de PCC2ng, sin PVCR.EXE externo.
+        Se pasa el vcr CRUDO (sin convertir race); PVCRALG aplica Race[] via PlayerRace(). }
+      UnlockReservedMemory(ReservedMemory);
+      TCombatInit(Yes);
+      CombatPHost(vcr,Yes,VCSpeed,VCSet and 8<>0,No);
+      TCombatFinish;
+      LockReservedMemory;
+     end;
     if not errr then
     begin
       if BadVideoOrMouse then RestoreCrtMode;
@@ -1669,7 +1610,7 @@ procedure ViewMessages;
 		    lbase:=nil;
 		    chh:=27;
 		  end;
-	ord('v'): if (msgn[msgt]>0) and (msgvcr<>0) and ((not pvcr) or pvcrexe) then
+	ord('v'): if (msgn[msgt]>0) and (msgvcr<>0) then
 		  begin
 		    ViewVCR(msgvcr);
 		    ii:=succ(msgt);

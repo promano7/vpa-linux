@@ -650,13 +650,32 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
     simple (falta la explosión/`SurrPic` completa); escalonado en Y de fighters aproximado;
     `SetPhost3` fijado a `False` (la detección PHost 3-vs-4 es de la Fase D). **No verificado
     visualmente todavía.**
-- **Fase D — Integración en VPA:** enrutar el visor — en partidas **PHost** usar el algoritmo
-  portado; en **THost** mantener el `Battle` clásico de VPA (o portar también
-  `hostalgorithm.cpp` más adelante). Eliminar la llamada externa a `PVCR.EXE`/`VCR.EXE` y
-  limpiar los *flags* `pvcr`/`pvcrexe`.
+- **Fase D — Integración en VPA:** ✅ *hecho.* El visor PHost nativo está enrutado en
+  `MESSAGES.PAS`:
+  - **`ViewVCR`** (ver una batalla): en **PHost** (`pvcr`) llama a `CombatPHost(vcr,Yes,…)`
+    (algoritmo portado, animado) en vez de construir el fichero temporal y `Exec(PVCR.EXE)`;
+    en **THost** mantiene el `Combat` clásico. Toda la maquinaria de `PVCR.EXE` (temp file,
+    rename, `Exec`, `SwapVectors`) **eliminada**.
+  - **`GetVCRMessage`** (resumen del mensaje): PHost ya **no** sale antes de calcular; corre
+    `CombatPHost(vcr,No,…)` sin animación para obtener el desenlace y mostrar los rótulos
+    `/Destroyed/`/`/Captured/`, igual que THost. (Para eso `CombatPHost` vuelca el resultado a
+    `dd[lr].pic` con `ExplPic`/`SurrPic`.)
+  - **Tecla *View*** habilitada para PHost siempre (se quitó el requisito `pvcrexe`), y eliminado
+    el aviso obsoleto *"Copy PVCR.EXE…"*.
+  - **CRÍTICO (race vs owner):** el camino PHost pasa el `vcr` **crudo** (sin la conversión
+    `dd[lr].race := Race[…]` que sí hace THost antes de `Combat`). `MapVCR` pone `owner := race`
+    (slot de jugador) y **PVCRALG aplica `Race[]` internamente** vía `PlayerRace(owner)`;
+    pre-convertir causaría doble conversión (`Race[Race[slot]]`).
+  - **`SetPhost3(True)`** (no `False`): el nombre engaña — `pvcralgorithm.hpp` documenta
+    `false=PHost 2.x, true=PHost 3.x/4.x`. PHost 3 y 4 usan la misma rama (`true`); solo el
+    obsoleto PHost 2.x usaría `false`. Correcto para la partida 4.1h de Pablo.
+  - Build verde; arranca bajo Xvfb. **Falta solo la verificación visual** (Fase E).
 - **Fase E — Validación (crítica):** comparar resultado (ganador, daño final, supervivientes,
   munición) contra combates reales de una partida PHost 4.1h y, si hace falta, contra
   `PVCR.EXE` en DOSBox. Banco de pruebas con varios VCR conocidos; iterar hasta bit-exacto.
+  Incluye la **verificación visual** del visor (animación de naves/cazas/beams/torpedos) y las
+  dos correcciones silenciosas de `checkSide` (`beamType=0`→`numBeams=0`; `torpType=0`→
+  `numLaunchers`/`numTorps=0`).
 - **Fase F — Pulido y opcionales:** death rays, niveles de experiencia (PHost 4.x), y —si se
   quisiera— el combate multi-nave **FLAK** (`game/vcr/flak/` de PCC2ng), que es un módulo
   aparte. Documentación y limpieza.

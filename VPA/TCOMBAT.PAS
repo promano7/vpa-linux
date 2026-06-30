@@ -1752,6 +1752,7 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
       seed,sig,flags,btype : word;
       vis : TVcrVisualizer;
       lr  : LRtype; xx : int; side:TVcrSide; track:int; ch:word;
+      res : TVcrResult;
   begin
     Show:=Animate; Beep:=Sounds; KeyStop:=KeyIntr; WAIT:=(10-speed)*DDelay;
     planet:=vcr.planet; r:=vcr.K0;
@@ -1810,7 +1811,9 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
     vis.fireBeam:=pvFireBeam; vis.fireTorpedo:=pvFireTorpedo;
     vis.updateBeam:=nil; vis.updateLauncher:=nil; vis.killObject:=pvKillObject;
     MapVCR(vcr,lobj,robj,seed,sig,flags,btype);
-    SetCapabilities(flags); SetPhost3(False);   { TODO Fase D: PHost 3 vs 4 segun version del host }
+    SetCapabilities(flags);
+    SetPhost3(True);    { PHost 3.x/4.x usan la rama "true" (intercept de fighters per-player);
+                          solo PHost 2.x (obsoleto) usaria false. Ver pvcralgorithm.hpp. }
     InitBattle(lobj,robj,seed,vis);
 
     while PlayCycle do
@@ -1839,6 +1842,10 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
     vcr.dd[Left].dam:=VcrCurDamage(vsLeft); vcr.dd[Right].dam:=VcrCurDamage(vsRight);
     vcr.dd[Left].crew:=VcrCurCrew(vsLeft);  vcr.dd[Right].crew:=VcrCurCrew(vsRight);
     vcr.dd[Left].tfn:=VcrObjInfo(vsLeft).numFighters;   vcr.dd[Right].tfn:=VcrObjInfo(vsRight).numFighters;
+    { resultado -> pic, para los rotulos /Destroyed/ /Captured/ del resumen }
+    res:=BattleResult;
+    if res.leftDestroyed  then vcr.dd[Left].pic :=ExplPic else if res.leftCaptured  then vcr.dd[Left].pic :=SurrPic;
+    if res.rightDestroyed then vcr.dd[Right].pic:=ExplPic else if res.rightCaptured then vcr.dd[Right].pic:=SurrPic;
   end;
 
 End.
