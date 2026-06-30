@@ -115,8 +115,8 @@ const
   VCR_MAX_FTRS  = 50;
   VCR_MAX_BAYS  = 50;
   { tasas "Nu" del Object: VPA solo maneja PHost/THost (no Nu), asi que son las
-    constantes por defecto de PCC2ng (object.cpp) }
-  cBeamKillRate    = 1;
+    constantes por defecto de PCC2ng (object.cpp). Excepcion: BeamKillRate no es
+    constante porque vale 3 para Privateer (ver TFixedStatus.beam_kill_rate). }
   cBeamChargeRate  = 1;
   cTorpMissRate    = 35;
   cTorpChargeRate  = 1;
@@ -142,6 +142,7 @@ type
     beam_recharge, bay_recharge, torp_recharge : longint;
     beam_hit_odds, torp_hit_odds : longint;   { pueden superar 16-bit con bonus altos }
     beam_kill, beam_damage, torp_kill, torp_damage : int;
+    beam_kill_rate : int;   { 3 si la raza del dueno es Privateer (5), 1 si no (database.cpp:87) }
     scale, max_scaled, damage_limit_scaled, mass_plus1 : longint;
     ShieldDamageScaling, ShieldKillScaling, HullDamageScaling, CrewKillScaling : int;
     MaxFightersLaunched, StrikesPerFighter, BayLaunchInterval, FighterMovementSpeed : int;
@@ -388,6 +389,12 @@ procedure InitBattle (var left, right: TVcrObject; seed: word;
       st.f.max_scaled     := longint(10000) * st.f.scale;
       st.f.mass_plus1     := longint(o.mass) + 1;
       owner := o.owner;
+      { Privateer (raza 5): triple Kill_Power de los beams (formulas.html;
+        PCC2ng lo fija al cargar el VCR en database.cpp:87). Afecta tanto al
+        dano a tripulacion (CrewKillScaling) como al escudo (ShieldKillScaling),
+        porque ese 'kill' alimenta ambas formulas dentro de Hit. }
+      if PlayerRace(owner) = 5 then st.f.beam_kill_rate := 3
+                               else st.f.beam_kill_rate := 1;
       { --- beams --- }
       if o.numBeams > 0 then begin
         bt := o.beamType;
@@ -705,7 +712,7 @@ begin
        and (GetDistance <= st.f.BeamFiringRange) then
     begin
       missing := not RandomRange100LT(st.f.beam_hit_odds);
-      kill := (longint(st.f.beam_kill)   * (st.r.m_beamStatus[beam] div 10) div 100) * cBeamKillRate;
+      kill := (longint(st.f.beam_kill)   * (st.r.m_beamStatus[beam] div 10) div 100) * st.f.beam_kill_rate;
       dest := (longint(st.f.beam_damage) * (st.r.m_beamStatus[beam] div 10) div 100);
       st.r.m_beamStatus[beam] := 0;
       if Assigned(gVis.updateBeam) then gVis.updateBeam(st.f.side, beam);

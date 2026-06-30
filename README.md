@@ -597,6 +597,27 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
      destapó que los campos escalados (`max_scaled`, `damage_limit_scaled`) exceden 16 bits
      en modo alternativo y exigen `longint` — ya estaban correctamente declarados así en
      `TFixedStatus`/`TRunningStatus`.
+- **Bonus raciales de combate** (revisado contra la documentación de PHost 4.1h,
+  `formulas.html`/`config.html`/`rules.html`) — se aplican por tres vías, todas cubiertas:
+  - *Config per-jugador* (recarga de beams de la Fed, scalings, etc.): el algoritmo indexa
+    cada opción por el **dueño** del combatiente (`EMV(CombatCfg.X, owner, …)`), igual que
+    PCC2ng. ✅
+  - *Rama por raza en el algoritmo*: solo el **Lizard** (raza 2) con su 150% de daño antes de
+    estallar (`PlayerRace(owner)=2`). ✅
+  - *Horneado en el registro VCR por el host*: masa +50kt, +3 bahías, escudos y `FullWeaponry`
+    de la **Federación** (`AllowFedCombatBonus`) — `MapVCR` los lee tal cual; el cargador de
+    VCR de PCC2ng tampoco los re-aplica. ✅
+  - **Privateers (raza 5): ×3 al `Kill_Power` de los beams.** No va por `CrewKillScaling` sino
+    por un factor que PCC2ng fija al cargar el VCR (`database.cpp:87`:
+    `setBeamKillRate(PlayerRace[owner]==5 ? 3 : 1)`) y el algoritmo usa en `fireBeam`. Portado
+    con un campo `beam_kill_rate` en `TFixedStatus`, fijado en `InitBattle` y usado en
+    `BeamFire`; afecta a tripulación **y** a escudo (el `kill` alimenta ambas fórmulas en
+    `Hit`). **Validado bit-exacto** con un combatiente Privateer (escenario E4: R muere por
+    tripulación arrasada en vez de por daño, y desaparece el bonus → cambia el combate). Los
+    otros cuatro *rates* (`BeamChargeRate`, `TorpMissRate`, `TorpChargeRate`, `CrewDefenseRate`)
+    coinciden con `database.cpp` y quedan como constantes. ✅
+  - *Pendiente (Fase E)*: los dos *silent fixes* de `database.cpp` (si `beamType=0` → `numBeams=0`;
+    si `torpType=0` → `numLaunchers=0`/`numTorps=0`), parte de `checkSide`.
 - **Fase C — Conectar el visualizador a `TCOMBAT`:** implementar los 8 eventos llamando a las
   rutinas de dibujo existentes (`Beam`/`Torpedo`/`Fighter`/`Hit`/`Gauge`/`Blast`…), con el
   *timing* y la animación de VPA. Soportar el modo "sin animación" (resultado rápido).
