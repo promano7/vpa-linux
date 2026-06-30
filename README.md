@@ -618,9 +618,26 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
     coinciden con `database.cpp` y quedan como constantes. ✅
   - *Pendiente (Fase E)*: los dos *silent fixes* de `database.cpp` (si `beamType=0` → `numBeams=0`;
     si `torpType=0` → `numLaunchers=0`/`numTorps=0`), parte de `checkSide`.
-- **Fase C — Conectar el visualizador a `TCOMBAT`:** implementar los 8 eventos llamando a las
-  rutinas de dibujo existentes (`Beam`/`Torpedo`/`Fighter`/`Hit`/`Gauge`/`Blast`…), con el
-  *timing* y la animación de VPA. Soportar el modo "sin animación" (resultado rápido).
+- **Fase C — Conectar el visualizador a `TCOMBAT`:** 🟡 *en curso.* Implementar los 8 eventos
+  con las primitivas de dibujo de VPA, con el *timing*/animación de VPA y un modo "sin animación".
+  - **Decisión de diseño (importante):** se usan **solo las primitivas puras de dibujo**
+    (`Beam`, `Torpedo`, `Fighter`, `Blast`, `Gauge`, `DrawShield`), **no** las rutinas de alto
+    nivel `Hit`/`FireBeam`/`FireTorpedo`/`Battle`, porque esas **llevan dentro la matemática de
+    THost** (p.ej. `Hit` recalcula escudo/daño/tripulación con la fórmula clásica). El visor PHost
+    debe **renderizar el estado real de PVCRALG**, no recalcular nada.
+  - **C1 ✅ (hecho):** PVCRALG expone *accessors* de solo lectura para que el visor consulte la
+    geometría y el estado en vivo: `VcrObjectX`, `VcrFighterX`, `VcrFighterStatus`,
+    `VcrActiveFighters`, `VcrBeamStatus`, `VcrLauncherStatus`, `VcrCurShield/Damage/Crew`
+    (des-escalado en vivo), `VcrObjInfo`, `VcrDistance`, `VcrTime`. Los 8 callbacks ya estaban
+    cableados en las funciones de disparo desde la Fase B. Son lecturas puras: no tocan la
+    matemática (bit-exactitud intacta).
+  - **C2 (siguiente):** mapeo coordenadas del algoritmo (metros, `m_objectX` en `±29000`) →
+    píxeles de pantalla (estudiar la geometría del `Battle` antiguo en `TCOMBAT`).
+  - **C3:** escribir los 8 callbacks (unit nueva o en `TCOMBAT`) llamando a las primitivas, con
+    el estado leído por accessors y recordando el último valor mostrado para animar el barrido
+    `viejo→nuevo` de los `Gauge`.
+  - **C4:** driver `Combat`-PHost (InitBattle → bucle `PlayCycle` → `DoneBattle`) con animación y
+    el modo rápido (`PlayFastForward` + pintar estado final).
 - **Fase D — Integración en VPA:** enrutar el visor — en partidas **PHost** usar el algoritmo
   portado; en **THost** mantener el `Battle` clásico de VPA (o portar también
   `hostalgorithm.cpp` más adelante). Eliminar la llamada externa a `PVCR.EXE`/`VCR.EXE` y

@@ -89,6 +89,25 @@ procedure PlayFastForward;          { ejecuta hasta el final sin emitir animacio
 procedure DoneBattle (var left, right: TVcrObject);
 function  BattleResult : TVcrResult;   { ganador/perdedor tras DoneBattle }
 
+{ --- Accessors de solo lectura para el visualizador (Fase C) ---
+  El visor lee de aqui el estado geometrico y de combate del algoritmo para
+  renderizar con las primitivas de TCOMBAT (Beam/Torpedo/Fighter/Gauge/...). }
+function VcrTime : longint;                              { tick actual }
+function VcrDistance : longint;                          { distancia entre objetos (metros) }
+function VcrObjectX (side:TVcrSide) : longint;           { posicion del baseship }
+function VcrFighterX (side:TVcrSide; id:int) : longint;  { posicion de un fighter }
+function VcrFighterStatus (side:TVcrSide; id:int) : int; { 0=idle, 1=atacando, 2=volviendo }
+function VcrActiveFighters (side:TVcrSide) : int;        { fighters fuera (volando) }
+function VcrBeamStatus (side:TVcrSide; id:int) : longint;     { carga del beam [0..1000] }
+function VcrLauncherStatus (side:TVcrSide; id:int) : longint; { carga del tubo [0..1000] }
+function VcrCurShield (side:TVcrSide) : int;   { escudo actual (des-escalado en vivo) }
+function VcrCurDamage (side:TVcrSide) : int;   { dano actual }
+function VcrCurCrew (side:TVcrSide) : int;     { tripulacion actual }
+function VcrObjInfo (side:TVcrSide) : TVcrObject; { copia del objeto: campos estaticos +
+                                                    ammo en vivo (numFighters/numTorps).
+                                                    OJO: shield/damage/crew de la copia estan
+                                                    obsoletos en combate; usar VcrCur* }
+
 { --- Consulta de estado en curso (la usa el visualizador). STUB en Fase A. --- }
 function  GetShield      (side:TVcrSide): int;
 function  GetDamage      (side:TVcrSide): int;
@@ -1117,6 +1136,57 @@ end;
 
 function BattleResult : TVcrResult;
 begin BattleResult := gResult; end;
+
+{ --- Accessors de solo lectura (Fase C) --- }
+
+function VcrTime : longint;
+begin VcrTime := m_time; end;
+
+function VcrDistance : longint;
+begin VcrDistance := GetDistance; end;
+
+function VcrObjectX (side:TVcrSide) : longint;
+begin VcrObjectX := m_status[side].r.m_objectX; end;
+
+function VcrFighterX (side:TVcrSide; id:int) : longint;
+begin VcrFighterX := m_status[side].r.m_fighterX[id]; end;
+
+function VcrFighterStatus (side:TVcrSide; id:int) : int;
+begin VcrFighterStatus := m_status[side].r.m_fighterStatus[id]; end;
+
+function VcrActiveFighters (side:TVcrSide) : int;
+begin VcrActiveFighters := m_status[side].r.m_activeFighters; end;
+
+function VcrBeamStatus (side:TVcrSide; id:int) : longint;
+begin VcrBeamStatus := m_status[side].r.m_beamStatus[id]; end;
+
+function VcrLauncherStatus (side:TVcrSide; id:int) : longint;
+begin VcrLauncherStatus := m_status[side].r.m_launcherStatus[id]; end;
+
+{ Des-escalado en vivo, identico al de DoneBattle (AC vs no-AC). }
+function VcrCurShield (side:TVcrSide) : int;
+begin
+  if m_alternativeCombat then VcrCurShield := DivRound(m_status[side].r.shield_scaled, m_status[side].f.scale)
+                         else VcrCurShield := m_status[side].r.shield_scaled;
+end;
+
+function VcrCurDamage (side:TVcrSide) : int;
+  var d : longint;
+begin
+  if m_alternativeCombat then d := DivRound(m_status[side].r.damage_scaled2, m_status[side].f.scale * 100)
+                         else d := DivRound(m_status[side].r.damage_scaled2, 100);
+  if d > 100 then d := 100;
+  VcrCurDamage := d;
+end;
+
+function VcrCurCrew (side:TVcrSide) : int;
+begin
+  if m_alternativeCombat then VcrCurCrew := DivRound(m_status[side].r.crew_scaled2, m_status[side].f.scale * 100)
+                         else VcrCurCrew := DivRound(m_status[side].r.crew_scaled2, 100);
+end;
+
+function VcrObjInfo (side:TVcrSide) : TVcrObject;
+begin VcrObjInfo := m_status[side].r.obj; end;
 
 { --- Consulta de estado en curso (modelo entero: des-escala los valores). --- }
 function GetShield      (side:TVcrSide): int;
