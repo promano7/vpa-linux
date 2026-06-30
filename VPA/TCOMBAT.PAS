@@ -1607,7 +1607,10 @@ procedure pvRefreshAmmo (side:TVcrSide);
   var lr:LRtype; nf:int; oi:TVcrObject;
   begin
     lr:=pvLR(side); oi:=VcrObjInfo(side);
-    if oi.numBays>0 then nf:=oi.numFighters+VcrActiveFighters(side)
+    { PVCR muestra solo los cazas en RESERVA (bahias); los que estan en vuelo no
+      se cuentan (numFighters baja al lanzar y sube al aterrizar). Asi el contador
+      coincide fotograma a fotograma con PVCR.EXE. }
+    if oi.numBays>0 then nf:=oi.numFighters
                     else nf:=oi.numTorps;
     if Show then
     begin
