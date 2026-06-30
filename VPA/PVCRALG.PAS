@@ -1098,7 +1098,7 @@ end;
 procedure DoneBattle (var left, right: TVcrObject);
 
   procedure FinishSide (side, opp : TVcrSide; var o : TVcrObject);
-    var i : int;
+    var i, lim : int;
     begin
       with m_status[side] do
       begin
@@ -1113,9 +1113,13 @@ procedure DoneBattle (var left, right: TVcrObject);
           r.obj.crew   := DivRound(r.crew_scaled2,   100);
           r.obj.shield := r.shield_scaled;        { scale = 1 }
         end;
-        if r.obj.damage > 100 then r.obj.damage := 100;
+        { Limite de dano MOSTRADO: el Lizard (raza 2) combate hasta 150%, el
+          resto hasta 100%. No saturar siempre a 100 o se perderia el dano real
+          del Lizard; PVCR.EXE muestra el valor crudo (p.ej. 127). }
+        if PlayerRace(r.obj.owner) = 2 then lim := 150 else lim := 100;
+        if r.obj.damage > lim then r.obj.damage := lim;
         { si sobrevive, aterrizar los fighters que quedan fuera }
-        if CanStillFight(m_status[side], m_status[opp]) and (r.obj.damage < 100) then
+        if CanStillFight(m_status[side], m_status[opp]) and (r.obj.damage < lim) then
           for i := 0 to f.MaxFightersLaunched-1 do
             if r.m_fighterStatus[i] <> FighterIdle then
             begin
@@ -1181,11 +1185,13 @@ begin
 end;
 
 function VcrCurDamage (side:TVcrSide) : int;
-  var d : longint;
+  var d : longint; lim : int;
 begin
   if m_alternativeCombat then d := DivRound(m_status[side].r.damage_scaled2, m_status[side].f.scale * 100)
                          else d := DivRound(m_status[side].r.damage_scaled2, 100);
-  if d > 100 then d := 100;
+  { Lizard (raza 2) combate hasta 150%; el resto hasta 100%. }
+  if PlayerRace(m_status[side].r.obj.owner) = 2 then lim := 150 else lim := 100;
+  if d > lim then d := lim;
   VcrCurDamage := d;
 end;
 

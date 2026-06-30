@@ -32,6 +32,7 @@ type    cfgSec  = (sColor,sMarkers,sInterface,sSystem,sConfig,sPHOST,sRace,sData
 procedure ReadConfig1;
 procedure ReadConfig2 (RWMode:boolean);
 function  ReadConfigFile (fnm:str79; sec:cfgSec) : boolean;
+function  ResolveCase (fnm:str79) : str79;  { resuelve mayus/minus de un nombre en disco (Linux) }
 procedure WriteHConfig;
 procedure WriteDConfig;
 procedure InitHullFunc;

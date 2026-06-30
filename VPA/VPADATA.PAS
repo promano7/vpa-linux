@@ -1278,11 +1278,11 @@ function OpenData (var f:file; name:filename; mustbe:boolean) : boolean;
   begin
     OpenData:=No;
     FileMode:=0;
-    Assign(f,addir+name);
+    Assign(f,ResolveCase(addir+name));
     Reset(f,1);
     if (IOResult<>0) or (FileSize(f)=0) then
     begin
-      Assign(f,name);
+      Assign(f,ResolveCase(name));
       Reset(f,1);
       if (IOResult<>0) or (FileSize(f)=0) then
         if mustbe then begin Writeln(#13#10'Can''t read file ',name); Halt end
@@ -1296,7 +1296,7 @@ function Exists (name:filename) : boolean;
   begin
     Exists:=No;
     FileMode:=0;
-    Assign(f,addir+name);
+    Assign(f,ResolveCase(addir+name));
     Reset(f,1);
     if (IOResult<>0) or (FileSize(f)=0) then
       Exit;
@@ -1308,7 +1308,7 @@ function OpenRW (var f:file; name:filename; mustbe:boolean) : boolean;
   begin
     OpenRW:=Yes;
     FileMode:=2;
-    Assign(f,addir+name);
+    Assign(f,ResolveCase(addir+name));
     Reset(f,1);
     if IOResult<>0 then
       if mustbe then
