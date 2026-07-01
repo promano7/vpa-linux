@@ -1841,6 +1841,7 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
       seed,sig,flags,btype : word;
       vis : TVcrVisualizer;
       lr  : LRtype; xx : int; side:TVcrSide; track:int; ch:word;
+      ex  : int;   { nivel de experiencia de la unidad (para mostrar el rango) }
       res : TVcrResult;
   begin
     Show:=Animate; Beep:=Sounds; KeyStop:=KeyIntr; WAIT:=(10-speed)*DDelay;
@@ -1870,6 +1871,15 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
       for lr:=Left to Right do
       begin
         xx:=TX[lr];
+        { Rango de experiencia (Fase F): solo si el fichero VCR declara ExperienceCapability
+          (bit 2 de VcrFileCaps, fijado en GetVCR desde el 1er registro). El nivel se lee del
+          objeto (byte alto de weaps); se aplica el mismo reset de consistencia que PVCRALG. }
+        if (VcrFileCaps and 2) <> 0 then
+        begin
+          ex := (word(vcr.dd[lr].weaps) shr 8) and $FF;
+          if ex > NumExperienceLevels then ex := 0;
+          WriteXY(xx,18,'Rank  : '+ExperienceLevelName(ex));
+        end;
         WriteXY(xx,19,'Shield: '+Fmt1w(longint(shld[lr])*10,5)+'% ('+NStr0(shpw[lr])+'tw)');
         WriteXY(xx,20,'Damage: '+Fmt1w(longint(dam[lr])*10,5)+'%');
         if (lr=Left) or (planet=0) then WriteXY(xx,21,'Crew  : '+Fmt1w(longint(crew[lr])*10,6));

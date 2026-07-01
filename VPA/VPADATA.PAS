@@ -1050,7 +1050,7 @@ function  ShipExperience(sid : int):int;
 function  PlanetExperience(pid : int):int;
 procedure PutShipExperience(sid, exp : int);
 procedure PutPlanetExperience(pid, exp : int);
-{function  ExperienceLevelName(exp:int):string;}
+function  ExperienceLevelName(exp:int):string;
 function  BuildQ(pid : int):int;
 procedure NewBuildQData(t : tptr);
 procedure PutBuildQ(pid, exp : int);
@@ -1446,7 +1446,7 @@ procedure PutBuildQ(pid, exp : int);
   end;
   
   
-{function  ExperienceLevelName(exp:int):string;
+function  ExperienceLevelName(exp:int):string;
   var  i : int;
        s : string;
   begin
@@ -1464,7 +1464,7 @@ procedure PutBuildQ(pid, exp : int);
       Trim(s);
       ExperienceLevelName := s;
     end;
-  end;}
+  end;
 
 {
   Read turn list. This will build up a list of turns in 'TRoot', and set
