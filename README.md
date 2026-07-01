@@ -547,14 +547,15 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
     `InitCombatCfgDefaults` fija los **defaults de PHost** (de PCC2ng) antes de leer el fichero.
     Implementado con un despachador `ReadCombatKey` enganchado al bucle de parseo **sin tocar la
     tabla posicional `KeyNames`** (riesgo cero para la config existente). Las claves `EMod*`
-    (experiencia) se difieren a la Fase F.
+    (experiencia) se implementaron en la **Fase F** (helper `GetEMod`, arrays por nivel).
 - **Fase B — Portar el algoritmo** (la matemática), por bloques de menor a mayor dependencia — ✅ **COMPLETADA Y VALIDADA BIT-EXACTA**:
   1. `initBattle` + precálculo de config (hit odds, recharge rates, kill/damage).
      ✅ **Precálculo portado y verificado bit-exacto** (`InitBattle` en `PVCRALG.PAS`,
      modelo entero `PVCR_INTEGER`): estructuras de estado `TFixedStatus`/`TRunningStatus`
      por lado; `ComputeBeamHitOdds`/`ComputeBeamRechargeRate`/`ComputeTorpHitOdds`/
      `ComputeTubeRechargeRate`/`ComputeBayRechargeRate` (fórmulas de PHost), `DivRound`
-     (`ccvcr.pas:RDiv`), `EMV` (`getExperienceModifiedValue` sin experiencia) y la caché de
+     (`ccvcr.pas:RDiv`), `EMV` (`getExperienceModifiedValue`, con soporte de experiencia añadido
+     en la Fase F) y la caché de
      opciones de config; specs de armas desde `Beams[]`/`Torps[]` de VPA (`kill`/`expl` =
      kill/damage power). Validado contra una referencia C++ con varias entradas (incluidos
      casos que rebosan 16-bit → `beam_hit_odds`/`torp_hit_odds` son 32-bit, como en PCC2ng).
@@ -694,9 +695,37 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
     que están en vuelo, igual que `PVCR.EXE` (verificado: 21 en reserva a 35600 m, no 51).
   - **Estelas de cazas:** corregido el borrado (cada caza se borra con la misma forma `h` con que
     se dibujó, vía `pvFH`); ya no deja rastro al moverse.
-- **Fase F — Pulido y opcionales:** death rays, niveles de experiencia (PHost 4.x), y —si se
-  quisiera— el combate multi-nave **FLAK** (`game/vcr/flak/` de PCC2ng), que es un módulo
-  aparte. Documentación y limpieza.
+- **Fase F — Niveles de experiencia (PHost 4.x)** — ✅ **COMPLETADA y validada bit-exacta.**
+  En PHost 4 cada unidad (nave o planeta) tiene un **nivel de experiencia** (0..`NumExperienceLevels`,
+  con `NumExperienceLevels` entre 0 y 10). El nivel modifica el combate: las opciones de config se
+  ajustan con los **modificadores `EMod*`** según la fórmula de PCC2ng
+  (`getExperienceModifiedValue`): `valor_efectivo = clamp(base[jugador] + EMod[nivel], min, max)`,
+  aplicada a ~20 parámetros (`BeamHitOdds`/`Bonus`, recargas de beam/tube/bay, `ShieldDamage`/
+  `ShieldKillScaling`, `HullDamageScaling`, `CrewKillScaling`, `MaxFightersLaunched`,
+  `StrikesPerFighter`, `Fighter*`, `BeamHitFighterCharge`).
+  - **Parser** (`CONFIG.PAS`): helper `GetEMod` que captura las 20 claves `EMod*` **por nivel**
+    (admite tanto listas `4,4,5,8` como valor único `0`, que se propaga a todos los niveles);
+    defaults a 0. `NumExperienceLevels` ya se leía.
+  - **Datos** (`VPADATA.PAS`): tipo `EArr = array[1..10] of int` y campos `EMod*` en `TCombatCfg`.
+  - **Algoritmo** (`PVCRALG.PAS`): el nivel de cada unidad ya se leía del registro VCR
+    (`experienceLevel` en el offset 33 del objeto, tras `numBeams`). `EMV` ahora suma el
+    `EMod[nivel]` de la unidad; se añade el **reset de consistencia** de PCC2ng: si el fichero no
+    declara `ExperienceCapability` o el nivel supera `NumExperienceLevels`, la unidad pasa a nivel 0.
+  - **Capabilities del fichero (bug sutil corregido)** (`MESSAGES.PAS` + `TCOMBAT.PAS`): siguiendo
+    `classicvcr.cc`, las capabilities (DeathRay/Experience/Beam) se determinan **una sola vez a
+    partir del primer registro** del fichero VCR —`(firstFlags & 0x8000) ? firstFlags & ~0x8000 : 0`—
+    y valen para **todos** los combates. En un fichero PHost real solo el 1er registro lleva el bit
+    `ValidCapabilities` (0x8000); los demás llevan flags = 0. Antes el visor usaba las flags
+    **por-registro**, lo que **desactivaba la experiencia en los combates 2º en adelante**. Ahora
+    `GetVCR` calcula `VcrFileCaps` del registro #1 y el visor lo usa.
+  - **Validación:** bit-exacta contra el test **`pvcr-exp` de PCC2** (6/6 combates, con unidades de
+    nivel 2 y 3), ejercitando el stack completo: parser real de `pconfig.src` → `EMod` → combate con
+    experiencia. Coinciden tiempo de fin, ganador y escudo/daño/tripulación/munición finales. Verificado
+    también que el parser lee correctamente el `pconfig.src` de una partida real (NORTH12,
+    `NumExperienceLevels=4`) y **sin regresión** en combate sin experiencia (PHOENIX4).
+  - *(Pendiente/opcional: death rays y el combate multi-nave **FLAK** (`game/vcr/flak/` de PCC2ng).
+    Mostrar el **nombre del rango** —"Recruit"…"Ultra Elite" vía `ExperienceLevelNames`— en el visor
+    es la fase siguiente, ya en marcha.)*
 
 > **Estado:** ✅ **funcional y validado bit-exacto contra `PVCR.EXE`.** El visor PHost nativo
 > sustituye por completo a `PVCR.EXE`: mismo desarrollo, mismos contadores fotograma a fotograma
