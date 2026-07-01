@@ -389,12 +389,25 @@ function ReadConfigFile (fnm:str79; sec:cfgSec) : boolean;
                              else a[i]:=Value(s1);
       end;
     end;
+  procedure GetEMod (var a:EArr);
+    { como GetArray pero para modificadores de experiencia: rellena a[1..10]
+      indexado por nivel. Un valor unico ('EModHullDamageScaling = 0') se aplica
+      a todos los niveles via la convencion 'repetir ultimo'. }
+    var i : byte;
+    begin
+      for i:=1 to 10 do
+      begin
+        Parse(s,s1,',');
+        if (ls1=0) and (i>1) then a[i]:=a[i-1]
+                             else a[i]:=Value(s1);
+      end;
+    end;
   procedure ReadCombatKey;
     { s1=nombre de clave (mayusculas), s=valor. Captura las claves de combate de
       PHost que el visor nativo (PVCRALG) necesita y que NO estan en la tabla
       posicional KeyNames, sin acoplarlas a ella. Por jugador con GetArray;
-      escalares con Value/YesNo. Las claves EMod* (experiencia) se difieren a la
-      fase F y aqui se ignoran (caen por el final del if sin asignar). }
+      escalares con Value/YesNo. Las claves EMod* (experiencia, Fase F) se
+      capturan por nivel con GetEMod. }
     begin
       with CombatCfg do
       if      s1='BEAMHITODDS'           then GetArray(BeamHitOdds)
@@ -427,7 +440,28 @@ function ReadConfigFile (fnm:str79; sec:cfgSec) : boolean;
       else if s1='SHIPMOVEMENTSPEED'     then GetArray(ShipMovementSpeed)
       else if s1='STANDOFFDISTANCE'      then StandoffDistance:=Value(s)
       else if s1='FIREONATTACKFIGHTERS'  then FireOnAttackFighters:=YesNo
-      else if s1='PLANETSHAVETUBES'      then PlanetsHaveTubes:=YesNo;
+      else if s1='PLANETSHAVETUBES'      then PlanetsHaveTubes:=YesNo
+      { --- Modificadores de experiencia (Fase F) --- }
+      else if s1='EMODBEAMHITODDS'         then GetEMod(EModBeamHitOdds)
+      else if s1='EMODBEAMHITBONUS'        then GetEMod(EModBeamHitBonus)
+      else if s1='EMODBEAMRECHARGERATE'    then GetEMod(EModBeamRechargeRate)
+      else if s1='EMODBEAMRECHARGEBONUS'   then GetEMod(EModBeamRechargeBonus)
+      else if s1='EMODTORPHITODDS'         then GetEMod(EModTorpHitOdds)
+      else if s1='EMODTORPHITBONUS'        then GetEMod(EModTorpHitBonus)
+      else if s1='EMODTUBERECHARGERATE'    then GetEMod(EModTubeRechargeRate)
+      else if s1='EMODTUBERECHARGEBONUS'   then GetEMod(EModTubeRechargeBonus)
+      else if s1='EMODBAYRECHARGERATE'     then GetEMod(EModBayRechargeRate)
+      else if s1='EMODBAYRECHARGEBONUS'    then GetEMod(EModBayRechargeBonus)
+      else if s1='EMODSHIELDDAMAGESCALING' then GetEMod(EModShieldDamageScaling)
+      else if s1='EMODSHIELDKILLSCALING'   then GetEMod(EModShieldKillScaling)
+      else if s1='EMODHULLDAMAGESCALING'   then GetEMod(EModHullDamageScaling)
+      else if s1='EMODCREWKILLSCALING'     then GetEMod(EModCrewKillScaling)
+      else if s1='EMODMAXFIGHTERSLAUNCHED' then GetEMod(EModMaxFightersLaunched)
+      else if s1='EMODSTRIKESPERFIGHTER'   then GetEMod(EModStrikesPerFighter)
+      else if s1='EMODFIGHTERMOVEMENTSPEED' then GetEMod(EModFighterMovementSpeed)
+      else if s1='EMODFIGHTERBEAMEXPLOSIVE' then GetEMod(EModFighterBeamExplosive)
+      else if s1='EMODFIGHTERBEAMKILL'     then GetEMod(EModFighterBeamKill)
+      else if s1='EMODBEAMHITFIGHTERCHARGE' then GetEMod(EModBeamHitFighterCharge);
     end;
   procedure GetWraparoundRectangle;
     var i  : byte;
@@ -975,6 +1009,9 @@ procedure InitCombatCfgDefaults;
   procedure FL (var a:LArr11; v:longint);
     var i : byte;
     begin for i:=1 to 11 do a[i]:=v; end;
+  procedure FE (var a:EArr);
+    var i : byte;
+    begin for i:=1 to 10 do a[i]:=0; end;   { EMod* por defecto = 0 (sin efecto) }
   begin
     with CombatCfg do begin
       F(BeamHitOdds,100);          F(BeamHitBonus,0);
@@ -995,6 +1032,17 @@ procedure InitCombatCfgDefaults;
       StandoffDistance     := 3000;
       FireOnAttackFighters := No;
       PlanetsHaveTubes     := No;
+      FE(EModBeamHitOdds);         FE(EModBeamHitBonus);
+      FE(EModBeamRechargeRate);    FE(EModBeamRechargeBonus);
+      FE(EModTorpHitOdds);         FE(EModTorpHitBonus);
+      FE(EModTubeRechargeRate);    FE(EModTubeRechargeBonus);
+      FE(EModBayRechargeRate);     FE(EModBayRechargeBonus);
+      FE(EModShieldDamageScaling); FE(EModShieldKillScaling);
+      FE(EModHullDamageScaling);   FE(EModCrewKillScaling);
+      FE(EModMaxFightersLaunched); FE(EModStrikesPerFighter);
+      FE(EModFighterMovementSpeed);
+      FE(EModFighterBeamExplosive); FE(EModFighterBeamKill);
+      FE(EModBeamHitFighterCharge);
     end;
   end;
 

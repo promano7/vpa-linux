@@ -1903,7 +1903,8 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
     vis.fireBeam:=pvFireBeam; vis.fireTorpedo:=pvFireTorpedo;
     vis.updateBeam:=nil; vis.updateLauncher:=nil; vis.killObject:=pvKillObject;
     MapVCR(vcr,lobj,robj,seed,sig,flags,btype);
-    SetCapabilities(flags);
+    SetCapabilities(VcrFileCaps);   { regla PCC2: capabilities del 1er registro del fichero (fijadas en GetVCR),
+                                      no las flags por-registro (que valen 0 salvo en el 1o). }
     SetPhost3(True);    { PHost 3.x/4.x usan la rama "true" (intercept de fighters per-player);
                           solo PHost 2.x (obsoleto) usaria false. Ver pvcralgorithm.hpp. }
     InitBattle(lobj,robj,seed,vis);

@@ -25,6 +25,7 @@ const   NUM_SHIPS    = 999;
         NUM_MAX      = 999;
 
 type    IArr11  = array [1..11] of int;
+        EArr    = array [1..10] of int;   { modificadores de experiencia (EMod*), por nivel 1..NumExperienceLevels }
         fcstr   = array [1..3] of char;
 {$IFOPT N-}
         single  = real;
@@ -687,6 +688,7 @@ const
         MinimumChunnelDistance    : int = 100;
         AllowAlliedChunneling     : Boolean = No;
         NumExperienceLevels       : int = 0;
+        VcrFileCaps               : word = 0;   { capabilities del fichero VCR (regla PCC2: del 1er registro) }
         ExperienceLevelNames      : string = 'Recruit,Soldier,Experienced,Elite,Ultra Elite';
         AllowAlternativeCombat    : boolean = No;
 
@@ -768,6 +770,18 @@ type
           MaxFightersLaunched, StrikesPerFighter, FighterMovementSpeed,
           FighterBeamExplosive, FighterBeamKill, FighterKillOdds,
           BeamHitFighterCharge, BeamHitShipCharge, ShipMovementSpeed : IArr11;
+          { Modificadores por experiencia (EMod*), indexados por nivel 1..NumExperienceLevels.
+            Valor efectivo en combate = clamp(base[jugador] + EMod[nivel], min, max). }
+          EModBeamHitOdds, EModBeamHitBonus,
+          EModBeamRechargeRate, EModBeamRechargeBonus,
+          EModTorpHitOdds, EModTorpHitBonus,
+          EModTubeRechargeRate, EModTubeRechargeBonus,
+          EModBayRechargeRate, EModBayRechargeBonus,
+          EModShieldDamageScaling, EModShieldKillScaling,
+          EModHullDamageScaling, EModCrewKillScaling,
+          EModMaxFightersLaunched, EModStrikesPerFighter, EModFighterMovementSpeed,
+          EModFighterBeamExplosive, EModFighterBeamKill,
+          EModBeamHitFighterCharge : EArr;
           { 32-bit: distancias/rangos en metros; pueden superar 32767 (p.ej.
             BeamHitFighterRange por defecto = 100000) }
           FighterFiringRange, BeamFiringRange,

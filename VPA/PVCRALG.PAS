@@ -341,13 +341,14 @@ begin
                                     else PlayerRace := owner;
 end;
 
-function EMV (var opt:IArr11; owner, lo, hi : int) : int;
-  { getExperienceModifiedValue sin experiencia (EMod diferido a Fase F):
-    clamp(opt[owner], lo, hi). }
+function EMV (var opt:IArr11; var emod:EArr; var o:TVcrObject; lo, hi : int) : int;
+  { getExperienceModifiedValue (PCC2ng): valor base por jugador mas el modificador
+    de experiencia del nivel de la unidad, clampeado a [lo,hi].
+    v = clamp( base[owner] + (nivel<>0 ? EMod[nivel] : 0), lo, hi ). }
   var v : int;
 begin
-  if (owner >= 1) and (owner <= 11) then v := opt[owner] else v := opt[1];
-  { Fase F: if obj.experience<>0 then v := v + EModOpt[experience]; }
+  if (o.owner >= 1) and (o.owner <= 11) then v := opt[o.owner] else v := opt[1];
+  if (o.experience >= 1) and (o.experience <= 10) then v := v + emod[o.experience];
   if v < lo then v := lo else if v > hi then v := hi;
   EMV := v;
 end;
@@ -356,8 +357,8 @@ end;
 function ComputeBeamHitOdds (bkill, bdmg : int; var o:TVcrObject) : longint;
   var i : longint;
 begin
-  i := longint(EMV(CombatCfg.BeamHitBonus, o.owner, -4095, 4095)) * (bkill + bdmg) div 100
-       + EMV(CombatCfg.BeamHitOdds, o.owner, 0, 100);
+  i := longint(EMV(CombatCfg.BeamHitBonus, CombatCfg.EModBeamHitBonus, o, -4095, 4095)) * (bkill + bdmg) div 100
+       + EMV(CombatCfg.BeamHitOdds, CombatCfg.EModBeamHitOdds, o, 0, 100);
   if i < 0 then i := 0;
   ComputeBeamHitOdds := i;
 end;
@@ -365,8 +366,8 @@ end;
 function ComputeBeamRechargeRate (bkill, bdmg : int; var o:TVcrObject) : longint;
   var i : longint;
 begin
-  i := ( longint(bkill + bdmg) * EMV(CombatCfg.BeamRechargeBonus, o.owner, -4095, 4095) div 100
-         + EMV(CombatCfg.BeamRechargeRate, o.owner, 0, 16384) ) * cBeamChargeRate;
+  i := ( longint(bkill + bdmg) * EMV(CombatCfg.BeamRechargeBonus, CombatCfg.EModBeamRechargeBonus, o, -4095, 4095) div 100
+         + EMV(CombatCfg.BeamRechargeRate, CombatCfg.EModBeamRechargeRate, o, 0, 16384) ) * cBeamChargeRate;
   if i < 1 then i := 1;
   ComputeBeamRechargeRate := i;
 end;
@@ -374,8 +375,8 @@ end;
 function ComputeTorpHitOdds (tkill, tdmg : int; var o:TVcrObject) : longint;
   var i : longint;
 begin
-  i := longint(EMV(CombatCfg.TorpHitBonus, o.owner, -4095, 4095)) * (tkill + tdmg) div 100
-       + EMV(CombatCfg.TorpHitOdds, o.owner, 0, 100);
+  i := longint(EMV(CombatCfg.TorpHitBonus, CombatCfg.EModTorpHitBonus, o, -4095, 4095)) * (tkill + tdmg) div 100
+       + EMV(CombatCfg.TorpHitOdds, CombatCfg.EModTorpHitOdds, o, 0, 100);
   if i < 0 then i := 0;
   ComputeTorpHitOdds := i;
 end;
@@ -383,8 +384,8 @@ end;
 function ComputeTubeRechargeRate (tkill, tdmg : int; var o:TVcrObject) : longint;
   var i : longint;
 begin
-  i := ( longint(EMV(CombatCfg.TubeRechargeBonus, o.owner, -4095, 4095)) * (tkill + tdmg) div 100
-         + EMV(CombatCfg.TubeRechargeRate, o.owner, 0, 16384) ) * cTorpChargeRate;
+  i := ( longint(EMV(CombatCfg.TubeRechargeBonus, CombatCfg.EModTubeRechargeBonus, o, -4095, 4095)) * (tkill + tdmg) div 100
+         + EMV(CombatCfg.TubeRechargeRate, CombatCfg.EModTubeRechargeRate, o, 0, 16384) ) * cTorpChargeRate;
   if i < 1 then i := 1;
   ComputeTubeRechargeRate := i;
 end;
@@ -392,8 +393,8 @@ end;
 function ComputeBayRechargeRate (num : int; var o:TVcrObject) : longint;
   var i : longint;
 begin
-  i := longint(EMV(CombatCfg.BayRechargeBonus, o.owner, -500, 500)) * num
-       + EMV(CombatCfg.BayRechargeRate, o.owner, 0, 16384);
+  i := longint(EMV(CombatCfg.BayRechargeBonus, CombatCfg.EModBayRechargeBonus, o, -500, 500)) * num
+       + EMV(CombatCfg.BayRechargeRate, CombatCfg.EModBayRechargeRate, o, 0, 16384);
   if i < 1 then i := 1;
   ComputeBayRechargeRate := i;
 end;
@@ -412,6 +413,12 @@ procedure InitBattle (var left, right: TVcrObject; seed: word;
   procedure PrepSide (var st : TSideStatus; var o : TVcrObject);
     var i, owner, bt, tt, j, charge : int;
     begin
+      { Consistencia del nivel de experiencia (PCC2ng): si el registro VCR no
+        declara ExperienceCapability, o el nivel supera NumExperienceLevels, se
+        trata la unidad como nivel 0 (sin modificadores). }
+      if o.experience <> 0 then
+        if ((m_capabilities and cExperienceCapability) = 0)
+           or (o.experience > NumExperienceLevels) then o.experience := 0;
       st.r.obj := o;
       if m_alternativeCombat then st.f.scale := o.mass + 1
                              else st.f.scale := 1;
@@ -483,16 +490,16 @@ procedure InitBattle (var left, right: TVcrObject; seed: word;
                                else st.f.damage_limit_scaled := longint(100*2-1) * 50 * st.f.scale;
       { --- config cacheada/ajustada --- }
       if (owner>=1) and (owner<=11) then j := owner else j := 1;
-      st.f.ShieldDamageScaling  := EMV(CombatCfg.ShieldDamageScaling, owner, 0, 32767);
-      st.f.ShieldKillScaling    := EMV(CombatCfg.ShieldKillScaling,   owner, 0, 32767);
-      st.f.HullDamageScaling    := EMV(CombatCfg.HullDamageScaling,   owner, 0, 32767);
-      st.f.MaxFightersLaunched  := EMV(CombatCfg.MaxFightersLaunched, owner, 0, VCR_MAX_FTRS);
-      st.f.StrikesPerFighter    := EMV(CombatCfg.StrikesPerFighter,   owner, 1, 100);
+      st.f.ShieldDamageScaling  := EMV(CombatCfg.ShieldDamageScaling, CombatCfg.EModShieldDamageScaling, o, 0, 32767);
+      st.f.ShieldKillScaling    := EMV(CombatCfg.ShieldKillScaling, CombatCfg.EModShieldKillScaling, o, 0, 32767);
+      st.f.HullDamageScaling    := EMV(CombatCfg.HullDamageScaling, CombatCfg.EModHullDamageScaling, o, 0, 32767);
+      st.f.MaxFightersLaunched  := EMV(CombatCfg.MaxFightersLaunched, CombatCfg.EModMaxFightersLaunched, o, 0, VCR_MAX_FTRS);
+      st.f.StrikesPerFighter    := EMV(CombatCfg.StrikesPerFighter, CombatCfg.EModStrikesPerFighter, o, 1, 100);
       st.f.BayLaunchInterval    := CombatCfg.BayLaunchInterval[j];
-      st.f.FighterMovementSpeed := EMV(CombatCfg.FighterMovementSpeed, owner, 1, 10000);
-      st.f.FighterBeamExplosive := EMV(CombatCfg.FighterBeamExplosive, owner, 1, 1000);
-      st.f.FighterBeamKill      := EMV(CombatCfg.FighterBeamKill,      owner, 1, 1000);
-      st.f.BeamHitFighterCharge := EMV(CombatCfg.BeamHitFighterCharge, owner, 1, 1000);
+      st.f.FighterMovementSpeed := EMV(CombatCfg.FighterMovementSpeed, CombatCfg.EModFighterMovementSpeed, o, 1, 10000);
+      st.f.FighterBeamExplosive := EMV(CombatCfg.FighterBeamExplosive, CombatCfg.EModFighterBeamExplosive, o, 1, 1000);
+      st.f.FighterBeamKill      := EMV(CombatCfg.FighterBeamKill, CombatCfg.EModFighterBeamKill, o, 1, 1000);
+      st.f.BeamHitFighterCharge := EMV(CombatCfg.BeamHitFighterCharge, CombatCfg.EModBeamHitFighterCharge, o, 1, 1000);
       st.f.FighterFiringRange   := CombatCfg.FighterFiringRange[j];
       st.f.BeamHitFighterRange  := CombatCfg.BeamHitFighterRange[j];
       st.f.BeamFiringRange      := CombatCfg.BeamFiringRange[j];
@@ -500,7 +507,7 @@ procedure InitBattle (var left, right: TVcrObject; seed: word;
       st.f.TorpFiringRange      := CombatCfg.TorpFiringRange[j];
       st.f.ShipMovementSpeed    := CombatCfg.ShipMovementSpeed[j];
       st.f.CrewKillScaling      := DivRound( longint(100 - cCrewDefenseRate) *
-                                    EMV(CombatCfg.CrewKillScaling, owner, 0, 32767), 100);
+                                    EMV(CombatCfg.CrewKillScaling, CombatCfg.EModCrewKillScaling, o, 0, 32767), 100);
       { TorpFiringRange += 100*getFiringRangeBonus(): VPA no carga ese bonus
         (extension de PHost), asi que se asume 0. TODO si hiciera falta. }
     end;

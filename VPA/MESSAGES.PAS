@@ -1243,20 +1243,31 @@ procedure FileMessage (var m:Msg);
 
 procedure GetVCR (n:word; var vcr:VCRData);
   var	v	: file;
+	vcr1	: VCRData;
+	f1	: word;
   begin
     if n>nm[m_VCR] then Exit;
     if DFiles and (turn=today) then
     begin
       OpenRW(v,'VCR'+plstr+'.DAT',Yes);
+      Seek(v,2);                                { registro #1 -> capabilities del fichero }
+      BlockRead(v,vcr1,SizeOf(VCRData));
       Seek(v,long(n-1)*SizeOf(VCRData)+2);
       BlockRead(v,vcr,SizeOf(VCRData));
       CloseData(v);
     end
     else begin
+      Seek(f,TTurn^.data^.vpos+2);              { registro #1 -> capabilities del fichero }
+      BlockRead(f,vcr1,SizeOf(VCRData));
+      if IOResult=0 then ;
       Seek(f,TTurn^.data^.vpos+2+long(n-1)*SizeOf(VCRData));
       BlockRead(f,vcr,SizeOf(VCRData));
       if IOResult=0 then ;
     end;
+    { PCC2 (classicvcr.cc): caps = (firstTemp & Valid) ? (firstTemp & ~Valid) : 0.
+      El 1er registro del fichero determina las capabilities de TODOS los combates. }
+    f1 := word(vcr1.plnpic);
+    if (f1 and $8000) <> 0 then VcrFileCaps := f1 and $7FFF else VcrFileCaps := 0;
   end;
 
 procedure GetVCRMessage (n:word; var m:Msg);
