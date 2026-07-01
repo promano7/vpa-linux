@@ -873,16 +873,26 @@ procedure StartCombat (RND:byte; Show:boolean);
 	d.dd[lr].launs:=Max(0,Min(d.dd[lr].launs,ml));
       end;
     end;
-    if (VCSet and 4=0) and (not pln) and
+    if (not PHOST) and (VCSet and 4=0) and (not pln) and
        (alw_rnd>=400) and (d.shpw[Right]>140) and (v[Left].bays>0) then
-      inc(d.shpw[Right],360);	{ Anti-LeftWin }
+      inc(d.shpw[Right],360);	{ Anti-LeftWin: heuristica de THost (solo THost; en PHost el
+                                  combate es por masa y sumar 360 falsearia el resultado). }
     if not Show then
     begin
       Clear(StartX-3*8,StartY,StartX+11*8-1,StartY+7);
       SetColor(White);
       OutTextXY(StartX-3*8,StartY,'SIMULATING....');
     end;
-    Combat(d,Show,VCSpeed,VCSet and 8<>0,No);
+    if PHOST then
+    begin
+      { Partida PHost: usar la matematica PHost portada (PVCRALG via CombatPHost).
+        Las naves del simulador son de nivel 0 (no hay UI de experiencia), asi que
+        se desactiva la capacidad de experiencia -> combate PHost base, sin rango. }
+      VcrFileCaps:=0;
+      CombatPHost(d,Show,VCSpeed,VCSet and 8<>0,No);
+    end
+    else
+      Combat(d,Show,VCSpeed,VCSet and 8<>0,No);   { Partida THost: matematica clasica de VPA. }
     if not Show then Clear(StartX-3*8,StartY,StartX+11*8-1,StartY+7);
     WriteAtt;
     WriteResult;
