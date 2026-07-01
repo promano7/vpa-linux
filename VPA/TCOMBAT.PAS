@@ -1796,7 +1796,7 @@ procedure BuildPlanetDisc (lr:LRtype; diam:int);
     imagen de ptcgraph (cabecera 12 bytes + 1 word/pixel). Sustituye al sprite de
     nave que cargaria LoadPic, para dibujar el planeta como planeta. La textura se
     genera una vez (la imagen se reutiliza cada frame). }
-  var ib:PImgBytes; cx,cy,rr,dx,dy,d2,k,px,py,c,rnd:int;
+  var ib:PImgBytes; cx,cy,rr,dx,dy,d2,k,px,py,c,rnd,hy,kp:int; r2,inner:longint;
   begin
     ib:=PImgBytes(img[lr]); if ib=nil then Exit;
     if diam>104 then diam:=104; if diam<8 then diam:=8;
@@ -1804,21 +1804,33 @@ procedure BuildPlanetDisc (lr:LRtype; diam:int);
     ib^[0]:=diam and $ff; ib^[1]:=(diam shr 8) and $ff;   { ancho }
     ib^[4]:=diam and $ff; ib^[5]:=(diam shr 8) and $ff;   { alto }
     cx:=diam div 2; cy:=diam div 2; rr:=(diam div 2)-1;
+    r2:=longint(rr)*rr; inner:=(r2*70) div 100;   { a partir de ~0.84*r empieza el difuminado }
     k:=12;
     for py:=0 to diam-1 do
       for px:=0 to diam-1 do
       begin
         dx:=px-cx; dy:=py-cy; d2:=dx*dx+dy*dy;
-        if d2 > rr*rr then c:=0                             { fuera: fondo negro }
+        if d2 > r2 then c:=0                                { fuera: fondo negro }
         else
         begin
           rnd:=Random(100);
           c:=clPlSalmon;                                    { base salmon }
-          if rnd<20 then c:=clPlDark                        { relieve rojo oscuro }
-          else if rnd<34 then c:=clPlTan                    { manchas claras }
-          else if rnd<46 then c:=clPlMid;                   { salmon medio }
-          if (dy < -(rr div 4)) and (Random(100)<45) then c:=clPlTan;   { brillo arriba }
-          if (d2 > (rr-3)*(rr-3)) and (Random(100)<55) then c:=0;       { borde difuminado }
+          if rnd<12 then c:=clPlDark                        { moteado rojo oscuro }
+          else if rnd<22 then c:=clPlTan                    { manchas claras }
+          else if rnd<32 then c:=clPlMid;                   { salmon medio }
+          { lineas de relieve continuas (dos familias, como continentes) }
+          if ((((dx+2*dy+300) mod 23)<2) or (((2*dx-dy+300) mod 28)<2)) and (Random(100)<80) then c:=clPlDark;
+          { brillo concentrado arriba-centro }
+          hy:=dy + (rr*2) div 5;
+          if ((dx*dx+hy*hy) < ((rr*2) div 5)*((rr*2) div 5)) and (Random(100)<55) then c:=clPlTan;
+          { borde suave: la probabilidad de mantener pixel cae gradualmente hacia
+            el borde siguiendo el circulo, sin picos (nada de 'virus') }
+          if d2 > inner then
+          begin
+            kp := 100 - ((d2-inner)*90) div (r2-inner);
+            if kp<10 then kp:=10;
+            if Random(100) >= kp then c:=0;
+          end;
         end;
         ib^[k]:=c; ib^[k+1]:=0; inc(k,2);
       end;
