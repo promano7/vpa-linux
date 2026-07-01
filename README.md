@@ -678,6 +678,18 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
     `false=PHost 2.x, true=PHost 3.x/4.x`. PHost 3 y 4 usan la misma rama (`true`); solo el
     obsoleto PHost 2.x usaría `false`. Correcto para la partida 4.1h de Pablo.
   - Build verde; arranca bajo Xvfb. **Falta solo la verificación visual** (Fase E).
+  - **Simulador de combate (F5) enrutado** (`VCS.PAS`): el simulador de VPA construye un
+    `VCRData` en memoria y hasta ahora **siempre** llamaba al `Combat` clásico (matemática de
+    THost), aunque la partida fuese PHost. Ahora enruta igual que el visor: en **PHost**
+    (`if PHOST then`) usa `CombatPHost` (la matemática PHost portada de PCC2ng, ya validada
+    bit-exacta); en **THost**, el `Combat` clásico. El *Anti-LeftWin* (heurística de THost que
+    suma 360 de masa al lado derecho para compensar el sesgo de victoria del lado izquierdo) se
+    **salta en PHost** —el combate PHost es por masa y ese `+360` lo falsearía— (de hecho ya
+    estaba desactivado para PHost vía `VCSet bit 4`; el `not PHOST` explícito lo documenta). Las
+    naves del simulador son de nivel 0 (no hay interfaz para fijar experiencia), así que se pone
+    `VcrFileCaps:=0` → combate PHost **base**, sin línea de rango. Como `CombatPHost` vuelca el
+    resultado final a `dd[lr]`/`shld[lr]` igual que `Combat`, el resumen del simulador
+    (`WriteResult`) muestra el desenlace PHost correctamente.
 - **Fase E — Validación (crítica):** ✅ *hecha.* Validado **bit-exacto contra `PVCR.EXE`**
   (DOSBox) sobre combates reales de la partida PHOENIX4 (PHost 4.1h), comparando fotograma a
   fotograma de un vídeo: ganador, daño final, supervivientes, munición, escudo/tripa y cuenta
