@@ -21,6 +21,13 @@ const   RotPic  : set of byte =
         _Red    = 12;
         _Gray   = 13;
         _Yellow = 14;
+        { Colores dedicados del planeta-disco (indices libres de la paleta 256;
+          los sprites usan 0..15, SetPal fija 1..15, asi que 208..211 estan libres).
+          RGB muestreados del planeta de PVCR.EXE. }
+        clPlSalmon = 208;   { base salmon/coral }
+        clPlTan    = 209;   { tan claro (brillo) }
+        clPlDark   = 210;   { rojo oscuro (relieve) }
+        clPlMid    = 211;   { salmon medio (sombra) }
         { PLANETS palette colors (default Black,White,Brown,LGray,LBlue,LGreen,LRed,Yellow)}
         __Gray          = 8;
         __DarkGray      = 11;
@@ -1431,6 +1438,11 @@ procedure SetPal;
       almacenados como 6 bits (0..63) en orden R,B,G; ptcgraph quiere 0..255 RGB. }
     for i:=1 to 15 do SetRGBPalette(i, 4*pal[i,1], 4*pal[i,3], 4*pal[i,2]);
    {$ENDIF}
+    { colores del planeta-disco (muestreados de PVCR.EXE), en indices libres }
+    SetRGBPalette(clPlSalmon, 224, 144, 112);
+    SetRGBPalette(clPlTan,    224, 192, 160);
+    SetRGBPalette(clPlDark,   128,   0,   0);
+    SetRGBPalette(clPlMid,    192, 144, 112);
   end;
 
 procedure Combat (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyIntr:boolean);
@@ -1733,6 +1745,13 @@ procedure pvUpdateShips;
     Dist:=SX[Right]-SX[Left];
     Str(Dist:3,s); WriteXY(42,17,s);
     nx:=SX[Left]-szx[Left] div 2; if nx<0 then nx:=0;
+    { En combate contra planeta, no dejar que la nave se meta dentro del disco:
+      su borde derecho se detiene un poco antes del planeta. Solo se limita la
+      posicion de DIBUJO (nx); SX[Left] y la distancia mostrada no se tocan. }
+    if planet=1 then
+      if nx > SX[Right]-szx[Right] div 2 - szx[Left] - 10 then
+        nx := SX[Right]-szx[Right] div 2 - szx[Left] - 10;
+    if nx<0 then nx:=0;
     if nx<>x[Left] then begin DrawShield(Left,Off); x[Left]:=nx; end;
     DrawShield(Left,On);
     if useSVGA then begin convertImage(img[Left]^,img256); PutImage(x[Left],y[Left],img256,NormalPut); end
@@ -1772,11 +1791,12 @@ procedure pvUpdateFighters;
 { --- driver principal: setup (= Combat) + InitBattle/PlayCycle/DoneBattle --- }
 
 procedure BuildPlanetDisc (lr:LRtype; diam:int);
-  { Rellena img[lr]^ con un disco de planeta (esfera sombreada) en el formato
-    de imagen de ptcgraph (cabecera 12 bytes: ancho, alto, reservado; luego
-    1 word por pixel). Sustituye al sprite de nave que cargaria LoadPic, para
-    que el planeta se dibuje como planeta y no como nave. }
-  var ib:PImgBytes; cx,cy,rr,off,dx,dy,d2,hx,hy,k,px,py,c:int;
+  { Rellena img[lr]^ con un planeta texturizado estilo PVCR.EXE (esfera salmon
+    moteada con relieve, brillo tan arriba y borde difuminado), en el formato de
+    imagen de ptcgraph (cabecera 12 bytes + 1 word/pixel). Sustituye al sprite de
+    nave que cargaria LoadPic, para dibujar el planeta como planeta. La textura se
+    genera una vez (la imagen se reutiliza cada frame). }
+  var ib:PImgBytes; cx,cy,rr,dx,dy,d2,k,px,py,c,rnd:int;
   begin
     ib:=PImgBytes(img[lr]); if ib=nil then Exit;
     if diam>104 then diam:=104; if diam<8 then diam:=8;
@@ -1784,7 +1804,6 @@ procedure BuildPlanetDisc (lr:LRtype; diam:int);
     ib^[0]:=diam and $ff; ib^[1]:=(diam shr 8) and $ff;   { ancho }
     ib^[4]:=diam and $ff; ib^[5]:=(diam shr 8) and $ff;   { alto }
     cx:=diam div 2; cy:=diam div 2; rr:=(diam div 2)-1;
-    off:=2*rr div 5;                { foco de luz desplazado arriba-izquierda }
     k:=12;
     for py:=0 to diam-1 do
       for px:=0 to diam-1 do
@@ -1793,11 +1812,13 @@ procedure BuildPlanetDisc (lr:LRtype; diam:int);
         if d2 > rr*rr then c:=0                             { fuera: fondo negro }
         else
         begin
-          hx:=dx+off; hy:=dy+off;                           { distancia al foco de luz }
-          if (hx*hx+hy*hy) < (off*off*3) div 4 then c:=_Yellow            { brillo esferico }
-          else if d2 > (rr-2)*(rr-2) then c:=_Gray                        { borde }
-          else if (dx+dy > rr div 2) and (d2 > (rr*rr) div 2) then c:=_Gray { sombra abajo-dcha }
-          else c:=_Red;                                                  { cuerpo del planeta }
+          rnd:=Random(100);
+          c:=clPlSalmon;                                    { base salmon }
+          if rnd<20 then c:=clPlDark                        { relieve rojo oscuro }
+          else if rnd<34 then c:=clPlTan                    { manchas claras }
+          else if rnd<46 then c:=clPlMid;                   { salmon medio }
+          if (dy < -(rr div 4)) and (Random(100)<45) then c:=clPlTan;   { brillo arriba }
+          if (d2 > (rr-3)*(rr-3)) and (Random(100)<55) then c:=0;       { borde difuminado }
         end;
         ib^[k]:=c; ib^[k+1]:=0; inc(k,2);
       end;
@@ -1830,7 +1851,7 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
       LoadPic(Left,pic[Left],pic[Left] in RotPic,pic[Left] in FliPic,Yes,Yes); AnalysePic(Left,pic[Left]);
       LoadPic(Right,pic[Right],pic[Right] in RotPic,not(pic[Right] in FliPic),Yes,Yes); AnalysePic(Right,pic[Right]);
       { El planeta se dibuja como disco (como PVCR), no como el sprite de nave. }
-      if planet=1 then BuildPlanetDisc(Right,64);
+      if planet=1 then BuildPlanetDisc(Right,66);
       ClearDevice; SetPal; TextAttr:=White;
       WriteXY(10,0,name[Left]+'       versus       '+name[Right]);
       WriteXY(32,17,'Distance:    00');
