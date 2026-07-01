@@ -1491,10 +1491,15 @@ begin
     for lr:=Left to Right do
     begin
       x:=TX[lr];
-      WriteXY(x,19,'Shield: '+Fmt1w(longint(shld[lr])*10,5)+'% ('+NStr0(shpw[lr])+'tw)');
-      WriteXY(x,20,'Damage: '+Fmt1w(longint(dam[lr])*10,5)+'%');
+      Str(shld[lr]:3,s);
+      WriteXY(x,19,'Shield:   '+s+'% ('+NStr0(shpw[lr])+'tw)');
+      Str(dam[lr]:3,s);
+      WriteXY(x,20,'Damage:   '+s+'%');
       if (lr=Left) or (planet=0) then
-        WriteXY(x,21,'Crew  : '+Fmt1w(longint(crew[lr])*10,6));
+      begin
+        Str(crew[lr]:4,s);
+        WriteXY(x,21,'Crew  :   '+s);
+      end;
       if (tl[lr]>0) and (launs[lr] or tf[lr]>0) then
       begin
         Str(tf[lr]:4,s);
@@ -1591,6 +1596,7 @@ const pvMaxFtr = 50;   { = VCR_MAX_FTRS de PVCRALG }
 
 var   pvFX : array [TVcrSide, 0..pvMaxFtr-1] of int;  { ultima X en pantalla, -1=ausente }
       pvFH : array [TVcrSide, 0..pvMaxFtr-1] of int;  { h con que se dibujo (para borrar igual y no dejar estela) }
+      pvDead : array [LRtype] of boolean;             { objeto destruido: pintar explosion al final }
 
 function pvSX (m:longint) : int;            { metros -> pixel X de pantalla }
   begin pvSX := 320 + m div 100; end;
@@ -1703,9 +1709,17 @@ procedure pvFireTorpedo (side:TVcrSide; hit,launcher:int);
   end;
 
 procedure pvKillObject (side:TVcrSide);
+  { Marca el objeto como destruido (para pintar la explosion al final, encima de
+    todo) y hace el sonido. La explosion en si la dibuja el driver tras los
+    refrescos, para que no la tape el redibujo de escudos/gauges. }
+  var i:int;
   begin
-    if Show then Blast(pvSX(VcrObjectX(side)),SY);
-    { TODO (Fase E): animacion de explosion completa / SurrPic como el Battle clasico }
+    pvDead[pvLR(side)]:=true;
+    if Show and Beep then
+    begin
+      for i:=1 to 150 do begin Sound(100+Random(500)); Delay(5); end;
+      NoSound;
+    end;
   end;
 
 { --- movimiento por tick (naves y fighters), leido del estado de PVCRALG --- }
@@ -1757,6 +1771,38 @@ procedure pvUpdateFighters;
 
 { --- driver principal: setup (= Combat) + InitBattle/PlayCycle/DoneBattle --- }
 
+procedure BuildPlanetDisc (lr:LRtype; diam:int);
+  { Rellena img[lr]^ con un disco de planeta (esfera sombreada) en el formato
+    de imagen de ptcgraph (cabecera 12 bytes: ancho, alto, reservado; luego
+    1 word por pixel). Sustituye al sprite de nave que cargaria LoadPic, para
+    que el planeta se dibuje como planeta y no como nave. }
+  var ib:PImgBytes; cx,cy,rr,off,dx,dy,d2,hx,hy,k,px,py,c:int;
+  begin
+    ib:=PImgBytes(img[lr]); if ib=nil then Exit;
+    if diam>104 then diam:=104; if diam<8 then diam:=8;
+    FillChar(ib^,12,0);
+    ib^[0]:=diam and $ff; ib^[1]:=(diam shr 8) and $ff;   { ancho }
+    ib^[4]:=diam and $ff; ib^[5]:=(diam shr 8) and $ff;   { alto }
+    cx:=diam div 2; cy:=diam div 2; rr:=(diam div 2)-1;
+    off:=2*rr div 5;                { foco de luz desplazado arriba-izquierda }
+    k:=12;
+    for py:=0 to diam-1 do
+      for px:=0 to diam-1 do
+      begin
+        dx:=px-cx; dy:=py-cy; d2:=dx*dx+dy*dy;
+        if d2 > rr*rr then c:=0                             { fuera: fondo negro }
+        else
+        begin
+          hx:=dx+off; hy:=dy+off;                           { distancia al foco de luz }
+          if (hx*hx+hy*hy) < (off*off*3) div 4 then c:=_Yellow            { brillo esferico }
+          else if d2 > (rr-2)*(rr-2) then c:=_Gray                        { borde }
+          else if (dx+dy > rr div 2) and (d2 > (rr*rr) div 2) then c:=_Gray { sombra abajo-dcha }
+          else c:=_Red;                                                  { cuerpo del planeta }
+        end;
+        ib^[k]:=c; ib^[k+1]:=0; inc(k,2);
+      end;
+  end;
+
 procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyIntr:boolean);
   var lobj,robj : TVcrObject;
       seed,sig,flags,btype : word;
@@ -1783,15 +1829,17 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
     begin
       LoadPic(Left,pic[Left],pic[Left] in RotPic,pic[Left] in FliPic,Yes,Yes); AnalysePic(Left,pic[Left]);
       LoadPic(Right,pic[Right],pic[Right] in RotPic,not(pic[Right] in FliPic),Yes,Yes); AnalysePic(Right,pic[Right]);
+      { El planeta se dibuja como disco (como PVCR), no como el sprite de nave. }
+      if planet=1 then BuildPlanetDisc(Right,64);
       ClearDevice; SetPal; TextAttr:=White;
       WriteXY(10,0,name[Left]+'       versus       '+name[Right]);
       WriteXY(32,17,'Distance:    00');
       for lr:=Left to Right do
       begin
         xx:=TX[lr];
-        Str(shld[lr]:3,s); WriteXY(xx,19,'Shield:   '+s+'% ('+NStr0(shpw[lr])+'tw)');
-        Str(dam[lr]:3,s);  WriteXY(xx,20,'Damage:   '+s+'%');
-        if (lr=Left) or (planet=0) then begin Str(crew[lr]:4,s); WriteXY(xx,21,'Crew  :   '+s); end;
+        WriteXY(xx,19,'Shield: '+Fmt1w(longint(shld[lr])*10,5)+'% ('+NStr0(shpw[lr])+'tw)');
+        WriteXY(xx,20,'Damage: '+Fmt1w(longint(dam[lr])*10,5)+'%');
+        if (lr=Left) or (planet=0) then WriteXY(xx,21,'Crew  : '+Fmt1w(longint(crew[lr])*10,6));
         if (tl[lr]>0) and (launs[lr] or tf[lr]>0) then
         begin
           Str(tf[lr]:4,s); WriteXY(xx,22,'Torps :   '+s);
@@ -1817,6 +1865,7 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
     end;
 
     for side:=vsLeft to vsRight do for track:=0 to pvMaxFtr-1 do begin pvFX[side,track]:=-1; pvFH[side,track]:=1; end;
+    pvDead[Left]:=false; pvDead[Right]:=false;
     vis.startFighter:=pvStartFighter; vis.landFighter:=pvLandFighter; vis.killFighter:=pvKillFighter;
     vis.fireBeam:=pvFireBeam; vis.fireTorpedo:=pvFireTorpedo;
     vis.updateBeam:=nil; vis.updateLauncher:=nil; vis.killObject:=pvKillObject;
@@ -1851,6 +1900,22 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
       debe pasar de reserva+vuelo al valor final (solo reserva), como en PVCR. }
     pvRefreshAmmo(vsLeft); pvRefreshAmmo(vsRight);
 
+    { explosiones de los objetos destruidos, encima de todo (tras los refrescos,
+      para que el redibujo de escudos/gauges no las tape); se quita antes el
+      escudo, como el Battle clasico. }
+    if Show then
+      for lr:=Left to Right do
+        if pvDead[lr] then
+        begin
+          DrawShield(lr,Off);
+          xx:=x[lr]+szx[lr] div 2;
+          LoadPic(lr,ExplPic,No,No,Yes,Yes);
+          szx[lr]:=ImgW(lr); szy[lr]:=ImgH(lr);
+          x[lr]:=xx-szx[lr] div 2; y[lr]:=SY-szy[lr] div 2;
+          SetPal;
+          PutImage(x[lr],y[lr],img[lr]^,OrPut);
+        end;
+
     vcr.shld[Left]:=VcrCurShield(vsLeft);   vcr.shld[Right]:=VcrCurShield(vsRight);
     vcr.dd[Left].dam:=VcrCurDamage(vsLeft); vcr.dd[Right].dam:=VcrCurDamage(vsRight);
     vcr.dd[Left].crew:=VcrCurCrew(vsLeft);  vcr.dd[Right].crew:=VcrCurCrew(vsRight);
@@ -1859,6 +1924,14 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
     res:=BattleResult;
     if res.leftDestroyed  then vcr.dd[Left].pic :=ExplPic else if res.leftCaptured  then vcr.dd[Left].pic :=SurrPic;
     if res.rightDestroyed then vcr.dd[Right].pic:=ExplPic else if res.rightCaptured then vcr.dd[Right].pic:=SurrPic;
+
+    { Captura (nave con tripulacion a 0 pero sin destruir): no explota, pero se
+      anuncia arriba, como PVCR.EXE. }
+    if Show and (res.leftCaptured or res.rightCaptured) then
+    begin
+      TextAttr:=_Yellow;
+      WriteXY(28,2,'SHIP HAS BEEN CAPTURED!');
+    end;
 
     if Show then    { pausa al final (como el Battle clasico) para ver el resultado }
     begin
