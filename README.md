@@ -147,7 +147,8 @@ a uno de ellos:
 | Fichero | Estado | Para qué |
 |---|---|---|
 | `ptcgraph.pp` | **Modificado** (parche VPA) | Lee la escala (`VPAForceScale`/`VPA_SCALE`) y crea la "consola" de `ptc` más grande manteniendo la superficie en 640×480; `ptc` la escala. Lleva además `{$mode objfpc}` y `sysutils` para compilar dentro del build de VPA. La cabecera incluye un **aviso visible de modificación** (lo exige la LGPL). |
-| `ptcmouse.pp`, `ptccrt.pp` | **Sin modificar** | Necesarios para recompilar `ptcgraph` de forma autocontenida (FPC los reconstruye contra el `ptcgraph` parcheado, evitando un desajuste de versión de `.ppu`). |
+| `ptcmouse.pp` | **Sin modificar** | Necesario para recompilar `ptcgraph` de forma autocontenida (FPC lo reconstruye contra el `ptcgraph` parcheado, evitando un desajuste de versión de `.ppu`). |
+| `ptccrt.pp` | **Modificado** (parche VPA) | Base para recompilar `ptcgraph` autocontenido, y además lleva varios parches VPA en el manejo de teclado: expone `PTCLastKbdFlags` (Shift/Ctrl/Alt del último evento, usado como reserva), trata el botón **[X]** de la ventana como **Alt-X** (salir guardando) y marca `PTCQuitNoSave` para **Ctrl-Alt-X** (salir sin guardar), y emite **Alt+flecha** (`$9B/$9D/$98/$A0`) también en modo `kmTP7` —el de VPA—, no solo en `kmGO32/kmFPWINCRT` (restaura el comportamiento del TP7 de DOS). Con su aviso de modificación. |
 | `ptc/` (`core/` + `x11/`, ~556 KB) | **1 fichero modificado** (`x11/x11extensions.inc`) | Backend que hay debajo de `ptcgraph`. Se vendoriza para recompilarlo **sin las extensiones X11 DGA** y que el binario no dependa de `libXxf86dga` (retirada de Arch). Solo se tocan los dos `{$DEFINE …XF86DGA1/2}` de `x11extensions.inc` (comentados), con su aviso de modificación; el resto va íntegro. El `Makefile` (objetivo `ptc`) lo recompila a `build/ptcunits/`. |
 | `graphh.inc`, `graph.inc`, `clip.inc`, `fills.inc`, `fontdata.inc`, `gtext.inc`, `modes.inc`, `palette.inc` | **Sin modificar** | Includes que arrastra `ptcgraph`. |
 
@@ -781,6 +782,20 @@ hacían parecer que el programa estaba "congelado":
 10. **Ratón quieto al cargar** — al abrir, el cursor se centra y la posición interna de
    `ptcmouse` se sincroniza con el *warp*, de modo que el mapa ya no hace auto-scroll solo hasta
    que el usuario mueve el ratón.
+11. **Crash al comprar torpedos/cazas** — al entrar en «Buy torps/fighters» de una StarBase el
+   programa abortaba con `RunError(250)` («NOT ENOUGH MEMORY»). Causa: el menú reserva un buffer
+   para guardar la pantalla de debajo (`MenuSize`→`ImageSize`), y en 256 colores (`D8bit`) ese
+   buffer pesa ~2 bytes/píxel — mucho más que los 16 colores planares de la BGI de DOS —, así que
+   superaba el límite `ReservedMemory=30000` que comprueba `UnLockReservedMemory`. Medido: la
+   región de ese menú da 30438 bytes. Subido `ReservedMemory` a **65536** (los buffers de pantalla
+   se guardan en un `word`, ≤65535, así que 64 KB los cubre todos; en Linux reservarlos es gratis).
+12. **Modificadores Shift/Ctrl/Alt** — `KbdFlags` consulta ahora el estado **actual** de los
+   modificadores a X11 (`XQueryPointer`, como la BIOS DOS `0040:0017`), de modo que funcionan tanto
+   los atajos de teclado (Shift/Ctrl+flecha…) como **ratón+modificador** (p. ej. el zoom del mapa
+   con Shift/Ctrl y el botón central). Además, el `ptccrt` vendorizado ahora emite **Alt+flecha**
+   (`$9B00`/`$9D00`/`$A000`/`$9800`) también en modo `kmTP7` —el que usa VPA—, no solo en
+   `kmGO32/kmFPWINCRT`; antes se tragaban y no llegaban el paneo del mapa ni los ajustes ±100.
+   Todo validado por inyección de eventos bajo Xvfb.
 
 ### Limitaciones conocidas
 
