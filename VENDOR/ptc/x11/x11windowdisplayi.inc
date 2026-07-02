@@ -279,15 +279,14 @@ begin
     begin
       ox := cx div cscale; oy := cy div cscale;   { pixel en la cruz original 15x15 }
       { Cruz con ajuste fino de 1 px de PANTALLA para casar con el cursor del VPA
-        de DOS (visto en DOSBox), comparando brazos opuestos:
-          - horizontal DERECHO 1 px mas abajo que el izquierdo,
-          - vertical SUPERIOR 1 px mas a la izquierda que el inferior
-        (equivale a: derecho +1 abajo, inferior +1 derecha; izquierdo y superior
-        quedan en su sitio). Hueco central de 3 px. }
-      if ( (oy = 7) and (ox <= 5) )                                              { horizontal izquierdo }
-      or ( (ox = 7) and (oy <= 5) )                                              { vertical superior }
-      or ( (cy >= 1) and (((cy - 1) div cscale) = 7) and (ox >= 9) )             { horizontal derecho (+1 abajo) }
-      or ( (cx >= 1) and (((cx - 1) div cscale) = 7) and (oy >= 9) ) then        { vertical inferior (+1 derecha) }
+        de DOS (visto en DOSBox):
+          - brazo horizontal IZQUIERDO: 1 px mas abajo (el derecho queda igual),
+          - brazo vertical SUPERIOR:    1 px a la derecha (el inferior queda igual).
+        Hueco central de 3 px. }
+      if ( (oy = 7) and (ox >= 9) )                                              { horizontal derecho (sin tocar) }
+      or ( (ox = 7) and (oy >= 9) )                                              { vertical inferior (sin tocar) }
+      or ( (cy >= 1) and (((cy - 1) div cscale) = 7) and (ox <= 5) )             { horizontal izquierdo (+1 abajo) }
+      or ( (cx >= 1) and (((cx - 1) div cscale) = 7) and (oy <= 5) ) then        { vertical superior (+1 derecha) }
         CrossBuf[cy * cbpr + (cx div 8)] := CrossBuf[cy * cbpr + (cx div 8)] or (1 shl (cx and 7));
     end;
   tmpPixmap := XCreateBitmapFromData(FDisplay, RootWindow(FDisplay, FScreen), @CrossBuf, csize, csize);
