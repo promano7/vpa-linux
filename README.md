@@ -16,8 +16,8 @@ sustitución de la BGI de Borland.
 > normalidad. El **simulador de combate** y las **StarBases** muestran los sprites de las naves,
 > la ventana es **escalable** y admite **pantalla completa** (`VPA_SCALE`), y la salida distingue
 > guardar (**Alt-X** / botón **[X]**) de salir sin guardar (**Ctrl-Alt-X**, con confirmación).
-> Quedan solo detalles de afinado puramente estéticos (ver [Limitaciones conocidas](#limitaciones-conocidas)):
-> la diana propia del ratón.
+> La **diana blanca** propia de VPA se muestra como cursor dentro de su ventana (solo ahí,
+> sin afectar al resto del escritorio), auto-escalada al tamaño de la ventana.
 > Este documento se actualiza a medida que avanzamos.
 
 > **Entorno verificado** (FPC 3.2.2 / Ubuntu 24.04): las units `ptcgraph`, `ptccrt`,
@@ -149,7 +149,7 @@ a uno de ellos:
 | `ptcgraph.pp` | **Modificado** (parche VPA) | Lee la escala (`VPAForceScale`/`VPA_SCALE`) y crea la "consola" de `ptc` más grande manteniendo la superficie en 640×480; `ptc` la escala. Lleva además `{$mode objfpc}` y `sysutils` para compilar dentro del build de VPA. La cabecera incluye un **aviso visible de modificación** (lo exige la LGPL). |
 | `ptcmouse.pp` | **Sin modificar** | Necesario para recompilar `ptcgraph` de forma autocontenida (FPC lo reconstruye contra el `ptcgraph` parcheado, evitando un desajuste de versión de `.ppu`). |
 | `ptccrt.pp` | **Modificado** (parche VPA) | Base para recompilar `ptcgraph` autocontenido, y además lleva varios parches VPA en el manejo de teclado: expone `PTCLastKbdFlags` (Shift/Ctrl/Alt del último evento, usado como reserva), trata el botón **[X]** de la ventana como **Alt-X** (salir guardando) y marca `PTCQuitNoSave` para **Ctrl-Alt-X** (salir sin guardar), y emite **Alt+flecha** (`$9B/$9D/$98/$A0`) también en modo `kmTP7` —el de VPA—, no solo en `kmGO32/kmFPWINCRT` (restaura el comportamiento del TP7 de DOS). Con su aviso de modificación. |
-| `ptc/` (`core/` + `x11/`, ~556 KB) | **1 fichero modificado** (`x11/x11extensions.inc`) | Backend que hay debajo de `ptcgraph`. Se vendoriza para recompilarlo **sin las extensiones X11 DGA** y que el binario no dependa de `libXxf86dga` (retirada de Arch). Solo se tocan los dos `{$DEFINE …XF86DGA1/2}` de `x11extensions.inc` (comentados), con su aviso de modificación; el resto va íntegro. El `Makefile` (objetivo `ptc`) lo recompila a `build/ptcunits/`. |
+| `ptc/` (`core/` + `x11/`, ~556 KB) | **2 ficheros modificados** (`x11/x11extensions.inc`, `x11/x11windowdisplayi.inc` + su `.d.inc`) | Backend que hay debajo de `ptcgraph`. Se vendoriza para recompilarlo **sin las extensiones X11 DGA** (`x11extensions.inc`: solo se comentan los dos `{$DEFINE …XF86DGA1/2}`) y que el binario no dependa de `libXxf86dga` (retirada de Arch). Además, `x11windowdisplayi.inc`/`.d.inc` llevan la **diana blanca de VPA como cursor** de la ventana (cruz simétrica, auto-escalada, por-ventana; ver §7 «Estado actual (runtime)» punto 13). Todos los cambios con su aviso de modificación; el resto va íntegro. El `Makefile` (objetivo `ptc`) lo recompila a `build/ptcunits/`. |
 | `graphh.inc`, `graph.inc`, `clip.inc`, `fills.inc`, `fontdata.inc`, `gtext.inc`, `modes.inc`, `palette.inc` | **Sin modificar** | Includes que arrastra `ptcgraph`. |
 
 **Licencia de estos ficheros:** son parte de la **Free Pascal run-time library**, bajo la
@@ -796,12 +796,26 @@ hacían parecer que el programa estaba "congelado":
    (`$9B00`/`$9D00`/`$A000`/`$9800`) también en modo `kmTP7` —el que usa VPA—, no solo en
    `kmGO32/kmFPWINCRT`; antes se tragaban y no llegaban el paneo del mapa ni los ajustes ±100.
    Todo validado por inyección de eventos bajo Xvfb.
+13. **Diana blanca propia (cursor)** — VPA muestra su **cruz blanca** original como cursor,
+   en lugar del puntero del sistema. Se implementa en el `ptc` vendorizado
+   (`x11/x11windowdisplayi.inc`): su cursor "visible" pasa a ser una cruz blanca (misma forma
+   que el `CrossPointer`/`MouseMotionHandler` originales, **simétrica**), fijada **por-ventana**
+   sobre la propia ventana de ptc (`XChangeWindowAttributes`/`CWCursor`) — igual mecanismo que
+   el cursor invisible que ptc ya usaba —, de modo que **solo se ve dentro de VPA** y el
+   escritorio recupera su puntero al salir. Se hace en ptc (y no en `xfocus` con `XDefineCursor`)
+   porque ptc reponía el cursor a `None` en cada `ShowMouse` y pisaba cualquier `XDefineCursor`
+   externo. La diana se **auto-escala** a la escala de la ventana (`AWidth/640`, nearest-neighbor,
+   cap 4×) para verse del tamaño correcto a 2×/pantalla completa (el cursor X va a píxeles nativos,
+   no lo escala ptc con el contenido). Además, el warp del cursor (`MapSurfaceToWindow`) se centra
+   en el bloque escalado (no en la esquina) para que la cruz caiga centrada sobre planetas/objetos.
+   Nota: la diana real de VPA es **simétrica**; la ligera asimetría que se ve en DOSBox no está en
+   el cursor sino que la introduce el escalador de DOSBox (a menudo estirando a 16:9), así que no se
+   reproduce — se prioriza la fidelidad al cursor original.
 
 ### Limitaciones conocidas
 
 | Tema | Estado | Detalle |
 |---|---|---|
-| Diana propia del ratón | 📝 Pendiente | VPA dibuja su propia cruz blanca (`MouseMotionHandler`, `if mdraw`); de momento sirve el puntero de Linux. |
 | Decimales del combate | 🔒 Por diseño (asumido) | El visor muestra escudo/daño/tripa con un decimal (como `PVCR.EXE`) y la **parte entera coincide** (p. ej. escudo 9.8). El primer decimal puede diferir ~±0.5: `PVCR.EXE` acumula la fracción sub-unidad distinto a PCC2ng (coinciden en los cruces enteros — de ahí la bit-exactitud del **resultado** — pero no en la fracción). Igualar el decimal exacto exigiría abandonar el algoritmo fiel a PCC2ng, así que **se deja así a propósito**: se prioriza respetar al 100% el código portado y se muestra el valor correcto del algoritmo. |
 
 ### Fuentes de mapa de bits (`.FNT`)

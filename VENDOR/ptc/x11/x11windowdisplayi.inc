@@ -278,15 +278,12 @@ begin
     for cx := 0 to csize - 1 do
     begin
       ox := cx div cscale; oy := cy div cscale;   { pixel en la cruz original 15x15 }
-      { Cruz con ajuste fino de 1 px de PANTALLA para casar con el cursor del VPA
-        de DOS (visto en DOSBox):
-          - brazo horizontal IZQUIERDO: 1 px mas abajo (el derecho queda igual),
-          - brazo vertical SUPERIOR:    1 px a la derecha (el inferior queda igual).
-        Hueco central de 3 px. }
-      if ( (oy = 7) and (ox >= 9) )                                              { horizontal derecho (sin tocar) }
-      or ( (ox = 7) and (oy >= 9) )                                              { vertical inferior (sin tocar) }
-      or ( (cy >= 1) and (((cy - 1) div cscale) = 7) and (ox <= 5) )             { horizontal izquierdo (+1 abajo) }
-      or ( (cx >= 1) and (((cx - 1) div cscale) = 7) and (oy <= 5) ) then        { vertical superior (+1 derecha) }
+      { Cruz simetrica, fiel al cursor original de VPA (tanto el CrossPointer
+        hardware como la cruz software del MouseMotionHandler son simetricos):
+        brazo vertical (col 7) en filas 0-5 y 9-14; brazo horizontal (fila 7) en
+        cols 0-5 y 9-14; hueco central de 3 px. Escalado NxN por pixel. }
+      if ((ox = 7) and ((oy <= 5) or (oy >= 9))) or
+         ((oy = 7) and ((ox <= 5) or (ox >= 9))) then
         CrossBuf[cy * cbpr + (cx div 8)] := CrossBuf[cy * cbpr + (cx div 8)] or (1 shl (cx and 7));
     end;
   tmpPixmap := XCreateBitmapFromData(FDisplay, RootWindow(FDisplay, FScreen), @CrossBuf, csize, csize);
