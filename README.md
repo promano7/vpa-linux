@@ -291,7 +291,7 @@ verificable al final de cada una.
 
 ### Fase 4 — Limpieza de bajo nivel (UNIT + núcleo)
 - [x] **Eliminados** `UNIT/DPMI.PAS`, `UNIT/DPMITEST.PAS`, `UNIT/MEMTEST.PAS`, `UNIT/SYSEXT.PAS` (subsistema DPMI de DOS), más los binarios DOS muertos `UNIT/DPMI.TPU`/`UNIT/SYSEXT.TPU` y la doc/licencia `UNIT/DPMI.TXT`. Verificado que nada vivo los usa y que `vpa.pas` compila y enlaza sin ellos. `DPMI` solo lo usaban `DPMITEST`/`MEMTEST` (programas de prueba, también fuera).
-- [ ] Revisar `UNIT/AUXF.PAS` y `UNIT/STRF.PAS`: sustituir asm por Pascal/intrínsecos de FPC.
+- [x] Revisar `UNIT/AUXF.PAS` y `UNIT/STRF.PAS`: sustituir asm por Pascal/intrínsecos de FPC. ✅ **Hecho** (durante el port inicial de estas units hoja). Ambos ficheros son **100% Pascal**, sin una sola línea de ensamblador: `AUXF` usa intrínsecos de FPC (`CompareByte` en `Diff`, `Sleep` en `Delay`, `GetTickCount64` en `Timer`, `SysUtils`) y `STRF` reescribió las rutinas que eran asm x86 (`ItemPos`/`ItemStr`, originalmente `repne scasb`) en Pascal puro y portable. Verificado funcionalmente.
 - [ ] Tratar las ~11 interrupciones y ~29 líneas de asm del núcleo, fichero a fichero (hora del sistema, etc.).
 - [ ] Clasificar los `absolute` del núcleo: *aliasing* (se queda) vs. acceso a hardware (se reescribe).
 
