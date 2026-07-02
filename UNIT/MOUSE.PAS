@@ -70,8 +70,6 @@ var
   HandlerTable : array[0..6] of TMouseProc;
   prevX, prevY : integer;
   prevButtons  : word;
-  dbgMoveCnt   : longint;
-  dbgPollCnt   : longint;
   rangeSet     : boolean;
   rX1, rY1, rX2, rY2 : integer;   { rango permitido del cursor (clamp por software) }
 
@@ -187,10 +185,8 @@ procedure PollMouse;
         provocaba un bucle de realimentacion que fijaba el raton en el borde }
     end;
     MouseX := mx; MouseY := my; MouseButtons := btns;
-    {$IFDEF UNIX}if btns <> prevButtons then xfocus.DbgMouseBtn(mx, my, btns);{$ENDIF}
     if (mx <> prevX) or (my <> prevY) then
     begin
-      {$IFDEF UNIX}inc(dbgMoveCnt); if (dbgMoveCnt and 31)=0 then xfocus.DbgMouseBtn(mx, my, $FFFF);{$ENDIF}
       Dispatch(EvMouseMove);
     end;
     if ((btns and LeftButton)<>0)   and ((prevButtons and LeftButton)=0)   then Dispatch(EvLtPress);

@@ -3,9 +3,7 @@
     * GrabInputFocus: localiza la ventana, oculta el puntero del sistema (cursor
       en blanco; usa conexion X PERSISTENTE para que el cursor no se libere) y
       pide el foco de teclado (ptcgraph hace XMapRaised pero no XSetInputFocus).
-    * ReleaseInputFocus: suelta y cierra (llamar al salir).
-    * DbgKey / DbgMouseBtn: si VPA_XDEBUG esta puesto, registran en stderr cada
-      tecla/clic que VPA realmente recibe (para depurar el input). }
+    * ReleaseInputFocus: suelta y cierra (llamar al salir). }
 unit xfocus;
 interface
 
@@ -19,11 +17,6 @@ procedure MapMouseToSurface(var x, y: longint);
 procedure MapSurfaceToWindow(var x, y: longint);
 procedure GrabInputFocus;
 procedure ReleaseInputFocus;
-procedure DbgKey(w: word);
-procedure DbgMouseBtn(x, y: longint; btn: word);
-procedure DbgDispatch(w: word);
-procedure DbgPoll(installed, disabled: boolean; x, y, b: longint);
-procedure DbgFont(id: longint);
 function  PointerInsideWindow: boolean;
 
 implementation
@@ -33,11 +26,9 @@ var
   gDpy: PDisplay = nil;          { conexion persistente (mantiene vivo el cursor) }
   gWin: TWindow  = 0;
   gCur: TCursor  = 0;
-  gXDebug: boolean = False;
   gFullscreen: boolean = False;  { pantalla completa activa (escalar raton) }
   gWinW: cint = 0;               { tamano de la ventana (cache para escalar el raton) }
   gWinH: cint = 0;
-  gSizeCnt: integer = 0;         { throttle de la consulta de tamano }
   gWantFullscreen: boolean = False;  { VPA_SCALE=fullscreen: pedir pantalla completa al gestor }
 
 function FullscreenRequested: boolean;
@@ -90,9 +81,6 @@ begin
   if n > maxfit then n := maxfit;           { recortar a lo que cabe }
   if n < 1 then n := 1;
   ResolveScale := n;
-  if gXDebug then
-    Writeln(StdErr, 'xfocus: VPA_SCALE="', v, '" -> escala ', n,
-            ' fullscreen=', gWantFullscreen, ' (max que cabe en pantalla ', maxfit, ')');
 end;
 
 function WantFullscreen: boolean;
@@ -113,9 +101,6 @@ begin
   begin
     gFullscreen := True;          { activa el escalado del raton en MapMouseToSurface }
     gWinW := attr.width; gWinH := attr.height;
-    if gXDebug then
-      Writeln(StdErr, 'xfocus: ventana ', gWinW, 'x', gWinH,
-              ' (>640x480) -> escalado de raton activado');
   end;
 end;
 
@@ -186,7 +171,6 @@ begin
   end;
   XFlush(gDpy);
   gFullscreen := True;
-  if gXDebug then Writeln(StdErr, 'xfocus: solicitada pantalla completa (_NET_WM_STATE_FULLSCREEN), pantalla ', sw, 'x', sh);
 end;
 
 { Quita el estado de pantalla completa. Se llama al cerrar la grafica, como
@@ -215,7 +199,6 @@ begin
   XSendEvent(gDpy, XDefaultRootWindow(gDpy), 0,
              SubstructureRedirectMask or SubstructureNotifyMask, @ev);
   XFlush(gDpy);
-  if gXDebug then Writeln(StdErr, 'xfocus: liberada la pantalla completa (REMOVE _NET_WM_STATE_FULLSCREEN)');
 end;
 
 procedure UpdateWindowSize;
@@ -264,37 +247,6 @@ begin
     if x < 0 then x := 0 else if x > gWinW - 1 then x := gWinW - 1;
     if y < 0 then y := 0 else if y > gWinH - 1 then y := gWinH - 1;
   end;
-end;
-
-procedure DbgKey(w: word);
-begin
-  if gXDebug then Writeln(StdErr, 'VPA recibe tecla = $', HexStr(w, 4));
-end;
-
-procedure DbgMouseBtn(x, y: longint; btn: word);
-begin
-  if not gXDebug then exit;
-  if btn = $FFFF then Writeln(StdErr, 'VPA: raton MOVIDO a (', x, ',', y, ')')
-  else Writeln(StdErr, 'VPA recibe raton botones=', btn, ' en (', x, ',', y, ')');
-end;
-
-procedure DbgDispatch(w: word);
-begin
-  if gXDebug then Writeln(StdErr, '>>> VPA DESPACHA ch=$', HexStr(w, 4), ' (Main salio del bucle)');
-end;
-
-procedure DbgPoll(installed, disabled: boolean; x, y, b: longint);
-begin
-  if gXDebug then
-    Writeln(StdErr, 'PollMouse: habilitado=', installed, ' deshab=', disabled,
-            '  ptc_raton=(', x, ',', y, ') botones=', b);
-end;
-
-procedure DbgFont(id: longint);
-begin
-  if GetEnvironmentVariable('VPA_XDEBUG') <> '' then
-    Writeln(StdErr, 'VPA: fuente del mapa LittFont = ', id,
-            '  (si es 2/SmallFont => no se cargo LITT_VPA.CHR del directorio de la partida)');
 end;
 
 { ¿esta el puntero del raton dentro de la ventana de VPA? Se usa para no hacer
@@ -398,9 +350,7 @@ procedure GrabInputFocus;
 var
   root: TWindow; want, base: string; tries: integer;
   ev: TXEvent; netActive: TAtom; ts: TTimeSpec;
-  nm: PChar; attr: TXWindowAttributes;
 begin
-  gXDebug := GetEnvironmentVariable('VPA_XDEBUG') <> '';
   if gDpy = nil then gDpy := XOpenDisplay(nil);
   if gDpy = nil then begin Writeln(StdErr,'xfocus: sin display X'); exit; end;
   root := XDefaultRootWindow(gDpy);
@@ -421,17 +371,6 @@ begin
   if gWin <> 0 then
   begin
     Writeln(StdErr, 'xfocus: ventana encontrada -> pidiendo foco de teclado');
-    if gXDebug then
-    begin
-      Writeln(StdErr, 'xfocus: gWin=0x', HexStr(gWin, 8));
-      if (XFetchName(gDpy, gWin, @nm) <> 0) and (nm <> nil) then
-        begin Writeln(StdErr, '  titulo  = "', string(nm), '"'); XFree(nm); end
-      else
-        Writeln(StdErr, '  titulo  = (sin nombre)');
-      if XGetWindowAttributes(gDpy, gWin, @attr) <> 0 then
-        Writeln(StdErr, '  tamano  = ', attr.width, 'x', attr.height);
-      Writeln(StdErr, '  esperado (ParamStr0) = "', want, '"  base = "', base, '"');
-    end;
     { No ocultamos el cursor del sistema: XDefinecursor hacia que el puntero
       desapareciera tambien fuera de la ventana. Mientras VPA no dibuje su propia
       diana, dejamos visible el puntero de Linux como puntero. }

@@ -1276,7 +1276,6 @@ procedure OpenGraph;
       Si falla la carga, queda SmallFont (comportamiento anterior). }
     LittFont := InstallUserFont('LITT_VPA.CHR');
     if LittFont <= 0 then LittFont := SmallFont;
-    {$IFDEF UNIX}DbgFont(LittFont);{$ENDIF}
    {$IFDEF VPAMM}
     { VPA/MM behaves as SVGA most of the time: we need to do manual
       text output, and mouse cursor }

@@ -64,7 +64,6 @@ function ReadKey : word;
   begin
     if bufFull then begin r := bufKey; bufFull := False; end
     else r := RawReadKey;
-    {$IFDEF UNIX}xfocus.DbgKey(r);{$ENDIF}
     ReadKey := r;
   end;
 

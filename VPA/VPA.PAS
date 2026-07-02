@@ -73,7 +73,6 @@ Begin
     repeat
       WriteFreeMem;
       Main;
-      {$IFDEF UNIX}xfocus.DbgDispatch(ch);{$ENDIF}
       case ch of
 {enter} 13	: ScreenSaver;
 {b}	ord('b'),
