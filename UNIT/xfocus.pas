@@ -18,6 +18,8 @@ procedure MapSurfaceToWindow(var x, y: longint);
 procedure GrabInputFocus;
 procedure ReleaseInputFocus;
 function  PointerInsideWindow: boolean;
+function  XReady: boolean;              { True si hay conexion X abierta }
+function  KbdModifiers: byte;           { estado actual Shift=3/Ctrl=4/Alt=8 (estilo BIOS 0040:0017) }
 
 implementation
 uses x, xlib, xutil, xatom, ctypes, unixtype, baseunix, sysutils;
@@ -269,6 +271,33 @@ begin
   if XGetWindowAttributes(gDpy, gWin, @attr) = 0 then Exit;
   PointerInsideWindow := (wx >= 0) and (wx < attr.width) and
                          (wy >= 0) and (wy < attr.height);
+end;
+
+function XReady: boolean;
+begin
+  XReady := gDpy <> nil;
+end;
+
+{ Estado ACTUAL de los modificadores (no el del ultimo evento de tecla), leido de
+  X11 igual que la BIOS de DOS exponia 0040:0017. Devuelve Shift=3, Ctrl=4, Alt=8
+  (combinables). Cubre tanto los atajos de teclado como raton+modificador (p.ej.
+  el zoom del mapa con Shift/Ctrl y el boton central). 0 si no hay conexion X. }
+function KbdModifiers: byte;
+var
+  root, child: TWindow;
+  rx, ry, wx, wy: cint;
+  mask: cuint;
+  r: byte;
+begin
+  KbdModifiers := 0;
+  if gDpy = nil then Exit;
+  if not XQueryPointer(gDpy, XDefaultRootWindow(gDpy), @root, @child,
+                       @rx, @ry, @wx, @wy, @mask) then Exit;
+  r := 0;
+  if (mask and ShiftMask)   <> 0 then r := r or 3;
+  if (mask and ControlMask) <> 0 then r := r or 4;
+  if (mask and Mod1Mask)    <> 0 then r := r or 8;
+  KbdModifiers := r;
 end;
 
 function TitleMatches(const nm, want, base: string): boolean;

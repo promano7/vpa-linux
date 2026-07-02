@@ -75,9 +75,18 @@ function PreviewKey : word;   { use only if KeyPressed }
 
 function KbdFlags : byte;
   begin
-    { Estado de modificadores del ultimo evento de tecla, expuesto por el ptccrt
-      vendorizado (Shift=3, Ctrl=4, Alt=8). Permite distinguir Ctrl-Alt-X de Alt-X. }
+    {$IFDEF UNIX}
+    { Estado ACTUAL de modificadores (Shift=3, Ctrl=4, Alt=8), consultado a X11 al
+      estilo de la BIOS DOS 0040:0017. Asi funciona tanto en atajos de teclado como
+      en raton+modificador (zoom del mapa con Shift/Ctrl). Sin conexion X se recurre
+      al ultimo evento de tecla que expone el ptccrt vendorizado. }
+    if xfocus.XReady then
+      KbdFlags := xfocus.KbdModifiers
+    else
+      KbdFlags := ptccrt.PTCLastKbdFlags;
+    {$ELSE}
     KbdFlags := ptccrt.PTCLastKbdFlags;
+    {$ENDIF}
   end;
 
 function KbdQuitNoSave : boolean;
