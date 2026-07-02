@@ -249,7 +249,7 @@ begin
   end;
 end;
 
-{ ¿esta el puntero del raton dentro de la ventana de VPA? Se usa para no hacer
+{ Esta el puntero del raton dentro de la ventana de VPA? Se usa para no hacer
   auto-scroll cuando el puntero ha salido de la ventana (si no, MouseX se queda
   congelado en el borde y el mapa se desplaza sin parar). }
 function PointerInsideWindow: boolean;
@@ -370,7 +370,7 @@ begin
     gWin := FindWin(gDpy, root, want, base, false);  { ultimo recurso: coincidencia laxa por nombre base }
   if gWin <> 0 then
   begin
-    Writeln(StdErr, 'xfocus: ventana encontrada -> pidiendo foco de teclado');
+    Writeln(StdErr, 'xfocus: window found -> requesting keyboard focus');
     { No ocultamos el cursor del sistema: XDefinecursor hacia que el puntero
       desapareciera tambien fuera de la ventana. Mientras VPA no dibuje su propia
       diana, dejamos visible el puntero de Linux como puntero. }
