@@ -270,18 +270,10 @@ begin
                   PTCKEY_PAGEDOWN:
                     if KeyMode in [kmGO32, kmFPWINCRT] then
                       KeyBufAdd(#0#161);
-                  PTCKEY_UP:
-                    if KeyMode in [kmGO32, kmFPWINCRT] then
-                      KeyBufAdd(#0#152);
-                  PTCKEY_LEFT:
-                    if KeyMode in [kmGO32, kmFPWINCRT] then
-                      KeyBufAdd(#0#155);
-                  PTCKEY_RIGHT:
-                    if KeyMode in [kmGO32, kmFPWINCRT] then
-                      KeyBufAdd(#0#157);
-                  PTCKEY_DOWN:
-                    if KeyMode in [kmGO32, kmFPWINCRT] then
-                      KeyBufAdd(#0#160);
+                  PTCKEY_UP:    KeyBufAdd(#0#152);   { Alt-Up    -> VPA $9800 (Modif. VPA: antes solo kmGO32/kmFPWINCRT; }
+                  PTCKEY_LEFT:  KeyBufAdd(#0#155);   { Alt-Left   -> VPA $9B00   VPA usa kmTP7 y necesita Alt+flecha }
+                  PTCKEY_RIGHT: KeyBufAdd(#0#157);   { Alt-Right  -> VPA $9D00   para paneo del mapa y ajustes +-100. }
+                  PTCKEY_DOWN:  KeyBufAdd(#0#160);   { Alt-Down   -> VPA $A000   Es el comportamiento real del TP7 DOS.) }
                   PTCKEY_DIVIDE:
                     if KeyMode in [kmGO32, kmFPWINCRT] then
                       KeyBufAdd(#0#164);

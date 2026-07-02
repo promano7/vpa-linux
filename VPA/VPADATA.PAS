@@ -969,12 +969,18 @@ var
   Currently, it is used to make sure reservation of screen buffers always
   succeeds, but that requires that the screen buffer size is smaller than
   the ReservedMemory. In VPAMM, screen buffers are twice as big as in regular
-  VPA, so we need twice the space. }
+  VPA, so we need twice the space.
+  Linux port: VPA now runs in 256 colours (D8bit), where ptcgraph's ImageSize
+  is ~2 bytes/pixel instead of the 4-bit planar packing of the DOS 16-colour
+  BGI. A wide menu save (e.g. Buy torps/fighters, ~30 KB) therefore exceeds the
+  old 30000 limit and made UnLockReservedMemory raise RunError(250). The screen
+  buffers themselves are stored in a word (<=65535 bytes), so 65536 covers every
+  non-truncated save; on Linux memory is abundant, so reserving 64 KB is free. }
 const
        {$IFDEF VPAMM}
-        ReservedMemory  = 60000;
+        ReservedMemory  = 131072;
        {$ELSE}
-        ReservedMemory  = 30000;
+        ReservedMemory  = 65536;
        {$ENDIF}
         ResMem  : pointer = nil;
     FCChar  : array [0..61] of char = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
