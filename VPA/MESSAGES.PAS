@@ -91,7 +91,7 @@ const	IOMX	= 0;
 	MVStr	: array [boolean] of string[7] = ('MESSAGE','RECORD');
 	CRStr	: array [1..2] of str8 = ('write','forward');
 	SSMStr	: array [1..17] of char = 'Sub Space Message';
-	ClStr	: string[10] = 'client VPA';
+	ClStr	: string[20] = 'client VPA-Linux';
 	PVCR_EXE= 'PVCR.EXE';
 	pvcrlast: boolean = No;
 	pvcr	: boolean = No;
@@ -1677,7 +1677,7 @@ procedure CheckPHOSTMessage;
       if (ReadMessage(f,i,m,0,No)=player) and (m.lines>=1) then
       begin
 	s:=m.text[1]; Trim(s);
-	if Copy(s,1,10)=ClStr then
+	if Copy(s,1,Length(ClStr))=ClStr then
 	begin
 	  PHOSTmn:=i;
 	  Break;
