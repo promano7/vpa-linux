@@ -802,8 +802,7 @@ hacían parecer que el programa estaba "congelado":
 | Tema | Estado | Detalle |
 |---|---|---|
 | Diana propia del ratón | 📝 Pendiente | VPA dibuja su propia cruz blanca (`MouseMotionHandler`, `if mdraw`); de momento sirve el puntero de Linux. |
-| Planetas como disco | 📝 Pendiente | En el visor de combate el planeta se carga con `LoadPic` (su sprite de `RESOURCE.PLN`), así que se ve como una nave; `PVCR.EXE` lo dibuja como un disco. Falta una rutina que genere una imagen de disco en `img[Right]` cuando `planet=1` en lugar de cargar el sprite. |
-| Decimales del combate | ⚠️ Parcial | El visor ya muestra escudo/daño/tripa con un decimal (como `PVCR.EXE`) y la **parte entera coincide** (p. ej. escudo 9.8). Pero el primer decimal puede diferir ~±0.5: `PVCR.EXE` acumula la fracción sub-unidad distinto a PCC2ng (coinciden en los cruces enteros — de ahí la bit-exactitud del resultado — pero no en la fracción). Igualar el decimal exacto exigiría abandonar el algoritmo fiel a PCC2ng. Se muestra el valor correcto del algoritmo. |
+| Decimales del combate | 🔒 Por diseño (asumido) | El visor muestra escudo/daño/tripa con un decimal (como `PVCR.EXE`) y la **parte entera coincide** (p. ej. escudo 9.8). El primer decimal puede diferir ~±0.5: `PVCR.EXE` acumula la fracción sub-unidad distinto a PCC2ng (coinciden en los cruces enteros — de ahí la bit-exactitud del **resultado** — pero no en la fracción). Igualar el decimal exacto exigiría abandonar el algoritmo fiel a PCC2ng, así que **se deja así a propósito**: se prioriza respetar al 100% el código portado y se muestra el valor correcto del algoritmo. |
 
 ### Fuentes de mapa de bits (`.FNT`)
 
