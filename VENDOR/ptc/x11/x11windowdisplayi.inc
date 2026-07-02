@@ -103,14 +103,10 @@ var
   BlackColor: TXColor;
   WhiteColor: TXColor;
   BlankCursorData: array [1..8] of Byte = (0, 0, 0, 0, 0, 0, 0, 0);
-  { VPA: mapa de bits 15x15 de una diana blanca con hueco central de 3 px (la cruz
-    original de VPA). LSB-first (bit 0 = pixel izquierdo), 2 bytes por fila. }
-  CrossCursorData: array [1..30] of Byte = (
-    $80,$00, $80,$00, $80,$00, $80,$00, $80,$00, $80,$00,   { filas 0-5: col 7 }
-    $00,$00,                                                { fila 6: hueco }
-    $3F,$7E,                                                { fila 7: cols 0-5 y 9-14 }
-    $00,$00,                                                { fila 8: hueco }
-    $80,$00, $80,$00, $80,$00, $80,$00, $80,$00, $80,$00);  { filas 9-14: col 7 }
+  { VPA: buffer para generar la diana blanca ESCALADA (la cruz original 15x15
+    ampliada a la escala de la ventana). Cap a 4x -> 60x60 -> 8 bytes/fila * 60. }
+  CrossBuf: array [0..1023] of Byte;
+  cscale, csize, cbpr, cx, cy, ox, oy: Integer;
   CreateWindow_Depth: cint;
   CreateWindow_Visual: PVisual;
 {$IFDEF ENABLE_X11_EXTENSION_XINPUT2}
@@ -267,12 +263,32 @@ begin
       XFreePixmap(FDisplay, tmpPixmap);
   end;
 
-  { VPA: create the white crosshair cursor (VPA's own reticle). Used as the
-    "visible" cursor instead of the default arrow so VPA shows its original cross. }
-  tmpPixmap := XCreateBitmapFromData(FDisplay, RootWindow(FDisplay, FScreen), PChar(@CrossCursorData), 15, 15);
+  { VPA: crear la diana blanca ESCALADA a la escala de la ventana (AWidth/640).
+    El cursor X11 se dibuja a pixeles nativos de pantalla, no lo escala ptc con
+    el contenido; asi que lo ampliamos a mano (nearest-neighbor, igual que ptc
+    escala la superficie 640x480) para que se vea del mismo tamano relativo que
+    la cruz original de VPA a pantalla completa. }
+  cscale := AWidth div 640;
+  if cscale < 1 then cscale := 1;
+  if cscale > 4 then cscale := 4;   { 60x60 max: tamano de cursor universalmente soportado }
+  csize := 15 * cscale;
+  cbpr := (csize + 7) div 8;        { bytes por fila }
+  FillChar(CrossBuf, SizeOf(CrossBuf), 0);
+  for cy := 0 to csize - 1 do
+    for cx := 0 to csize - 1 do
+    begin
+      ox := cx div cscale; oy := cy div cscale;   { pixel en la cruz original 15x15 }
+      { patron: brazo vertical (col 7) en filas 0-5 y 9-14; brazo horizontal
+        (fila 7) en cols 0-5 y 9-14; hueco central de 3 px }
+      if ((ox = 7) and ((oy <= 5) or (oy >= 9))) or
+         ((oy = 7) and ((ox <= 5) or (ox >= 9))) then
+        CrossBuf[cy * cbpr + (cx div 8)] := CrossBuf[cy * cbpr + (cx div 8)] or (1 shl (cx and 7));
+    end;
+  tmpPixmap := XCreateBitmapFromData(FDisplay, RootWindow(FDisplay, FScreen), @CrossBuf, csize, csize);
   try
     if tmpPixmap <> None then
-      FX11CrossCursor := XCreatePixmapCursor(FDisplay, tmpPixmap, tmpPixmap, @WhiteColor, @BlackColor, 7, 7);
+      FX11CrossCursor := XCreatePixmapCursor(FDisplay, tmpPixmap, tmpPixmap, @WhiteColor, @BlackColor,
+                                             7 * cscale + cscale div 2, 7 * cscale + cscale div 2);
   finally
     if tmpPixmap <> None then
       XFreePixmap(FDisplay, tmpPixmap);
