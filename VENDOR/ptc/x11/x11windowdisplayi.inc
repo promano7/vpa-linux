@@ -40,6 +40,7 @@ begin
   inherited;
   FFocus := True;
   FX11InvisibleCursor := None;
+  FX11CrossCursor := None;
   FCursorVisible := True;
   FGrabMouse := False;
   FMouseGrabbed := False;
@@ -100,7 +101,16 @@ var
   tmpArrayOfCLong: array [1..1] of clong;
   tmpPixmap: TPixmap;
   BlackColor: TXColor;
+  WhiteColor: TXColor;
   BlankCursorData: array [1..8] of Byte = (0, 0, 0, 0, 0, 0, 0, 0);
+  { VPA: mapa de bits 15x15 de una diana blanca con hueco central de 3 px (la cruz
+    original de VPA). LSB-first (bit 0 = pixel izquierdo), 2 bytes por fila. }
+  CrossCursorData: array [1..30] of Byte = (
+    $80,$00, $80,$00, $80,$00, $80,$00, $80,$00, $80,$00,   { filas 0-5: col 7 }
+    $00,$00,                                                { fila 6: hueco }
+    $3F,$7E,                                                { fila 7: cols 0-5 y 9-14 }
+    $00,$00,                                                { fila 8: hueco }
+    $80,$00, $80,$00, $80,$00, $80,$00, $80,$00, $80,$00);  { filas 9-14: col 7 }
   CreateWindow_Depth: cint;
   CreateWindow_Visual: PVisual;
 {$IFDEF ENABLE_X11_EXTENSION_XINPUT2}
@@ -235,6 +245,10 @@ begin
   BlackColor.red := 0;
   BlackColor.green := 0;
   BlackColor.blue := 0;
+  FillChar(WhiteColor, SizeOf(WhiteColor), 0);
+  WhiteColor.red := $FFFF;
+  WhiteColor.green := $FFFF;
+  WhiteColor.blue := $FFFF;
 
   { Try to open an input method }
   if PTC_X11_TRY_XIM in FFlags then
@@ -248,6 +262,17 @@ begin
   tmpPixmap := XCreateBitmapFromData(FDisplay, RootWindow(FDisplay, FScreen), @BlankCursorData, 8, 8);
   try
     FX11InvisibleCursor := XCreatePixmapCursor(FDisplay, tmpPixmap, tmpPixmap, @BlackColor, @BlackColor, 0, 0);
+  finally
+    if tmpPixmap <> None then
+      XFreePixmap(FDisplay, tmpPixmap);
+  end;
+
+  { VPA: create the white crosshair cursor (VPA's own reticle). Used as the
+    "visible" cursor instead of the default arrow so VPA shows its original cross. }
+  tmpPixmap := XCreateBitmapFromData(FDisplay, RootWindow(FDisplay, FScreen), PChar(@CrossCursorData), 15, 15);
+  try
+    if tmpPixmap <> None then
+      FX11CrossCursor := XCreatePixmapCursor(FDisplay, tmpPixmap, tmpPixmap, @WhiteColor, @BlackColor, 7, 7);
   finally
     if tmpPixmap <> None then
       XFreePixmap(FDisplay, tmpPixmap);
@@ -498,6 +523,13 @@ begin
     XFreeCursor(FDisplay, FX11InvisibleCursor);
     FX11InvisibleCursor := None;
   end;
+
+  { VPA: free the crosshair cursor }
+  if FX11CrossCursor <> None then
+  begin
+    XFreeCursor(FDisplay, FX11CrossCursor);
+    FX11CrossCursor := None;
+  end;
 end;
 
 procedure TX11WindowDisplay.InternalResize(AWidth, AHeight: Integer);
@@ -531,7 +563,14 @@ var
   attr: TXSetWindowAttributes;
 begin
   if AVisible then
-    attr.cursor := None { Use the normal cursor }
+  begin
+    { VPA: mostrar la diana blanca propia en vez del puntero por defecto (None).
+      Si por lo que sea no se pudo crear, caer al cursor normal. }
+    if FX11CrossCursor <> None then
+      attr.cursor := FX11CrossCursor
+    else
+      attr.cursor := None;
+  end
   else
     attr.cursor := FX11InvisibleCursor; { Set the invisible cursor }
 

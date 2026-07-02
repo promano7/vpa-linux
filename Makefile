@@ -30,7 +30,7 @@ build: ptc
 ##        libXxf86dga). Se reconstruye solo si cambia el fuente vendorizado.
 ##        Nota: ptc es codigo FPC normal (no -Mtp), por eso NO usa @vpa.cfg.
 ptc: $(PTCUNITS)/ptc.ppu
-$(PTCUNITS)/ptc.ppu: $(PTCSRC)/ptc.pp $(PTCSRC)/x11/x11extensions.inc
+$(PTCUNITS)/ptc.ppu: $(PTCSRC)/ptc.pp $(wildcard $(PTCSRC)/*.pp) $(wildcard $(PTCSRC)/x11/*.inc) $(wildcard $(PTCSRC)/x11/*.pp) $(wildcard $(PTCSRC)/core/*.inc) $(wildcard $(PTCSRC)/core/*.pp)
 	@mkdir -p $(PTCUNITS)
 	$(FPC) -O2 -Fi$(PTCSRC) -Fi$(PTCSRC)/x11 -Fi$(PTCSRC)/core -FU$(PTCUNITS) $(PTCSRC)/ptc.pp
 	@echo ">> ptc recompilado sin DGA en $(PTCUNITS)/"

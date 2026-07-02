@@ -362,28 +362,15 @@ begin
   else FindWin := lenientW;             { ultimo recurso: coincidencia laxa }
 end;
 
-procedure MakeCrossCursor;
-{ Diana blanca 15x15 con hueco central de 3 px, como la cruz original de VPA
-  (MouseMotionHandler): brazos horizontales en cols 0-5 y 9-14 de la fila central
-  y verticales en filas 0-5 y 9-14 de la columna central; hotspot en el centro
-  (7,7). Bits en orden LSB-first (bit 0 = pixel izquierdo). }
-const
-  cross: array[0..29] of byte = (
-    $80,$00, $80,$00, $80,$00, $80,$00, $80,$00, $80,$00,  { filas 0-5: col 7 }
-    $00,$00,                                                { fila 6: hueco }
-    $3F,$7E,                                                { fila 7: cols 0-5 y 9-14 }
-    $00,$00,                                                { fila 8: hueco }
-    $80,$00, $80,$00, $80,$00, $80,$00, $80,$00, $80,$00); { filas 9-14: col 7 }
-var pm: TPixmap; fg, bg: TXColor;
+procedure MakeBlankCursor;
+const blank: array[0..7] of char = (#0,#0,#0,#0,#0,#0,#0,#0);
+var pm: TPixmap; black: TXColor;
 begin
-  FillChar(fg, sizeof(fg), 0); FillChar(bg, sizeof(bg), 0);
-  fg.red := $FFFF; fg.green := $FFFF; fg.blue := $FFFF;   { blanco }
-  pm := XCreateBitmapFromData(gDpy, gWin, PChar(@cross), 15, 15);
+  FillChar(black, sizeof(black), 0);
+  pm := XCreateBitmapFromData(gDpy, gWin, @blank, 8, 8);
   if pm <> None then
   begin
-    { source y mask iguales: solo se pintan los pixeles de la cruz (en fg=blanco),
-      el resto queda transparente y deja ver lo que hay debajo }
-    gCur := XCreatePixmapCursor(gDpy, pm, pm, @fg, @bg, 7, 7);
+    gCur := XCreatePixmapCursor(gDpy, pm, pm, @black, @black, 0, 0);
     XFreePixmap(gDpy, pm);
   end;
 end;
@@ -413,13 +400,6 @@ begin
   if gWin <> 0 then
   begin
     Writeln(StdErr, 'xfocus: window found -> requesting keyboard focus');
-    { Cursor propio de VPA: diana blanca (cruz) SOLO en la ventana de VPA. Al
-      definirlo por-ventana con XDefineCursor, X restaura el puntero normal en
-      cuanto el raton sale de la ventana, asi que no afecta al resto del escritorio.
-      (El intento anterior usaba un cursor en BLANCO, que hacia desaparecer el
-      puntero; ahora es una cruz visible, la diana original de VPA.) }
-    MakeCrossCursor;
-    if gCur <> 0 then XDefineCursor(gDpy, gWin, gCur);
     XRaiseWindow(gDpy, gWin);
     XSetInputFocus(gDpy, gWin, RevertToParent, CurrentTime);
     netActive := XInternAtom(gDpy, '_NET_ACTIVE_WINDOW', 1);
@@ -445,7 +425,6 @@ procedure ReleaseInputFocus;
 begin
   if gDpy <> nil then
   begin
-    if gWin <> 0 then XUndefineCursor(gDpy, gWin);
     if gCur <> 0 then begin XFreeCursor(gDpy, gCur); gCur := 0; end;
     XCloseDisplay(gDpy);
     gDpy := nil;

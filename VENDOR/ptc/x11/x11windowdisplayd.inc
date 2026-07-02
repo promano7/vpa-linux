@@ -46,6 +46,7 @@ type
     FMouseGrabbed: Boolean;
     FRelativeMouseMode: Boolean;
     FX11InvisibleCursor: TCursor; { Blank cursor }
+    FX11CrossCursor: TCursor; { VPA: white crosshair used as the visible cursor }
     FFullScreen: Boolean; { Keeps a snapshot of the PTC_X11_FULLSCREEN option
                              taken at the time 'open' was called }
     FResizable: Boolean;
