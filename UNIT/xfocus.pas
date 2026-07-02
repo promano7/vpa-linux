@@ -244,8 +244,13 @@ begin
   if (gWinW <= 0) or (gWinH <= 0) then UpdateWindowSize;
   if (gWinW > 0) and (gWinH > 0) then
   begin
-    x := (x * gWinW) div 640;
-    y := (y * gWinH) div 480;
+    { Centro del bloque escalado, no la esquina: el planeta (y todo el contenido)
+      se dibuja escalado NxN por pixel de superficie, con su centro en el medio del
+      bloque; si warpeamos el cursor a la esquina, la cruz queda ~escala/2 px arriba
+      -izquierda del planeta. Sumar media escala alinea la diana con el centro, como
+      el cursor software del VPA de DOS. }
+    x := (x * gWinW) div 640 + (gWinW div 640) div 2;
+    y := (y * gWinH) div 480 + (gWinH div 480) div 2;
     if x < 0 then x := 0 else if x > gWinW - 1 then x := gWinW - 1;
     if y < 0 then y := 0 else if y > gWinH - 1 then y := gWinH - 1;
   end;
