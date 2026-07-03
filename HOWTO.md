@@ -16,7 +16,8 @@ look, same keys.
 ## 1. What you need
 
 - A **64-bit x86 Linux** system with a graphical (X11 or Wayland) session.
-- The **`VPA` binary** (in this package) and the **`VPA.HLP`** help file (also here).
+- The **`VPA` binary** (in this package), plus the two support files shipped with
+  it: the **`VPA.HLP`** help file and the **`LITT_VPA.CHR`** map font.
 - A **VGA Planets game directory** of your own: the folder with your turn files
   (`GENx.DAT`, `SHIPx.DAT`, `PLANETx.DAT`, `BDATAx.DAT`, `PLAYERx.RST`, etc.), where
   `x` is your race number. VPA does **not** come with a game; you get those files
@@ -65,9 +66,18 @@ Use: VPA race [dir] ...
 `./VPA /?` lists all command-line options (`/B`, `/K`, `/M`, `/O`, `/P`, `/PW:pwd`,
 `/R`, `/S`, `/REP:frm,rep`).
 
-### The help file
-Keep **`VPA.HLP`** in your game directory (or next to the binary). With it present,
-press **F1** inside VPA for the built-in help. Without it, F1 simply shows nothing.
+### Support files (`VPA.HLP` and `LITT_VPA.CHR`)
+Keep both support files where you run VPA — in your game directory or next to the
+binary:
+
+- **`VPA.HLP`** — the built-in help. With it present, press **F1** inside VPA for
+  the help screen; without it, F1 simply shows nothing.
+- **`LITT_VPA.CHR`** — the small vector font used for the map labels (planet and ship
+  names). If it's missing, VPA still runs but falls back to a built-in font, so those
+  labels won't look quite right.
+
+Neither file stops VPA from starting, but you'll want both for the full, correct
+experience.
 
 ---
 
