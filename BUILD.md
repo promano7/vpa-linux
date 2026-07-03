@@ -85,6 +85,37 @@ comparación «siempre cierta», etc.).
 fuentes, etc.). Mantenlos accesibles como en la instalación DOS, junto al binario o
 en la ruta que VPA espera. (El `VPA.HLP` hay que regenerarlo una vez; ver §4.)
 
+### Tamaño de la ventana / pantalla completa (`VPA_SCALE`)
+
+La superficie de dibujo de VPA es siempre 640×480; para agrandar la ventana se usa
+la variable de entorno **`VPA_SCALE`** (se antepone al comando; sin ella la escala
+por defecto es **2×**). El valor no distingue mayúsculas/minúsculas.
+
+```sh
+# Pantalla completa (la mayor escala 4:3 que cabe, por encima del panel):
+VPA_SCALE=fullscreen ./build/VPA 3 ~/PLANETS/mipartida
+
+# Ventana nativa 640x480, la más pequeña (sin escalar):
+VPA_SCALE=1 ./build/VPA 3 ~/PLANETS/mipartida
+
+# Ventana a 3x (cualquier N de 2 a 8; se recorta a lo que quepa en pantalla):
+VPA_SCALE=3 ./build/VPA 3 ~/PLANETS/mipartida
+
+# Sin definir VPA_SCALE -> ventana a 2x (por defecto):
+./build/VPA 3 ~/PLANETS/mipartida
+```
+
+| `VPA_SCALE` | Resultado |
+|---|---|
+| *(sin definir)* | Ventana a **2×** (por defecto). |
+| `1` | 640×480 **nativo**, sin escalar (la más pequeña). |
+| `2`…`8` | Ventana a **N×** (recortada a lo que cabe en pantalla), siempre como ventana. |
+| `fullscreen` | **Pantalla completa** real: mayor ajuste 4:3 que cabe, por encima del panel del escritorio. (Alias: `full`, `max`. No distingue may/min, p. ej. `FULLSCREEN` vale.) |
+
+> Se sale siempre con **Alt-X** (guardando) o el botón **[X]**; **Ctrl-Alt-X** sale sin
+> guardar. La pantalla completa se aplica a la propia ventana de VPA (no cambia el modo
+> de vídeo del monitor) y se libera al cerrar.
+
 Sin argumentos, el programa imprime el banner y la ayuda de uso y sale — es la
 forma rápida de comprobar que el binario arranca:
 ```
@@ -179,6 +210,12 @@ El `vpa.cfg` no fija rutas del sistema, así que en cualquier distro con Free Pa
 3.2.x basta con instalar `fpc` y las librerías X11 equivalentes (X11, Xext, Xfixes,
 Xi, Xrandr, Xxf86vm). **Ninguna necesita ya `libxxf86dga`.** El paquete **xvfb** es
 opcional y solo para `make hlp`.
+
+- **Arch Linux** (es lo que cubre §1; aquí en una línea, para tenerlo junto al resto):
+  ```sh
+  sudo pacman -S fpc libx11 libxext libxfixes libxi libxrandr libxxf86vm
+  sudo pacman -S xorg-server-xvfb        # opcional, solo para 'make hlp'
+  ```
 
 - **Debian/Ubuntu:**
   ```sh
