@@ -1,44 +1,26 @@
-# === Finales de linea ===
-# El fuente original venia en CRLF (DOS); en el repo trabajamos en LF.
-# Solo afecta a los finales de linea; los bytes Latin-1 (acentos, tablas) se conservan.
+# Normalizar finales de linea: el fuente original venia en CRLF (DOS).
+# Para el port nativo trabajamos en LF dentro del repositorio.
 * text=auto eol=lf
 
-# Codigo y textos -> forzar LF (en MAYUSCULAS y minusculas: el fuente es herencia DOS)
-*.pas text eol=lf
-*.PAS text eol=lf
-*.inc text eol=lf
-*.INC text eol=lf
-*.pp  text eol=lf
-*.txt text eol=lf
-*.TXT text eol=lf
-*.cfg text eol=lf
-*.ini text eol=lf
-*.INI text eol=lf
-*.md  text eol=lf
-*.sh  text eol=lf
-*.hhh text eol=lf
-*.HHH text eol=lf
+# Codigo y textos: forzar LF
+*.pas  text eol=lf
+*.inc  text eol=lf
+*.pp   text eol=lf
+*.txt  text eol=lf
+*.cfg  text eol=lf
+*.ini  text eol=lf
+*.md   text eol=lf
+*.sh   text eol=lf
 
-# === Binarios: que Git NO los toque NUNCA (ni finales de linea ni nada) ===
-# Imprescindible en ambos casos: los ficheros DOS estan en MAYUSCULAS y, en
-# Linux, los patrones distinguen mayusculas/minusculas.
-*.obj binary
-*.OBJ binary
-*.bgi binary
-*.BGI binary
-*.chr binary
-*.CHR binary
-*.fnt binary
-*.FNT binary
-*.hlp binary
-*.HLP binary
-*.rzg binary
-*.RZG binary
-*.dat binary
-*.DAT binary
-*.msg binary
-*.MSG binary
-*.nm  binary
-*.NM  binary
-*.zip binary
-*.ZIP binary
+# Binarios: que git no los toque
+*.obj  binary
+*.bgi  binary
+*.chr  binary
+*.hlp  binary
+*.fnt  binary
+*.rzg  binary
+*.dat  binary
+# VPA.MSG son plantillas de texto: el port FPC/Linux necesita LF
+# (un CRLF deja un CR colgante que RTrim no elimina y corrompe el parseo)
+*.msg  text eol=lf
+*.zip  binary

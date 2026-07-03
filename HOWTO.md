@@ -16,8 +16,9 @@ look, same keys.
 ## 1. What you need
 
 - A **64-bit x86 Linux** system with a graphical (X11 or Wayland) session.
-- The **`VPA` binary** (in this package), plus the two support files shipped with
-  it: the **`VPA.HLP`** help file and the **`LITT_VPA.CHR`** map font.
+- The **`VPA` binary** (in this package), plus the support files shipped with it:
+  **`DISTTABL.DAT`** (required — a distance table VPA needs to start), **`VPA.MSG`**
+  (message templates), the **`VPA.HLP`** help file and the **`LITT_VPA.CHR`** map font.
 - A **VGA Planets game directory** of your own: the folder with your turn files
   (`GENx.DAT`, `SHIPx.DAT`, `PLANETx.DAT`, `BDATAx.DAT`, `PLAYERx.RST`, etc.), where
   `x` is your race number. VPA does **not** come with a game; you get those files
@@ -66,18 +67,23 @@ Use: VPA race [dir] ...
 `./VPA /?` lists all command-line options (`/B`, `/K`, `/M`, `/O`, `/P`, `/PW:pwd`,
 `/R`, `/S`, `/REP:frm,rep`).
 
-### Support files (`VPA.HLP` and `LITT_VPA.CHR`)
-Keep both support files where you run VPA — in your game directory or next to the
-binary:
+### Support files
+Keep these files where you run VPA — in your game directory or next to the binary:
 
-- **`VPA.HLP`** — the built-in help. With it present, press **F1** inside VPA for
-  the help screen; without it, F1 simply shows nothing.
+- **`DISTTABL.DAT`** — a precomputed distance table. **Required:** VPA refuses to
+  start (and exits) if it's missing or damaged. Ship it as-is; don't edit it.
+- **`VPA.MSG`** — the message templates VPA uses to parse and format incoming host
+  messages. If it's missing, VPA still runs but warns and can't parse messages. It's
+  a plain-text file in **Unix (LF)** line endings — keep it that way; a DOS (CRLF)
+  copy won't parse correctly on Linux.
+- **`VPA.HLP`** — the built-in help. With it present, press **F1** inside VPA for the
+  help screen; without it, F1 simply shows nothing.
 - **`LITT_VPA.CHR`** — the small vector font used for the map labels (planet and ship
   names). If it's missing, VPA still runs but falls back to a built-in font, so those
   labels won't look quite right.
 
-Neither file stops VPA from starting, but you'll want both for the full, correct
-experience.
+Only `DISTTABL.DAT` is strictly required to start; the rest are optional but wanted
+for the full, correct experience.
 
 ---
 
