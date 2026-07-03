@@ -21,14 +21,23 @@ de units del sistema y es portable entre distros).
 ```sh
 sudo pacman -S libx11 libxext libxfixes libxi libxrandr libxxf86vm
 ```
-Una de ellas, **`libxxf86dga`**, ya no está en los repos oficiales; instálala desde
-el AUR:
-```sh
-yay -S libxxf86dga      # o: paru -S libxxf86dga
-```
-> Si prefieres no depender de una librería obsoleta, en la Fase 7 del proyecto está
-> previsto recompilar `ptcgraph` **sin DGA**; mientras tanto, `libxxf86dga` del AUR
-> es la vía rápida.
+> **Ya NO hace falta `libxxf86dga`.** El port vendoriza el backend `ptc` recompilado
+> **sin las extensiones DGA** (en `VENDOR/ptc/`; ver README §1 y Fase 7), así que el
+> binario no enlaza `libxxf86dga` —que además fue retirada de los repos oficiales de
+> Arch en 2019—. Puedes comprobarlo con `ldd build/VPA | grep dga`: no debe aparecer
+> nada. (VPA usa siempre la consola X11 en ventana, nunca DGA, así que no se pierde
+> nada.)
+
+### (Opcional) Xvfb — solo para compilar la ayuda
+Solo si vas a regenerar el fichero de ayuda con `make hlp` (ver §4): el compilador
+de ayuda enlaza la capa gráfica y necesita un display X, que se le da con `xvfb-run`
+(un display virtual, sin pantalla real). El paquete:
+- **Arch:** `sudo pacman -S xorg-server-xvfb`
+- **Debian/Ubuntu:** `sudo apt install xvfb`
+- **Fedora:** `sudo dnf install xorg-x11-server-Xvfb`
+
+> No hace falta ni para el `make` normal ni para ejecutar VPA; únicamente para
+> `make hlp`/`make data`.
 
 ### Wayland
 El binario necesita X11. En una sesión Wayland se ejecuta igualmente a través de
@@ -39,7 +48,7 @@ El binario necesita X11. En una sesión Wayland se ejecuta igualmente a través 
 ## 2. Compilar
 
 Desde la raíz del proyecto (donde están `vpa.cfg`, `Makefile`, y las carpetas
-`VPA/`, `UNIT/`, etc.):
+`VPA/`, `UNIT/`, `VENDOR/`, etc.):
 
 ```sh
 make            # compila -> build/VPA
@@ -52,9 +61,11 @@ Equivale a invocar FPC directamente:
 fpc @vpa.cfg VPA/VPA.PAS
 ```
 
-El ejecutable y los `.ppu`/`.o` quedan en `build/`. Una compilación limpia tarda
-1–2 s y debe terminar con `Linking build/VPA` y sin errores (solo avisos benignos
-de FPC: switches `$E/$L/$N` ignorados, alguna comparación «siempre cierta», etc.).
+El ejecutable y los `.ppu`/`.o` quedan en `build/`. La primera compilación también
+recompila el backend `ptc` vendorizado a `build/ptcunits/` (sin DGA); las siguientes
+solo lo rehacen si cambian sus fuentes. Debe terminar con `Linking build/VPA` y sin
+errores (solo avisos benignos de FPC: switches `$E/$L/$N` ignorados, alguna
+comparación «siempre cierta», etc.).
 
 ---
 
@@ -72,7 +83,7 @@ de FPC: switches `$E/$L/$N` ignorados, alguna comparación «siempre cierta», e
 
 **Ficheros de apoyo:** VPA usa sus recursos originales (`VPA.HLP`, `VPA.MSG`,
 fuentes, etc.). Mantenlos accesibles como en la instalación DOS, junto al binario o
-en la ruta que VPA espera.
+en la ruta que VPA espera. (El `VPA.HLP` hay que regenerarlo una vez; ver §4.)
 
 Sin argumentos, el programa imprime el banner y la ayuda de uso y sale — es la
 forma rápida de comprobar que el binario arranca:
@@ -84,7 +95,33 @@ Use: VPA race [dir] ...
 
 ---
 
-## 4. (Opcional) Reconstruir el árbol desde el fuente original
+## 4. Compilar la ayuda (VPA.HLP)
+
+VPA muestra su ayuda en pantalla (tecla **F1**) desde el fichero `VPA.HLP`. El
+original venía como binario de DOS (empaquetado de records de Borland ≠ FPC), así
+que hay que **regenerarlo** una vez desde `VHLP/VPA.HHH`:
+
+```sh
+make hlp        # genera build/VPA.HLP
+```
+
+Esto compila `VHLP/VHLPMAKE.PAS` y lo ejecuta para producir `VPA.HLP`. Como
+`VHLPMAKE` enlaza la unit gráfica, necesita un display X: el `Makefile` usa
+`xvfb-run` (display virtual) de forma automática, con *fallback* a ejecución
+directa si ya tienes una sesión gráfica. Por eso necesita el paquete **xvfb** (ver
+§1); si no lo tienes y tampoco hay display, `make hlp` fallará.
+
+Copia el resultado a tu carpeta de partida:
+```sh
+cp build/VPA.HLP ~/PLANETS/
+```
+
+> **Atajo:** `make data` hace todo de golpe — compila el binario, genera `VPA.HLP`
+> y copia `LITT_VPA.CHR`, dejándolo en `build/` listo para copiar a la partida.
+
+---
+
+## 5. (Opcional) Reconstruir el árbol desde el fuente original
 
 Si partes del ZIP original (`VPASRC-3_67.ZIP`) en vez del repo ya preparado, el
 árbol se ensambla en dos pasadas: una **mecánica** (automatizable) y una de
@@ -106,11 +143,8 @@ bash preport-all.sh --apply
 #    clausulas uses. swapgraph.py procesa UN fichero por llamada; usa un bucle:
 for f in VPA/*.PAS UNIT/*.PAS; do python3 swapgraph.py "$f" --in-place; done
 
-# 4) Sobrescribir con los ficheros portados a mano (los de este repo):
-#    UNIT/: STRF AUXF MOUSE KEYBOARD
-#    VPA/ : SWITCHES.INC SCREEN TCOMBAT MESSAGES RST_TRN VPAINIT MSGREAD
-#           VPA2 VPADATA VPAEXIT SCRSAVER SVGA VPA VPA4 CONFIG
-#    (cópialos sobre los del árbol mecánico)
+# 4) Sobrescribir con los ficheros portados a mano (los de este repo), incluida
+#    la carpeta VENDOR/ (ptcgraph parcheado + backend ptc sin DGA).
 
 # 5) Compilar
 make           # o:  fpc @vpa.cfg VPA/VPA.PAS
@@ -126,25 +160,41 @@ referencian, así que puedes ignorarlos o borrarlos.
 
 ---
 
-## 5. Solución de problemas
+## 6. Solución de problemas
 
 | Síntoma | Causa / solución |
 |---|---|
 | `Can't find unit system` / `...ptcgraph` | Falta el paquete `fpc` o se está usando un `fpc.cfg` local que eclipsa al `/etc/fpc.cfg`. El fichero de config del proyecto debe llamarse `vpa.cfg`, **no** `fpc.cfg`. |
-| `cannot find -lXxf86dga` al enlazar | Instala `libxxf86dga` (AUR). |
 | `Threading has been used before cthreads was initialized` | Ya resuelto en el port (`cthreads` es la primera unit del `uses` de `VPA.PAS`). Si reaparece, verifica que `VPA.PAS` no se haya regenerado sin ese cambio. |
 | `Exception ... TPTCError` al arrancar | `ptcgraph` no pudo abrir la ventana: no hay display X11. Lanza desde una sesión gráfica (o XWayland). En un servidor sin pantalla puedes probar con `xvfb-run ./build/VPA`. |
-| Datos de la partida ilegibles / valores raros | Revisa que `SWITCHES.INC` tenga `{$PACKRECORDS 1}` (ver §4). |
+| `make hlp` falla o no genera `VPA.HLP` | Falta **xvfb** y no hay display X. Instala el paquete xvfb de tu distro (ver §1) o ejecuta `make hlp` desde una sesión gráfica. |
+| Datos de la partida ilegibles / valores raros | Revisa que `SWITCHES.INC` tenga `{$PACKRECORDS 1}` (ver §5). |
+| No aparece la ayuda al pulsar F1 | Falta `VPA.HLP` en la carpeta de partida. Genéralo con `make hlp` y cópialo (ver §4). |
 
 ---
 
-## 6. Otras distribuciones
+## 7. Otras distribuciones
 
 El `vpa.cfg` no fija rutas del sistema, así que en cualquier distro con Free Pascal
-3.2.x basta con instalar `fpc` y las librerías X11 equivalentes:
+3.2.x basta con instalar `fpc` y las librerías X11 equivalentes (X11, Xext, Xfixes,
+Xi, Xrandr, Xxf86vm). **Ninguna necesita ya `libxxf86dga`.** El paquete **xvfb** es
+opcional y solo para `make hlp`.
 
-- **Debian/Ubuntu:** `sudo apt install fpc libx11-dev libxext-dev libxrandr-dev
-  libxi-dev libxxf86vm-dev libxxf86dga-dev` y compilar igual con `make`.
+- **Debian/Ubuntu:**
+  ```sh
+  sudo apt install fpc libx11-dev libxext-dev libxfixes-dev libxrandr-dev \
+                   libxi-dev libxxf86vm-dev
+  sudo apt install xvfb        # opcional, solo para 'make hlp'
+  ```
+
+- **Fedora:**
+  ```sh
+  sudo dnf install fpc libX11-devel libXext-devel libXfixes-devel \
+                   libXrandr-devel libXi-devel libXxf86vm-devel
+  sudo dnf install xorg-x11-server-Xvfb   # opcional, solo para 'make hlp'
+  ```
+
+Después, en cualquiera de ellas, se compila igual con `make`.
 
 Si tu FPC es de otra versión mayor (4.x), revisa que siga ofreciendo `ptcgraph`;
 el resto del proyecto no depende de la ruta concreta de las units.
