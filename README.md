@@ -77,8 +77,14 @@ la MPL 1.1 es **la intención declarada del mantenedor actual, no un grant escri
 los ficheros por cada autor histórico**. Con varios autores y sin concesión explícita
 en el código, lo limpio es:
 
-1. **Contactar con el mantenedor actual** en SourceForge (`sfplanets`/`lastberserker`)
-   y pedir que confirme la licencia, idealmente añadiendo un fichero `LICENSE` al repo.
+1. **Situación aclarada con Stefan Reuther (PCC/PDK).** Consultado sobre la ausencia de
+   `LICENSE`/`COPYING` en el paquete, confirma que **nunca los hubo**: por lo que ve en el
+   historial git de SourceForge, Alex Ivlev pasó el código a Alexander Babanov
+   (`lastberserker`), que lo subió a SourceForge; la etiqueta **MPL** vive solo como metadato
+   del proyecto. Su recomendación de cara a publicar: añadir un `README` que apunte al
+   repositorio original («*based on original work published at &lt;link&gt; under MPL license*»)
+   y un fichero `LICENSE` con la **MPL** (o una compatible). Este es el plan para el cierre de
+   licencia previo a publicar (Fase 7).
 2. Para el código de **Stefan Reuther** que se conserva (`CC/`, PCC), los términos están en
    `CC/README` y en §1 (PCC2/PDK). Su **subsistema DPMI** (D4TP) se ha **eliminado** del port
    (era exclusivo de DOS), y con él su licencia `UNIT/DPMI.TXT`. Sigue activo en la comunidad
@@ -252,10 +258,10 @@ verificable al final de cada una.
 
 ### Fase 0 — Preparación del entorno
 - [x] Instalar Free Pascal y verificar que incluye `ptcgraph`, `ptccrt`, `ptcmouse`, `ptc`. ✅ FPC **3.2.2**; units en el paquete `fp-units-gfx`. Toolchain compila y enlaza. *(Ver §5.)*
-- [ ] Inicializar repositorio git e importar la 3.67 **intacta** como primer commit (base inmutable de referencia).
-- [ ] Crear rama de trabajo `port-linux`.
+- [x] Inicializar repositorio git e importar la 3.67 **intacta** como base de referencia. ✅ Hecho: subida en el 3.er commit (`Updated README.md and uploads original source code`); los dos primeros commits eran el README inicial y su actualización.
+- [x] Rama de trabajo. ✅ El desarrollo va en **`main`**. Al cerrar el primer binario nativo se **congelará** el estado como rama **`3.67`** (release) y `main` seguirá como rama de desarrollo para correcciones y mejoras futuras.
 - [x] Añadir `.gitignore`, `.gitattributes` y `setup-env.sh` (entregables de esta fase, ya generados).
-- [ ] Resolver/anotar el tema de licencia (contacto con mantenedor si se prevé distribuir).
+- [x] Resolver/anotar el tema de licencia (contacto con mantenedor si se prevé distribuir). ✅ **Anotado y contactado**: el análisis completo está en §1, y se consultó a **Stefan Reuther** (PCC/PDK), que confirma que nunca hubo `LICENSE`/`COPYING` en el paquete —solo el metadato **MPL** de SourceForge— y recomienda, de cara a publicar, añadir un `README` que apunte al repositorio original («based on original work published at &lt;link&gt; under MPL license») y un fichero `LICENSE` con la MPL (o una compatible). El cierre efectivo (añadir el `LICENSE`) queda para antes de publicar (ver Fase 7).
 - [x] Convertir finales de línea CRLF→LF (lo gestiona `.gitattributes`) y documentar codificación de los textos.
 
 ### Fase 1 — Recorte y andamiaje de compilación
@@ -325,7 +331,7 @@ verificable al final de cada una.
 - [ ] Comparar comportamiento contra la versión DOS en DOSBox.
 - [ ] Empaquetar (binario + ficheros de soporte: `vpa.hlp`, `vpa.msg`, recursos).
 - [ ] Cerrar el tema de licencia si se publica.
-- [ ] *(Opcional, fase posterior)* Evaluar 256 colores / resoluciones mayores, o un backend SDL para modernización real.
+- [x] *(Opcional, fase posterior)* Evaluar 256 colores / resoluciones mayores, o un backend SDL para modernización real. ✅ **256 colores hecho** (el port corre en `D8bit`/m640x480, 256 colores) y **resoluciones mayores hechas** vía `VPA_SCALE` (ventana N× y pantalla completa, manteniendo la superficie 640×480). Un **backend SDL** queda como **futuro opcional** (no necesario: `ptcgraph` cubre la API BGI; `sdlgraph` está reportado como roto por FPC).
 - [x] **Eliminada la dependencia de `libXxf86dga`.** Se vendoriza el backend `ptc` (solo `core/` + `x11/`, ~556 KB) en `VENDOR/ptc/` con las extensiones X11 `XF86DGA1`/`XF86DGA2` desactivadas en `x11/x11extensions.inc`; el `Makefile` (objetivo `ptc`) lo recompila a `build/ptcunits/` y `vpa.cfg` lo antepone al `ptc` del sistema. Verificado con `ldd`: el binario ya **no** enlaza `libXxf86dga` (VPA siempre usa la consola X11 en ventana, nunca DGA, así que no se pierde nada).
 
 ---
