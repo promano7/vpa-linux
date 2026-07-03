@@ -1652,7 +1652,7 @@ PROCEDURE ReadMessages (race:byte; lookmsg:boolean);
 
     if race=player then OpenW(g,'VPAMSG'+plstr+'.DAT',Yes);
 
-    Assign(t,VPA_MSG);
+    Assign(t,ResolveCase(VPA_MSG));   { tolerancia de caja: vpa.msg / VPA.MSG en Linux }
     Reset(t);
     if IOResult<>0 then
     begin
@@ -1708,6 +1708,9 @@ PROCEDURE ReadMessages (race:byte; lookmsg:boolean);
       while not Eof(t) do
       begin
         Readln(t,s); inc(l);
+        { Blindaje: si el VPA.MSG viniera en CRLF (DOS), Readln en Linux deja un CR
+          colgante que RTrim no quita; lo eliminamos para que las plantillas casen. }
+        if (ls>0) and (s[ls]=#13) then dec(ls);
         ProcessTabs(s); Trim(s);
         if (ls=0) or (s[1]=';') then Continue;
         Parse(s,s1,' '#9); Upper(s1);
