@@ -299,7 +299,7 @@ verificable al final de cada una.
 ### Fase 5 — E/S de ficheros y portabilidad de datos *(crítica)*
 - [x] **Tamaños de tipos** *(verificado en §5)*: en `{$MODE TP}` con FPC 3.2.2 x86_64, `Integer`=2, `Word`=2, `LongInt`=4 bytes (idénticos a BP7). **Dos trampas confirmadas:** `Pointer`=8 bytes (era 4) y `Real`=8 bytes (en BP7 era de **6 bytes**). **Resuelto:** los records que van a disco (`SRec`, `STRec`, `MRec`, `URec`, combate…) contienen solo `int`/`char`/`long`/`byte`/`boolean` — **ningún `pointer` ni `real` dentro** (auditado), así que no hay desajuste de tamaño. El único `Pointer`→entero problemático estaba en el display de dirección de error (`VPA.PAS`, manejador de fallos); corregido con `PtrUInt`.
 - [x] **Empaquetado de records (CRÍTICO, resuelto).** Turbo/Borland Pascal **siempre** empaqueta records sin relleno; FPC en modo TP **alinea a 2 por defecto**, insertando padding tras campos de tamaño impar (p. ej. `fcode` de 3 bytes en `SRec`) y desalineando lo leído de los `.DAT`. Verificado: `SizeOf(SRec)`=124 con relleno vs **123 byte-packed** (`name` en offset 46 vs 45). Solución: `{$PACKRECORDS 1}` en `switches.inc` (incluido por todas las units) → layout idéntico al de DOS. Binario recompila, enlaza y arranca.
-- [ ] **Endianness:** validar lectura de los binarios (x86 era little-endian; vigilar si se compila para ARM).
+- [x] **Endianness (validado + guarda).** Los ficheros de VGA Planets (`.DAT`/`.RST`/`.TRN`/`VPAx.DB`) son **little-endian** (formato x86 de DOS) y VPA los lee/escribe crudos con `BlockRead`/`BlockWrite` sobre records empaquetados, sin conversión. Esto es correcto en **todos los targets Linux realistas** (x86-64, ARM64, ARM32, RISC-V… todos little-endian por defecto), así que en **ARM funciona igual que en x86**. Para no corromper datos en silencio en un hipotético target **big-endian** (que necesitaría byte-swapping, no implementado), se añadió una **guarda de compilación** en `switches.inc`: `{$IFDEF ENDIAN_BIG}{$FATAL …}{$ENDIF}` — inerte en little-endian, y en big-endian **aborta la compilación con un mensaje claro** en vez de generar un binario que corrompería las partidas. Verificado que la guarda es inerte en x86-64 y que dispara correctamente (probado invirtiendo la condición).
 - [x] **Separador de rutas DOS→Linux (RESUELTO).** `OpenRW`/`OpenData` anteponen el directorio de partida (`addir`) a cada nombre, y `VPAINIT` le añadía un `\` de DOS → `LUPUS4\GEN5.DAT` no existe en Linux. Cambiado a `/`. (`OpenData` ya prueba `addir+name` y cae a `name` en el directorio actual, así que los ficheros maestros como `PLANET.NM` se localizan bien.)
 - [x] **Comprobaciones de runtime (RESUELTO).** El `BPC.CFG` original desactivaba E/S, rango, overflow y pila (`/$I-,R-,S-,Q-`) globalmente; el código asume `{$I-}` (comprueba `IOResult` tras `Reset`, sin excepciones). Sin ello, un fichero ausente lanzaba `EInOutError 217` al arrancar. Replicado en `vpa.cfg` con `-Ci- -Cr- -Co- -Ct-` (aplica a todas las units, también las que no incluyen `switches.inc` como `INI`). Verificado: el binario arranca, escribe su config y lee los datos de la partida desde el directorio indicado.
 - [x] **Rutas mayúsculas/minúsculas (RESUELTO).** Las partidas reales mezclan mayúsculas y
@@ -308,7 +308,11 @@ verificable al final de cada una.
   sistema de ficheros sensible a may/min **no abría** esos datos → caía a valores por defecto
   (¡incluido `AllowAlternativeCombat=No`!), alterando el combate. Solución: `ResolveCase` en
   `CONFIG.PAS` y `VPADATA.PAS` (resuelve el nombre real escaneando el directorio sin distinguir
-  may/min); aplicado en `ReadConfigFile`, `OpenData`, `Exists` y `OpenRW`.
+  may/min); aplicado en `ReadConfigFile`, `OpenData`, `Exists`, `OpenRW` y `OpenText` (el lector
+  de texto genérico), y en las lecturas de config distribuidas (`RACES.INI`, `MISSION.INI`,
+  `VPADATA.INI`, `VPACLR.INI`). Nombres 8.3 (`GEN5.DAT`…) no dan problema en Linux; el `vpa.ini`
+  propio de VPA se deja sin `ResolveCase` (caja consistente al crearlo/leerlo; envolverlo
+  arriesgaría una asimetría lee-resuelto/escribe-original al renombrar).
 - [ ] Adaptar el manejo de errores de Borland (`ExitProc`, `ExitCode`, `ErrorAddr`, procedimientos `far`) al equivalente de FPC.
 
 ### Fase 6 — Primer binario nativo

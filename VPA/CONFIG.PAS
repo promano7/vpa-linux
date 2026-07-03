@@ -839,7 +839,7 @@ procedure WriteDConfig;
         s1      : string [MaxKLen];
         key     : cfgKey;
   begin
-    Assign(f,addir+VPADATA_INI);
+    Assign(f,ResolveCase(addir+VPADATA_INI));
     Reset(f);
     if IOResult=0 then begin Close(f); Exit end;
     Writeln('Writing ',addir,VPADATA_INI,'...');
@@ -862,7 +862,7 @@ procedure WriteRConfig;
         i       : byte;
         s       : string [MaxKLen];
   begin
-    Assign(f,addir+RACES_INI);
+    Assign(f,ResolveCase(addir+RACES_INI));
     Reset(f);
     if IOResult=0 then begin Close(f); Exit end;
     Writeln('Writing ',addir,RACES_INI,'...');
@@ -885,7 +885,7 @@ procedure ReadMIT;
         m,m1    : MITptr;
         n       : int;
   begin
-    Assign(f,addir+'MISSION.INI');
+    Assign(f,ResolveCase(addir+'MISSION.INI'));
     Reset(f);
     if IOResult<>0 then Exit;
     Writeln('Reading MISSION.INI...');
@@ -969,7 +969,7 @@ procedure FinishColorSetup;
       Dispose(cpp1);
     end;
     if not RWMode then Exit;
-    Assign(f,addir+VPACLR_INI);
+    Assign(f,ResolveCase(addir+VPACLR_INI));
     Reset(f);
     if IOResult=0 then begin Close(f); Exit end;
     Writeln('Writing ',addir,VPACLR_INI,'...');

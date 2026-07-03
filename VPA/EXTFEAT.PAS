@@ -2299,11 +2299,11 @@ function OpenText(var f:text; name:filename; mustbe:boolean) : boolean;
 begin
   OpenText:=No;
   FileMode:=0;
-  Assign(f,addir+name);
+  Assign(f,ResolveCase(addir+name));
   Reset(f);
   if (IOResult<>0) or EOF(f) then
   begin
-    Assign(f,name);
+    Assign(f,ResolveCase(name));
     Reset(f);
     if (IOResult<>0) or EOF(f) then
       if mustbe then begin Writeln(#13#10'Can''t read file ',name); Halt end
