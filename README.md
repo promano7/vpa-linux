@@ -254,27 +254,27 @@ verificable al final de cada una.
 - [x] Instalar Free Pascal y verificar que incluye `ptcgraph`, `ptccrt`, `ptcmouse`, `ptc`. ✅ FPC **3.2.2**; units en el paquete `fp-units-gfx`. Toolchain compila y enlaza. *(Ver §5.)*
 - [ ] Inicializar repositorio git e importar la 3.67 **intacta** como primer commit (base inmutable de referencia).
 - [ ] Crear rama de trabajo `port-linux`.
-- [ ] Añadir `.gitignore`, `.gitattributes` y `setup-env.sh` (entregables de esta fase, ya generados).
+- [x] Añadir `.gitignore`, `.gitattributes` y `setup-env.sh` (entregables de esta fase, ya generados).
 - [ ] Resolver/anotar el tema de licencia (contacto con mantenedor si se prevé distribuir).
-- [ ] Convertir finales de línea CRLF→LF (lo gestiona `.gitattributes`) y documentar codificación de los textos.
+- [x] Convertir finales de línea CRLF→LF (lo gestiona `.gitattributes`) y documentar codificación de los textos.
 
 ### Fase 1 — Recorte y andamiaje de compilación
 - [x] **VPAMM ya está desactivado** por defecto (`{.$DEFINE VPAMM}` en `switches.inc`): el build estándar de `vpa.pas` no lo incluye. No hay que tocar el núcleo para sacarlo.
 - [x] **Carpeta `VPAMM/` descartada y eliminada del repositorio.** Era la variante "modo mixto" de DOS (DPMI + VESA + kernel gráfico propio: `DRIVERS`, `AAVESA`, `AAFONT`, `VESA256`, `VGA640`, `GRAPH`…). El símbolo `VPAMM` nunca se define en el port (los bloques `{$IFDEF VPAMM}` compilan a nada) y la capa gráfica es `ptcgraph`, no esos drivers. Verificado que `vpa.pas` **compila y enlaza sin la carpeta** (no está en las rutas `-Fu` de `vpa.cfg` ni la usa ningún `uses`/`{$I}` del build vivo). Las units DPMI de `UNIT/` (`DPMI`, `DPMITEST`, `MEMTEST`, `SYSEXT`) solo las usan programas de prueba descartados; pendientes de eliminar aparte (ver Fase 4).
 - [x] `vpa.cfg` para FPC en modo `{$MODE TP}` con las rutas de units del proyecto + ptcgraph (ruta Arch verificada). *(Sustituye a `BPC.CFG`.)*
 - [x] **`Makefile` para FPC** (sustituye al de Borland Make): objetivos `build`/`clean`/`run`/`help`. Build con `fpc @vpa.cfg VPA/VPA.PAS`. Instrucciones completas de compilación y ejecución en **[`BUILD.md`](BUILD.md)** (dependencias en Arch, ejecución con una partida, solución de problemas).
-- [ ] Decidir sobre `VPACC` (hoy ON) y `TASKS` (hoy OFF): mantener o desactivar `VPACC` al principio para reducir superficie.
-- [ ] **Limpieza global de directivas Borland** sin equivalente en Linux: `{$C MOVEABLE PRELOAD PERMANENT}` (atributos de segmento/overlay DOS), etc. — strip masivo.
-- [ ] Primer compilado de tanteo (bottom-up, empezando por una unit hoja como `STRF`): **recoger la lista de errores reales**.
+- [x] Decidir sobre `VPACC` y `TASKS`: **ambos quedan OFF** (comentados en `switches.inc`). La capa `VPACC` (`Enum*` estilo PCC2) no se activa para reducir superficie; las features que dependían de ella (hull-functions: chunnel en flota, cloak avanzado…) se resolvieron sobre el **modelo antiguo** (`IsShipFunc3`/`ShipOrHullDoes`, ver §1), sin necesidad de encender `VPACC`.
+- [x] **Limpieza global de directivas Borland** sin equivalente en Linux: `{$C MOVEABLE PRELOAD PERMANENT}` (atributos de segmento/overlay DOS), etc. — strip masivo.
+- [x] Primer compilado de tanteo (bottom-up, empezando por una unit hoja como `STRF`): **recoger la lista de errores reales**.
 
 ### Fase 2 — Capa gráfica (`ptcgraph`)
 - [x] **Verificado: `ptcgraph` cubre el 100% de la API BGI que usa VPA** (probado compilando un programa con todas las llamadas: `Line`, `OutTextXY`, `GetImage`/`PutImage`, `Circle`, `Bar`, paletas, viewports…). Es prácticamente *drop-in*.
 - [x] **`swapgraph.py`**: cambia `uses Graph`→`ptcgraph` (y `Crt`→`ptccrt`) en las cláusulas `uses` de los 22 ficheros afectados, preservando encoding. (VPA no usa `Crt`; sí `Dos` en 5 ficheros → Fase 4.)
-- [ ] Aplicar `swapgraph.py` a los ficheros con `uses Graph`.
-- [ ] **Reescribir la init de `VPA/VPAINIT.PAS`**: las ramas SVGA/CustomBGI/EGAVGA registran drivers BGI externos (`@svgaProc`, `@EGAVGADriverProc`, `@SmallFontProc`) que no enlazan en Linux. En ptcgraph `InstallUserDriver`/`RegisterBGIDriver` son no-ops; se sustituye todo el bloque por una llamada directa `InitGraph(gd,gm,'')` con un modo nativo (p.ej. `gd:=D8bit; gm:=m640x480` para 256 colores). Eliminar `SVGA.PAS`/`SVGA.OBJ`.
-- [ ] Reescribir `GREETS.ASM` en Pascal o eliminarla.
-- [ ] Portar la cadena del núcleo gráfico (`SCREEN`, `VPADATA`, `Global`…) hasta compilar.
-- [ ] **Hito:** arrancar en modo gráfico y dibujar el mapa estelar.
+- [x] Aplicar `swapgraph.py` a los ficheros con `uses Graph`.
+- [x] **Reescribir la init de `VPA/VPAINIT.PAS`**: las ramas SVGA/CustomBGI/EGAVGA registran drivers BGI externos (`@svgaProc`, `@EGAVGADriverProc`, `@SmallFontProc`) que no enlazan en Linux. En ptcgraph `InstallUserDriver`/`RegisterBGIDriver` son no-ops; se sustituye todo el bloque por una llamada directa `InitGraph(gd,gm,'')` con un modo nativo (p.ej. `gd:=D8bit; gm:=m640x480` para 256 colores). Eliminar `SVGA.PAS`/`SVGA.OBJ`.
+- [x] Reescribir `GREETS.ASM` en Pascal o eliminarla. ✅ **Descartada**: `WriteGreeting` (`VPAEXIT.PAS`) usa un stub sin datos de saludo, `GREETS.OBJ` no se enlaza y `GREETS.ASM`/`GREETS.BAT` quedan como ficheros muertos (no se compilan ni referencian).
+- [x] Portar la cadena del núcleo gráfico (`SCREEN`, `VPADATA`, `Global`…) hasta compilar.
+- [x] **Hito:** arrancar en modo gráfico y dibujar el mapa estelar.
 - [x] **Ventana más grande opcional (`VPA_SCALE`).** La superficie de dibujo sigue siendo 640×480 (toda la UI de VPA está diseñada para ese tamaño); para agrandar la ventana sin cambiar el modo de vídeo ni usar "fullscreen" del gestor (ambos provocaron cuelgues), se **vendoriza un `ptcgraph` con un parche mínimo** que crea la "consola" de `ptc` más grande y deja que `ptc` escale la superficie 640×480 para llenarla (ver `VENDOR/` y §1). El ratón se reescala en ambos sentidos (`xfocus.MapMouseToSurface`/`MapSurfaceToWindow`) para que el clic y las flechas mantengan la precisión píxel a píxel. Opciones (variable de entorno):
   - sin definir → **escala 2 por defecto** (ventana en el escritorio);
   - `VPA_SCALE=1` → 640×480 nativo (sin escalar);
@@ -287,8 +287,8 @@ verificable al final de cada una.
 - [x] Reescrito `UNIT/KEYBOARD.PAS` sobre `ptccrt` (`ReadKey`, `KeyPressed`, `PreviewKey`).
 - [x] **Mapeados los scancodes BIOS** ($3B00=F1, etc.): `ReadKey` devuelve el ascii en el byte bajo o el scancode en el byte alto para teclas extendidas.
 - [x] **`PollMouse` conectado al bucle de entrada:** se llama desde `KeyPressed` (no desde `FastKeyPressed`, reservado a bucles de animación). Cadena verificada: bucle principal → `KeyPressed` → `PollMouse` → `Dispatch(EvLtPress…)` → `MouseHandler` fija `mEvent` → el bloque `while mEvent<>0` ejecuta la acción. Compila, enlaza y arranca.
-- [ ] **Pendiente de prueba interactiva** (requiere partida real): navegar mapa y menús con ratón. **Shift/Ctrl/Alt: resuelto** — `KbdFlags` consulta el estado actual de modificadores a X11 (`XQueryPointer`, estilo BIOS `0040:0017`), validado por inyección (Shift→3, Ctrl→4, Alt→8) tanto en atajos de teclado como en ratón+modificador (zoom del mapa).
-- [ ] **Hito:** navegar por el mapa y los menús con ratón y teclado.
+- [x] **Prueba interactiva** (con partida real): navegar mapa y menús con ratón — **validado jugando** (mapa, planetas, StarBases, combate…). **Shift/Ctrl/Alt: resuelto** — `KbdFlags` consulta el estado actual de modificadores a X11 (`XQueryPointer`, estilo BIOS `0040:0017`), validado por inyección (Shift→3, Ctrl→4, Alt→8) tanto en atajos de teclado como en ratón+modificador (zoom del mapa).
+- [x] **Hito:** navegar por el mapa y los menús con ratón y teclado.
 
 ### Fase 4 — Limpieza de bajo nivel (UNIT + núcleo)
 - [x] **Eliminados** `UNIT/DPMI.PAS`, `UNIT/DPMITEST.PAS`, `UNIT/MEMTEST.PAS`, `UNIT/SYSEXT.PAS` (subsistema DPMI de DOS), más los binarios DOS muertos `UNIT/DPMI.TPU`/`UNIT/SYSEXT.TPU` y la doc/licencia `UNIT/DPMI.TXT`. Verificado que nada vivo los usa y que `vpa.pas` compila y enlaza sin ellos. `DPMI` solo lo usaban `DPMITEST`/`MEMTEST` (programas de prueba, también fuera).
@@ -313,13 +313,13 @@ verificable al final de cada una.
   `VPADATA.INI`, `VPACLR.INI`). Nombres 8.3 (`GEN5.DAT`…) no dan problema en Linux; el `vpa.ini`
   propio de VPA se deja sin `ResolveCase` (caja consistente al crearlo/leerlo; envolverlo
   arriesgaría una asimetría lee-resuelto/escribe-original al renombrar).
-- [ ] Adaptar el manejo de errores de Borland (`ExitProc`, `ExitCode`, `ErrorAddr`, procedimientos `far`) al equivalente de FPC.
+- [x] Adaptar el manejo de errores de Borland (`ExitProc`, `ExitCode`, `ErrorAddr`, procedimientos `far`) al equivalente de FPC.
 
 ### Fase 6 — Primer binario nativo
 - [x] **Iterar hasta lograr compilación limpia y un ejecutable que arranque.** ✅ **HITO: todas las units compilan y enlazan en un binario ELF de 64 bits.** Arranca bajo X11 (probado con Xvfb): inicializa `cthreads`, abre el display, imprime el banner y la ayuda de uso, y sale limpiamente al no recibir raza/directorio. `34064` líneas compiladas, 25 warnings.
 - [x] **Warnings de rango y de puntero corregidos:** las constantes fuera de rango de byte se debían al camino VPACC-off nunca compilado en el original — `VPA4` (`chr($5300)` de la tecla DEL, que se trunca a `chr(0)` como en DOS) → explicitado a `chr(0)`; `CONFIG` (`byte(key)-byte(kFF1)+1` con un enum que cruza 256) → `ord(...)`. El truncado de puntero de 64 bits en el display de error (`VPA.PAS`, `long(ErrorAddr)`) → `PtrUInt`. Quedan solo warnings benignos de FPC (switches `$E/$L/$N` ignorados, comparaciones siempre true/false, alguna variable sin inicializar) sin impacto.
 - [x] **`PollMouse` conectado al bucle de entrada principal** (vía `KeyPressed`; ver Fase 3).
-- [ ] Probar con datos reales de una partida (RST/TRN) — requiere un directorio de juego con `GENx.DAT`, `SHIPx.DAT`, etc.
+- [x] Probar con datos reales de una partida (RST/TRN) — requiere un directorio de juego con `GENx.DAT`, `SHIPx.DAT`, etc.
 
 ### Fase 7 — Pruebas, empaquetado y (opcional) distribución
 - [ ] Comparar comportamiento contra la versión DOS en DOSBox.
