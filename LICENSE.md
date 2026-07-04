@@ -27,6 +27,7 @@ copyright notices are retained.**
 | **PHost combat viewer**, ported from PCC2ng | `VPA/PVCRALG.PAS` and the parts derived from it wired into `VPA/TCOMBAT.PAS` and `VPA/MESSAGES.PAS` | **PCC II License Terms** (permissive, BSD-style) | © Stefan Reuther & contributors |
 | **Vendored Free Pascal** run-time files | `VENDOR/` (`ptcgraph.pp`, `ptccrt.pp`, `ptc/…`) | **GNU LGPL with the static-linking exception** (the modified LGPL under which FPC ships) | © 2010–2011 Nikolay Nikolov; © 2007 Daniel Mantione; and the Free Pascal development team |
 | **New port code**, build tooling and documentation | `UNIT/xfocus.pas`, `Makefile`, `vpa.cfg`, `preport.py`, `preport-all.sh`, `swapgraph.py`, `setup-env.sh`, `README.md`, `BUILD.es.md`, `BUILD.en.md`, `HOWTO.md`, this `LICENSE.md`, … | **BSD 3-Clause** | © 2026 Pablo Romano |
+| **Map label font** (BGI stroked font "LITT") | `LITT_VPA.CHR` | **© Borland International** — a Borland Graphics Interface (BGI) runtime font, not covered by the licenses above (see note below) | © 1987–1988 Borland International |
 
 ### Important notes
 
@@ -48,6 +49,14 @@ copyright notices are retained.**
   (`ptcgraph.pp`, `ptccrt.pp`, `ptc/x11/x11extensions.inc`,
   `ptc/x11/x11windowdisplayi.inc` and its `.d.inc`) keeps a header stating what was
   changed, as the LGPL requires.
+- **`LITT_VPA.CHR` is a Borland BGI font.** This map-label font is the stock Borland
+  Graphics Interface stroked font *"LITT"* (Small Font); its own header reads
+  *"Copyright (c) 1987,1988 Borland International."* It was embedded in the original
+  DOS VPA (as the linked `LITT_VPA.OBJ`) and is carried over here as the equivalent
+  `.CHR`. It is **not** original port work and is **not** covered by the MPL, BSD, PCC
+  or LGPL terms above — its copyright is Borland's. VPA runs without it (it falls back
+  to a built-in font), so it is **optional**. If a fully unencumbered redistribution is
+  desired, this file can be replaced with a free stroked font or omitted.
 
 ---
 
@@ -59,6 +68,7 @@ copyright notices are retained.**
   viewer) (© 2001–2024).
 - **Nikolay Nikolov, Daniel Mantione, and the Free Pascal development team** — the
   vendored Free Pascal run-time files in `VENDOR/`.
+- **Borland International** — the BGI stroked font `LITT_VPA.CHR` (© 1987–1988).
 - **Andrew Sterian, Thomas Voigt, Steffen Pietsch, Maurits van Rees, Stefan Reuther**
   — the PHost Development Kit (PDK), consulted as reference only.
 - **Pablo Romano** — the GNU/Linux native port (© 2026).
@@ -104,8 +114,8 @@ do), those govern.
 
 - **Mozilla Public License (MPL)** — <https://www.mozilla.org/en-US/MPL/>. The
   original VPA project on SourceForge is tagged **MPL 1.1**; a copy of the MPL should
-  accompany the VPA-derived files in any redistribution. (MPL 2.0 is the current
-  version.)
+  accompany the VPA-derived files in any redistribution (MPL 2.0 is the current
+  version).
 - **GNU LGPL + Free Pascal static-linking exception** — see the headers of the files
   in `VENDOR/` and <https://wiki.freepascal.org/faq#Licensing>.
 - **PCC II License Terms** — the permissive terms under which PCC2 / PCC2ng are

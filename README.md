@@ -30,6 +30,14 @@ sustitución de la BGI de Borland.
 
 ## 1. Análisis de licencia
 
+> 📄 **Resumen de licencia y textos completos: [`LICENSE.md`](LICENSE.md)** (con una copia de
+> la MPL en [`MPL-2.0.txt`](MPL-2.0.txt)). En corto: el código de **VPA** (y sus modificaciones)
+> sigue bajo **MPL**; lo portado de **PCC2/PCC2ng** bajo los *PCC II License Terms* (tipo BSD);
+> los ficheros vendorizados de **Free Pascal** bajo **LGPL** con excepción de enlace estático; y
+> el **código nuevo del port** bajo **BSD 3-Clause**, © 2026 Pablo Romano. Atribución:
+> *«based on original work published at <https://sourceforge.net/projects/vpa/> under the MPL license»*.
+> Esta sección conserva el análisis detallado que llevó a esa decisión.
+
 > **Intención del proyecto (decisión del autor del port):** este port será **software
 > libre, open source y gratuito** para toda la comunidad de VGA Planets, publicado en
 > **GitHub**. Se acepta sin problema usar dependencias o referencias **GPL** si son la
