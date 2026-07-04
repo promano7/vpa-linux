@@ -130,7 +130,24 @@ directory, ready to send back to your host.
 
 ---
 
-## 5. Credits & license
+## 5. Combat viewer — no `PVCR.EXE` / `VCR.EXE` needed
+
+The original DOS VPA could launch **external** combat viewers to replay battles —
+`PVCR.EXE` for **PHost** battles and `VCR.EXE` for classic **Tim-Host** battles. You
+do **not** need any of those with this Linux build: **the combat viewer is built in.**
+
+- **PHost** battles use a **native viewer** ported from the combat algorithm of
+  PCC2ng (bit-exact with the original), so `PVCR.EXE` is no longer required.
+- **Classic (Tim-Host)** battles use VPA's own internal viewer, so `VCR.EXE` isn't
+  needed either.
+
+There are **no external `.EXE` helpers to install or copy** — just run VPA. To watch a
+fight, open the combat message in the messages screen (**F3**) and press **`v`** to
+view it; the **F5** combat simulator also uses the same built-in engine.
+
+---
+
+## 6. Credits & license
 
 VPA was written by **Alex V. Ivlev** (© 1993–96) and maintained afterwards by the
 VPA team; it includes combat logic derived from **PCC2ng** by **Stefan Reuther**.
