@@ -674,8 +674,12 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
     `pvKillObject` — **corregido**: ahora el driver dibuja la explosión completa con el sprite
     `ExplPic` (encima de todo, tras los refrescos, quitando antes el escudo), no un `Blast`
     simple; estelas de fighters — **corregidas** en la Fase E (array `pvFH`, borra cada caza con
-    la misma forma con la que se dibujó). El **escalonado en Y de los fighters sigue siendo
-    aproximado** (no confirmado como pulido). `SetPhost3` fijado a `False` en esta fase (la
+    la misma forma con la que se dibujó); **escalonado en Y de los fighters — verificado sin
+    problema real**: `pvFY` fija la altura solo por `track mod 10` (no por su posición X),
+    así que dentro de una misma oleada lanzada en secuencia el resultado natural es una
+    diagonal escalonada (cada caza con un poco más de vuelo que el siguiente), no un
+    solapamiento; comprobado con capturas reales con hasta 74 cazas por bando sin dos iconos
+    coincidiendo en la misma altura. `SetPhost3` fijado a `False` en esta fase (la
     detección PHost 3-vs-4 es de la Fase D, que lo corrige a `True`). **Verificado
     visualmente** contra `PVCR.EXE` en la Fase E.
 - **Fase D — Integración en VPA:** ✅ *hecho.* El visor PHost nativo está enrutado en
