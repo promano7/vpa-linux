@@ -480,23 +480,19 @@ categoría (esto es la hoja de ruta de las Fases 2–4):
 
 | Fase | Estado | Notas |
 |---|---|---|
-| 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Caso `libXxf86dga` resuelto del todo (ptc vendorizado sin DGA, ver Fase 7). Pendiente solo admin: `git init` + rama + licencia. |
-| 1 — Recorte y andamiaje | 🟡 En curso | VPAMM ya OFF. `vpa.cfg` generado. **Units portadas: `STRF`, `AUXF`** (compilan + validadas). `AUXF` ahora exporta `MaxAvail`/`MemAvail` (heap DOS→valor grande en Linux), centralizado para todo el núcleo. Receta de port en §6. |
-| 2 — Capa gráfica (`ptcgraph`) | 🟡 En curso | Swap aplicado; SVGA fuera; `vpa.cfg`. **`SCREEN`, `TCOMBAT`, `MESSAGES` y `VPAINIT` portados y compilan.** `VPAINIT`: registro de drivers BGI → `InitGraph(D8bit, m640x480, '')` directo; quitados `mem[Seg0040]`, asm muerto y reset de CapsLock. Geometría/atributos de texto: a afinar viendo el binario. Frente actual: asm de `MSGREAD.PAS`. |
-| — Features *stubeadas* (restaurar luego) | 📝 Anotado | (1) **Hull-functions**: `IsShipFunc3`/`ShipOrHullDoes` **implementados** sobre el modelo antiguo (ver §1 y «Estado actual»); solo la capa `Enum*` estilo PCC2 sigue bajo `{$IFDEF VPACC}` (off). (2) **`KbdFlags`** (Shift/Ctrl/Alt) → **resuelto** (estado actual vía X11 `XQueryPointer`). (3) **`TCOMBAT.LoadPic`**: el decodificador de sprites VGA planares (4 planos) + paleta + rotación del visor de combate **ya está portado** a Pascal (ver «Estado actual (runtime)»); `SetPal` implementado. |
+| 0 — Preparación del entorno | ✅ Completada | Toolchain verificado **end-to-end** en Arch (FPC 3.2.2 compila y enlaza ptcgraph). Caso `libXxf86dga` resuelto del todo (ptc vendorizado sin DGA, ver Fase 7). `git init`/import y rama, hechos (ver §4, Fase 0); licencia contactada y anotada (Stefan Reuther), cierre formal en `LICENSE.md`/`MPL-2.0.txt` pendiente solo de publicar. |
+| 1 — Recorte y andamiaje | ✅ Completada | VPAMM descartado; `vpa.cfg`/`Makefile` para FPC. **Todas las units del núcleo portadas y compilan** (`STRF`, `AUXF` y el resto vía la receta de este §6). `GREETS.ASM` descartada (stub en `VPAEXIT`). |
+| 2 — Capa gráfica (`ptcgraph`) | ✅ Completada | Swap aplicado; SVGA fuera. `SCREEN`, `TCOMBAT`, `MESSAGES`, `VPAINIT` y el resto del núcleo gráfico portados, compilan y **dibujan el mapa estelar real**. `VPAINIT`: `InitGraph(D8bit, m640x480, '')` directo (sin drivers BGI externos). Sprites de naves/combate, StarBases y salvapantallas funcionando (ver «Estado actual (runtime)», punto 8). |
+| — Features *stubeadas* (restauradas) | ✅ Resuelto | (1) **Hull-functions**: `IsShipFunc3`/`ShipOrHullDoes` **implementados** sobre el modelo antiguo (ver §1 y «Estado actual»); solo la capa `Enum*` estilo PCC2 sigue bajo `{$IFDEF VPACC}` (off, decisión tomada). (2) **`KbdFlags`** (Shift/Ctrl/Alt) → **resuelto** (estado actual vía X11 `XQueryPointer`). (3) **`TCOMBAT.LoadPic`**: el decodificador de sprites VGA planares (4 planos) + paleta + rotación del visor de combate **portado** a Pascal; `SetPal` implementado. |
 | — Capa compat VPACC/HULLFUNC | ✅ Desbloqueado | Añadida a `VPADATA` (rama `{$IFNDEF VPACC}`): vars de estado (`BL0`, `bOver`, `mt0/mt1`, `MineN`…), consts (`iBeam`…`iRace`), ~40 `SPC_*`, tipo `THullFuncQueryResult`, declaración de `IsHullFunc`. `IsHullFunc` (asm) portado a Pascal; **`ShipOrHullDoes`/`IsShipFunc3` implementados** puenteando los `SPC_*` al modelo antiguo (chunnel en flota y cloak avanzado ya se detectan). **`VPA4`, `VPA2`, `CONFIG` compilan.** |
-| — Warnings de rango a revisar | 📝 Anotado | Constantes fuera de rango de byte en el path VPACC-off (nunca compilado en el original): `VPA4:1626` (21248), `CONFIG:517/703` (265). Truncan y compilan; revisar en runtime por si afectan datos. |
-| 3 — Entrada (ratón/teclado) | 🟡 En curso | **`MOUSE`→`ptcmouse` y `KEYBOARD`→`ptccrt` portados y validados.** **`KbdFlags` (Shift/Ctrl/Alt) resuelto**: estado actual de modificadores vía X11 (`XQueryPointer`), cubre teclado y ratón+modificador. Pendiente: llamar a `PollMouse` desde el bucle de entrada. |
-| 3 — Entrada (ratón/teclado) | ⬜ Pendiente | |
-| 4 — Limpieza de bajo nivel | ⬜ Pendiente | |
-| 5 — E/S y portabilidad de datos | 🟡 En curso | **`RST_TRN.PAS` portado** (.rst/.trn): (des)cifrado de nombres ±13, búsqueda `ScrambledName`+`ProcessName`, lectura de registro de `PLANETS.EXE` — asm 16-bit→Pascal (0-based asm vs 1-based `ByteArr`). |
-| 6 — Primer binario nativo | ⬜ Pendiente | |
-| 7 — Pruebas y empaquetado | ⬜ Pendiente | |
+| — Warnings de rango y de puntero | ✅ Resuelto | Las constantes fuera de rango de byte del path VPACC-off (`VPA4:1626`, `CONFIG:517/703`) y el truncado de puntero de 64-bit (`VPA.PAS`, error handler) quedaron corregidos (ver §4, Fase 6): explicitados/`ord(...)`/`PtrUInt`. Solo quedan warnings benignos de FPC sin impacto. |
+| 3 — Entrada (ratón/teclado) | ✅ Completada | `MOUSE`→`ptcmouse` y `KEYBOARD`→`ptccrt` portados y validados. **`KbdFlags`** (Shift/Ctrl/Alt) resuelto vía X11 `XQueryPointer` (teclado y ratón+modificador). **`PollMouse` conectado** al bucle de entrada principal (vía `KeyPressed`). Navegación por mapa y menús con ratón y teclado **validada jugando** partidas reales. |
+| 4 — Limpieza de bajo nivel | ✅ Completada | Subsistema DPMI de DOS eliminado (`DPMI*`, `MEMTEST`, `SYSEXT` y sus binarios/licencia). `AUXF`/`STRF` 100% Pascal (sin asm). Barrido exhaustivo del núcleo: cero interrupciones, puertos, memoria-DOS y asm vivo. Los 142 `absolute` del núcleo auditados: todos *aliasing* de variable (portable), ninguno de forma hardware. |
+| 5 — E/S y portabilidad de datos | ✅ Completada | `{$PACKRECORDS 1}` (empaquetado idéntico a DOS), guarda de endianness para big-endian, separador de rutas `/` (antes `\`), comprobaciones de runtime replicadas (`-Ci- -Cr- -Co- -Ct-`), rutas tolerantes a mayúsculas/minúsculas (`ResolveCase`) y `RST_TRN.PAS` portado (.rst/.trn: (des)cifrado de nombres, lectura de registro de `PLANETS.EXE`). |
+| 6 — Primer binario nativo | ✅ Completada | Todas las units compilan y enlazan en un binario ELF de 64 bits; arranca bajo X11. Warnings de rango/puntero corregidos. `PollMouse` conectado. **Probado con datos reales de partidas** (PHOENIX4, NORTH12…). |
+| 7 — Pruebas y empaquetado | 🟡 En curso | Quedan, ligados a la publicación (ver §4, Fase 7): comparación a fondo contra la versión DOS en DOSBox, empaquetado del binario distribuible, y el cierre formal de la licencia al publicar (`LICENSE.md`/`MPL-2.0.txt` ya preparados). |
 
 Leyenda: ⬜ Pendiente · 🟡 En curso · ✅ Completada
-
-> **Nota:** la tabla de fases anterior es el histórico del *port* inicial. El estado
-> real **a día de hoy** es el de las dos secciones siguientes.
 
 ## 7. Visor de combate PHost nativo (port de `pvcralgorithm` de PCC2ng)
 
@@ -645,7 +641,7 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
   - *Silent fixes de `checkSide` (`database.cpp`)*: ✅ portados en `MapSide` (si `beamType=0` →
     `numBeams=0`; si `torpType=0` → `numLaunchers=0`/`numTorps=0`; planeta con tubos desempaqueta
     la munición). No eran la causa de la discrepancia, pero quedan fieles a PCC2ng.
-- **Fase C — Conectar el visualizador a `TCOMBAT`:** 🟡 *en curso.* Implementar los 8 eventos
+- **Fase C — Conectar el visualizador a `TCOMBAT`:** ✅ *hecha.* Implementados los 8 eventos
   con las primitivas de dibujo de VPA, con el *timing*/animación de VPA y un modo "sin animación".
   - **Decisión de diseño (importante):** se usan **solo las primitivas puras de dibujo**
     (`Beam`, `Torpedo`, `Fighter`, `Blast`, `Gauge`, `DrawShield`), **no** las rutinas de alto
@@ -672,10 +668,15 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
     `SetCapabilities`/`SetPhost3` → `InitBattle` → bucle `while PlayCycle` con `pvUpdateShips`/
     `pvUpdateFighters` + `Delay` + teclas → `DoneBattle` → vuelca resultados al VCR). **Compila y
     enlaza** (build verde).
-  - **Salvedades (pulir en Fase E, requiere display):** movimiento del sprite de nave con clamp
-    simple (sin anti-solape del punto medio del `Battle` viejo); `pvKillObject` es un `Blast`
-    simple (falta la explosión/`SurrPic` completa); escalonado en Y de fighters aproximado;
-    `SetPhost3` fijado a `False` (la detección PHost 3-vs-4 es de la Fase D). **Verificado
+  - **Salvedades de la Fase C (✅ pulidas después):** movimiento del sprite de nave contra un
+    planeta — **corregido**: `pvUpdateShips` limita la posición de dibujo para que la nave no
+    se meta dentro del disco (clamp anti-solape, sin tocar la distancia real mostrada);
+    `pvKillObject` — **corregido**: ahora el driver dibuja la explosión completa con el sprite
+    `ExplPic` (encima de todo, tras los refrescos, quitando antes el escudo), no un `Blast`
+    simple; estelas de fighters — **corregidas** en la Fase E (array `pvFH`, borra cada caza con
+    la misma forma con la que se dibujó). El **escalonado en Y de los fighters sigue siendo
+    aproximado** (no confirmado como pulido). `SetPhost3` fijado a `False` en esta fase (la
+    detección PHost 3-vs-4 es de la Fase D, que lo corrige a `True`). **Verificado
     visualmente** contra `PVCR.EXE` en la Fase E.
 - **Fase D — Integración en VPA:** ✅ *hecho.* El visor PHost nativo está enrutado en
   `MESSAGES.PAS`:
@@ -696,7 +697,7 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
   - **`SetPhost3(True)`** (no `False`): el nombre engaña — `pvcralgorithm.hpp` documenta
     `false=PHost 2.x, true=PHost 3.x/4.x`. PHost 3 y 4 usan la misma rama (`true`); solo el
     obsoleto PHost 2.x usaría `false`. Correcto para la partida 4.1h de Pablo.
-  - Build verde; arranca bajo Xvfb. **Falta solo la verificación visual** (Fase E).
+  - Build verde; arranca bajo Xvfb. **Verificación visual completada** (ver Fase E).
   - **Simulador de combate (F5) enrutado** (`VCS.PAS`): el simulador de VPA construye un
     `VCRData` en memoria y hasta ahora **siempre** llamaba al `Combat` clásico (matemática de
     THost), aunque la partida fuese PHost. Ahora enruta igual que el visor: en **PHost**
@@ -754,9 +755,12 @@ cabecera de copyright de Reuther** y una nota de "derivado de PCC2ng".
     experiencia. Coinciden tiempo de fin, ganador y escudo/daño/tripulación/munición finales. Verificado
     también que el parser lee correctamente el `pconfig.src` de una partida real (NORTH12,
     `NumExperienceLevels=4`) y **sin regresión** en combate sin experiencia (PHOENIX4).
-  - *(Pendiente/opcional: death rays y el combate multi-nave **FLAK** (`game/vcr/flak/` de PCC2ng).
-    Mostrar el **nombre del rango** —"Recruit"…"Ultra Elite" vía `ExperienceLevelNames`— en el visor
-    es la fase siguiente, ya en marcha.)*
+  - **Nombre del rango en el visor — ✅ hecho.** El visor muestra `Rank : `+ el nombre del
+    rango (`ExperienceLevelName(ex)`, parseado de `ExperienceLevelNames` en `pconfig.src`),
+    solo si el fichero VCR declara `ExperienceCapability`, con el mismo reset de consistencia
+    que el resto de la Fase F (nivel fuera de rango → 0).
+  - *(Pendiente/opcional: death rays y el combate multi-nave **FLAK** (`game/vcr/flak/` de
+    PCC2ng). Sin fecha; no bloquean el resto del visor.)*
 
 > **Estado:** ✅ **funcional y validado bit-exacto contra `PVCR.EXE`.** El visor PHost nativo
 > sustituye por completo a `PVCR.EXE`: mismo desarrollo, mismos contadores fotograma a fotograma
