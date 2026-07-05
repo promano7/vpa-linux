@@ -1,6 +1,6 @@
 # ============================================================================
-# Makefile — Port de VGA Planets Assistant (VPA) 3.67 a GNU/Linux (Free Pascal)
-# Sustituye al MAKEFILE de Borland Make. Ver BUILD.md para requisitos y uso.
+# Makefile — Port of VGA Planets Assistant (VPA) 3.67 to GNU/Linux (Free Pascal)
+# Replaces Borland Make's MAKEFILE. See BUILD.en.md for requirements and usage.
 # ============================================================================
 
 FPC  ?= fpc
@@ -8,9 +8,9 @@ CFG   = vpa.cfg
 MAIN  = VPA/VPA.PAS
 BIN   = build/VPA
 
-# Backend ptc vendorizado y recompilado SIN la extension X11 DGA (ver VENDOR/ptc).
-# Se recompila a build/ptcunits y vpa.cfg lo antepone al ptc del sistema, de modo
-# que el binario no dependa de la obsoleta libXxf86dga (retirada de Arch).
+# Vendored ptc backend, recompiled WITHOUT the X11 DGA extension (see VENDOR/ptc).
+# It is rebuilt into build/ptcunits and vpa.cfg puts it before the system ptc, so
+# that the binary doesn't depend on the obsolete libXxf86dga (dropped by Arch).
 PTCSRC   = VENDOR/ptc
 PTCUNITS = build/ptcunits
 
@@ -18,61 +18,61 @@ PTCUNITS = build/ptcunits
 
 all: build
 
-## build : compila el ejecutable en build/VPA
+## build : build the executable into build/VPA
 build: ptc
 	@mkdir -p build
 	$(FPC) @$(CFG) $(MAIN)
 	@cp -f VPA/LITT_VPA.CHR build/ 2>/dev/null || true
 	@echo ""
-	@echo ">> Listo: $(BIN)"
+	@echo ">> Done: $(BIN)"
 
-## ptc  : recompila el backend ptc SIN la extension DGA (evita depender de
-##        libXxf86dga). Se reconstruye solo si cambia el fuente vendorizado.
-##        Nota: ptc es codigo FPC normal (no -Mtp), por eso NO usa @vpa.cfg.
+## ptc  : rebuild the ptc backend WITHOUT the DGA extension (avoids depending on
+##        libXxf86dga). Rebuilt only when the vendored source changes.
+##        Note: ptc is plain FPC code (not -Mtp), so it does NOT use @vpa.cfg.
 ptc: $(PTCUNITS)/ptc.ppu
 $(PTCUNITS)/ptc.ppu: $(PTCSRC)/ptc.pp $(wildcard $(PTCSRC)/*.pp) $(wildcard $(PTCSRC)/x11/*.inc) $(wildcard $(PTCSRC)/x11/*.pp) $(wildcard $(PTCSRC)/core/*.inc) $(wildcard $(PTCSRC)/core/*.pp)
 	@mkdir -p $(PTCUNITS)
 	$(FPC) -O2 -Fi$(PTCSRC) -Fi$(PTCSRC)/x11 -Fi$(PTCSRC)/core -FU$(PTCUNITS) $(PTCSRC)/ptc.pp
-	@echo ">> ptc recompilado sin DGA en $(PTCUNITS)/"
+	@echo ">> ptc rebuilt without DGA in $(PTCUNITS)/"
 
-## debug : compila con info de linea (-gl) para depurar con gdb (backtraces)
+## debug : build with line info (-gl) for debugging with gdb (backtraces)
 debug: ptc
 	@mkdir -p build
 	$(FPC) @$(CFG) -gl -O- $(MAIN)
 	@echo ""
-	@echo ">> Listo (debug): $(BIN)  — usar con: gdb ./$(BIN)"
+	@echo ">> Done (debug): $(BIN)  — use with: gdb ./$(BIN)"
 
-## run : compila y muestra la ayuda de uso (pasa argumentos con ARGS=...)
-##       Ejemplo:  make run ARGS="3 /ruta/a/la/partida"
+## run : build and show the usage help (pass arguments with ARGS=...)
+##       Example:  make run ARGS="3 /path/to/the/game"
 run: build
 	./$(BIN) $(ARGS)
 
-## clean : borra los artefactos de compilacion
+## clean : remove build artifacts
 clean:
 	rm -f build/*.ppu build/*.o build/*.rsj build/*.a $(BIN)
-	@echo ">> Limpiado."
+	@echo ">> Cleaned."
 
-## hlp  : genera el fichero de ayuda VPA.HLP desde VHLP/VPA.HHH
-##        (VHLPMAKE enlaza el unit grafico, por eso necesita un display:
-##         se usa xvfb-run para un display virtual). Copialo a tu carpeta
-##         de partida (donde ejecutas VPA), igual que los ficheros .DAT.
+## hlp  : generate the VPA.HLP help file from VHLP/VPA.HHH
+##        (VHLPMAKE links the graphics unit, so it needs a display:
+##         xvfb-run is used for a virtual display). Copy it to your game
+##         folder (where you run VPA), just like the .DAT files.
 hlp:
 	@mkdir -p build
 	$(FPC) @$(CFG) -obuild/vhlpmake VHLP/VHLPMAKE.PAS
 	@cp VHLP/VPA.HHH build/VPA.HHH
 	@cd build && (xvfb-run -a ./vhlpmake VPA.HHH || ./vhlpmake VPA.HHH) && mv -f VPA.hlp VPA.HLP && rm -f VPA.HHH vhlpmake
 	@echo ""
-	@echo ">> Generado build/VPA.HLP — copialo a tu carpeta de partida:  cp build/VPA.HLP ~/PLANETS/"
+	@echo ">> Generated build/VPA.HLP — copy it to your game folder:  cp build/VPA.HLP ~/PLANETS/"
 
-## data : reune en build/ los ficheros de datos de ejecucion (binario + VPA.HLP
-##        + LITT_VPA.CHR) listos para copiar a tu carpeta de partida.
-##        VPA.HLP se compila (regla 'hlp'); LITT_VPA.CHR es un dato estatico.
+## data : gather the runtime data files in build/ (binary + VPA.HLP
+##        + LITT_VPA.CHR) ready to copy to your game folder.
+##        VPA.HLP is built (the 'hlp' rule); LITT_VPA.CHR is a static data file.
 data: build hlp
 	@cp -f VPA/LITT_VPA.CHR build/ 2>/dev/null || true
 	@echo ""
-	@echo ">> Datos de ejecucion en build/:  VPA  VPA.HLP  LITT_VPA.CHR"
-	@echo ">> Copialos a tu carpeta de partida, p.ej.:  cp build/VPA build/VPA.HLP build/LITT_VPA.CHR ~/PLANETS/"
+	@echo ">> Runtime data in build/:  VPA  VPA.HLP  LITT_VPA.CHR"
+	@echo ">> Copy them to your game folder, e.g.:  cp build/VPA build/VPA.HLP build/LITT_VPA.CHR ~/PLANETS/"
 
-## help : lista los objetivos
+## help : list the targets
 help:
 	@grep -E '^## ' Makefile | sed 's/## //'
