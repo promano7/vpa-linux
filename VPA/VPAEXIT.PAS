@@ -44,7 +44,17 @@ procedure SaveData;
     begin
       Writeln('Creating VPA database...');
       OpenW(f,dbname,Yes);
-      BlockWrite(f,DBHeader,DBHeadLen);
+      { Port a Linux/FPC (bug corregido): el original hacia
+        "BlockWrite(f,DBHeader,DBHeadLen)" con DBHeader de 14 bytes y DBHeadLen=15,
+        leyendo 1 byte MAS ALLA del array (comportamiento indefinido). En Borland
+        Pascal/DOS ese byte "de mas" coincidia por casualidad de layout de memoria
+        con DBVersion (declarada justo despues); con FPC en Linux el layout es
+        distinto y ese byte sale 0, asi que el fichero se creaba con una cabecera
+        invalida y la siguiente ejecucion fallaba con "ERROR: Unknown version of
+        VPA database". Se escriben ahora la cabecera (14 bytes) y la version
+        (1 byte) por separado, sin depender del layout de memoria. }
+      BlockWrite(f,DBHeader,14);
+      BlockWrite(f,DBVersion,1);
       CloseData(f);
       TEnd^.fpos:=DBHeadLen;
       CreatedNewBase:=Yes;
