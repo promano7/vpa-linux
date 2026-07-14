@@ -14,7 +14,7 @@ copyright notices are retained.**
 > - The **vendored Free Pascal** files stay under the **GNU LGPL with the
 >   static-linking exception**.
 > - The files **written specifically for this Linux port** are **BSD 3-Clause**,
->   © 2026 Pablo Romano.
+>   © 2026 Pablo Romano Gómez.
 
 ---
 
@@ -26,7 +26,7 @@ copyright notices are retained.**
 | **PCC** command code | `CC/` | **PCC II License Terms** (permissive, BSD-style) | © 2001–2024 Stefan Reuther & contributors |
 | **PHost combat viewer**, ported from PCC2ng | `VPA/PVCRALG.PAS` and the parts derived from it wired into `VPA/TCOMBAT.PAS` and `VPA/MESSAGES.PAS` | **PCC II License Terms** (permissive, BSD-style) | © Stefan Reuther & contributors |
 | **Vendored Free Pascal** run-time files | `VENDOR/` (`ptcgraph.pp`, `ptccrt.pp`, `ptc/…`) | **GNU LGPL with the static-linking exception** (the modified LGPL under which FPC ships) | © 2010–2011 Nikolay Nikolov; © 2007 Daniel Mantione; and the Free Pascal development team |
-| **New port code**, build tooling and documentation | `UNIT/xfocus.pas`, `Makefile`, `vpa.cfg`, `preport.py`, `preport-all.sh`, `swapgraph.py`, `setup-env.sh`, `README.md`, `BUILD.es.md`, `BUILD.en.md`, `HOWTO.md`, this `LICENSE.md`, … | **BSD 3-Clause** | © 2026 Pablo Romano |
+| **New port code**, build tooling and documentation | `UNIT/xfocus.pas`, `Makefile`, `vpa.cfg`, `preport.py`, `preport-all.sh`, `swapgraph.py`, `setup-env.sh`, `README.md`, `BUILD.es.md`, `BUILD.en.md`, `HOWTO.md`, this `LICENSE.md`, … | **BSD 3-Clause** | © 2026 Pablo Romano Gómez |
 | **Map label font** (BGI stroked font "LITT") | `LITT_VPA.CHR` | **© Borland International** — a Borland Graphics Interface (BGI) runtime font, not covered by the licenses above (see note below) | © 1987–1988 Borland International |
 
 ### Important notes
@@ -71,13 +71,13 @@ copyright notices are retained.**
 - **Borland International** — the BGI stroked font `LITT_VPA.CHR` (© 1987–1988).
 - **Andrew Sterian, Thomas Voigt, Steffen Pietsch, Maurits van Rees, Stefan Reuther**
   — the PHost Development Kit (PDK), consulted as reference only.
-- **Pablo Romano** — the GNU/Linux native port (© 2026).
+- **Pablo Romano Gómez** — the GNU/Linux native port (© 2026).
 
 ---
 
-## 3. BSD 3-Clause License — for the new port code by Pablo Romano
+## 3. BSD 3-Clause License — for the new port code by Pablo Romano Gómez
 
-Copyright (c) 2026 Pablo Romano
+Copyright (c) 2026 Pablo Romano Gómez
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
