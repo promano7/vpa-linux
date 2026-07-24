@@ -2,7 +2,6 @@
 
 ; ******************** VPA Message Templates ********************
 ; ************** Copyright (c) Alex V. Ivlev, 1996 **************
-; ************** Copyright (c) VPA-TEAM 2013 V3.66 **************
 
 ; *** VPA Data Transmission
 Message Data
@@ -252,18 +251,9 @@ Keep    Cross 13
 End
 
 ; *** Distress call from us (ground attack,overpopulation,climate)
-;Message Common
-;Check   1,[Distress Call]
-;Keep    Flag 12
-;End
-
-; *** Distress Call (ground attack,overpopulation,climate new at V3.66)
-Message DistressCall
-Check   1,[DISTRESS CALL]
-Check	5,[massacred]
-Planet  4,1
-Owner   6,1
-Keep	Flag 12
+Message Common
+Check   1,[Distress Call]
+Keep    Flag 12
 End
 
 ; *** Distress call from enemy (ground attack,overpopulation,climate)
@@ -303,7 +293,6 @@ End
 Message Pillage
 Check   2,[PLANETARY MESSAGE]
 Check   [is plundering]
-Check   [Natives]
 ID      [Planet ID#],[:]
 NClans  [Natives],[:]
 Keep    Flag 12
@@ -442,15 +431,6 @@ Owner   [starbase],[the]
 Keep    Flag 14
 End
 
-; *** Ship built on Base
-Message SpaceDock
-Check    1,[Space Dock Message]
-Check    [A new],[new]
-ShipName 3,[A new]
-Planet   5,[at]
-Keep    
-End
-
 ; *** Boarding party: enemy ship captured
 Message Common
 Check   1,[Boarding Party!]
@@ -546,8 +526,6 @@ End
 ; *** HCONFIG message
 Message HConfig4
 Check   1,[Message from your Host]
-Check 	2,2,Free Fighters
-FreeFighters	3,1
 Check   [max mine radius]
 StructDecay [structure decay],[decay]
 WebDecay [web mine decay],[decay]
@@ -619,7 +597,6 @@ Check     [Aries makes fuel]
 RamScoop  [Cobol fuel per LY],[LY]
 AdvRefinery [Aries makes fuel],[fuel]
 Bioscanners [Bioscanners],[Bioscanners]
-VPAExtra	[VPA Extra Features],[Features]
 End
 
 ; *** Priority Points
