@@ -141,7 +141,16 @@ procedure Capitalize (var s:string);
 procedure ProcessTabs (var s:string);
   var   ls      : byte absolute s;
 	i       : byte;
-	s1	: string[7];
+	{ Bug de desbordamiento corregido (port a Linux/FPC): "9-(i and 7)" puede
+	  valer hasta 9 (cuando (i and 7)=0), pero s1 estaba declarada string[7]
+	  (capacidad de 7 bytes de datos). Cuando el tabulador caia en una columna
+	  con (i and 7) = 0 o 1, FillChar escribia 8 o 9 bytes en un buffer de 7,
+	  desbordandolo 1-2 bytes. En Borland Pascal/DOS ese desbordamiento caia
+	  por suerte en bytes de pila sin uso; con FPC en Linux corrompe el layout
+	  de pila y puede colgar el parseo (visto con VPA.MSG real: la linea
+	  "VPAExtra<TAB>[...]" cae justo en columna 9, (9 and 7)=1). Se amplia a
+	  string[9], el maximo que el algoritmo puede necesitar realmente. }
+	s1	: string[9];
   begin
     i:=Pos(#9,s);
     while i<>0 do
