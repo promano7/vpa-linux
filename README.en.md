@@ -369,8 +369,21 @@ verifiable state at the end of each one.
 
 ### Phase 7 — Testing, packaging and (optional) distribution
 - [ ] Compare behaviour against the DOS version under DOSBox.
-- [ ] Package (binary + support files: `vpa.hlp`, `vpa.msg`, resources).
-- [ ] Close out the license question if published.
+- [x] **Package (binary + support files: `vpa.hlp`, `vpa.msg`, resources).** ✅
+  Assembled and tested a real package (`vpa-linux-3.67.1-x86_64.tar.gz`): binary +
+  `VPA.HLP` (generated with `make hlp`) + `LITT_VPA.CHR` + `DISTTABL.DAT` +
+  `VPA.MSG` + `LICENSE.md`/`MPL-2.0.txt` + `HOWTO.es.md`/`HOWTO.en.md`. Tested the
+  way a real user would: extracted into a clean directory, `chmod +x`, starting
+  with no arguments (correct `3.67.1` banner, `ldd` clean of `libXxf86dga` and any
+  missing libs), `/?` showing the full help, and `VPA_SCALE`
+  (`1`/`2`/`3`/`fullscreen`) all starting fine. **Packaging bug found and fixed
+  along the way:** the `Makefile`'s `data` target copied `LITT_VPA.CHR` from
+  `VPA/` instead of the repo root (where it actually lives), so `make data`
+  wasn't including it — fixed in both places it appears in the `Makefile`
+  (`build`/`data`).
+- [x] Close out the license question if published. ✅ **Closed and published**:
+  `LICENSE.md` (multi-license breakdown per component, all copyright notices) and
+  `MPL-2.0.txt` (full text) are in the repo. See §1.
 - [x] *(Optional, later phase)* Evaluate 256 colours / higher resolutions, or an SDL backend for real modernisation. ✅ **256 colours done** (the port runs in `D8bit`/m640x480, 256 colours) and **higher resolutions done** via `VPA_SCALE` (N× window and fullscreen, keeping the 640×480 surface). An **SDL backend** remains a **future optional** item (not needed: `ptcgraph` covers the BGI API; `sdlgraph` is reported broken by FPC).
 - [x] **Removed the `libXxf86dga` dependency.** The `ptc` backend (`core/` + `x11/` only, ~556 KB) is vendored in `VENDOR/ptc/` with the X11 `XF86DGA1`/`XF86DGA2` extensions disabled in `x11/x11extensions.inc`; the `Makefile` (`ptc` target) rebuilds it into `build/ptcunits/` and `vpa.cfg` puts it ahead of the system's `ptc`. Verified with `ldd`: the binary no longer links `libXxf86dga` (VPA always uses the windowed X11 console, never DGA, so nothing is lost).
 
@@ -531,7 +544,7 @@ by category (this is the roadmap for Phases 2–4):
 | 4 — Low-level cleanup | ✅ Completed | DOS DPMI subsystem removed (`DPMI*`, `MEMTEST`, `SYSEXT` and their binaries/license). `AUXF`/`STRF` 100% Pascal (no asm). Exhaustive sweep of the core: zero interrupts, ports, DOS memory and live asm. The core's 142 `absolute` uses audited: all *variable aliasing* (portable), none of the hardware form. |
 | 5 — I/O and data portability | ✅ Completed | `{$PACKRECORDS 1}` (packing identical to DOS), big-endian compile guard, `/` path separator (was `\`), replicated runtime checks (`-Ci- -Cr- -Co- -Ct-`), case-insensitive paths (`ResolveCase`), and `RST_TRN.PAS` ported (.rst/.trn: name (de/en)cryption, reading `PLANETS.EXE`'s registration record). |
 | 6 — First native binary | ✅ Completed | Every unit compiles and links into a 64-bit ELF binary; starts under X11. Range/pointer warnings fixed. `PollMouse` wired in. **Tested with real game data** (PHOENIX4, NORTH12…). |
-| 7 — Testing and packaging | 🟡 In progress | What remains, tied to publication (see §4, Phase 7): a thorough comparison against the DOS version under DOSBox, packaging the distributable binary, and formally closing out the license on publication (`LICENSE.md`/`MPL-2.0.txt` already prepared). |
+| 7 — Testing and packaging | 🟡 In progress | **Packaging ✅** and **license ✅** done (see detail in §4, Phase 7: the `vpa-linux-3.67.1-x86_64.tar.gz` package tested like a real user would; `LICENSE.md`/`MPL-2.0.txt` published). Only a thorough comparison against the DOS version under DOSBox remains. |
 
 Legend: ⬜ Pending · 🟡 In progress · ✅ Completed
 

@@ -22,7 +22,7 @@ all: build
 build: ptc
 	@mkdir -p build
 	$(FPC) @$(CFG) $(MAIN)
-	@cp -f VPA/LITT_VPA.CHR build/ 2>/dev/null || true
+	@cp -f LITT_VPA.CHR build/ 2>/dev/null || true
 	@echo ""
 	@echo ">> Done: $(BIN)"
 
@@ -68,7 +68,7 @@ hlp:
 ##        + LITT_VPA.CHR) ready to copy to your game folder.
 ##        VPA.HLP is built (the 'hlp' rule); LITT_VPA.CHR is a static data file.
 data: build hlp
-	@cp -f VPA/LITT_VPA.CHR build/ 2>/dev/null || true
+	@cp -f LITT_VPA.CHR build/ 2>/dev/null || true
 	@echo ""
 	@echo ">> Runtime data in build/:  VPA  VPA.HLP  LITT_VPA.CHR"
 	@echo ">> Copy them to your game folder, e.g.:  cp build/VPA build/VPA.HLP build/LITT_VPA.CHR ~/PLANETS/"
