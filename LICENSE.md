@@ -26,7 +26,7 @@ copyright notices are retained.**
 | **PCC** command code | `CC/` | **PCC II License Terms** (permissive, BSD-style) | © 2001–2024 Stefan Reuther & contributors |
 | **PHost combat viewer**, ported from PCC2ng | `VPA/PVCRALG.PAS` and the parts derived from it wired into `VPA/TCOMBAT.PAS` and `VPA/MESSAGES.PAS` | **PCC II License Terms** (permissive, BSD-style) | © Stefan Reuther & contributors |
 | **Vendored Free Pascal** run-time files | `VENDOR/` (`ptcgraph.pp`, `ptccrt.pp`, `ptc/…`) | **GNU LGPL with the static-linking exception** (the modified LGPL under which FPC ships) | © 2010–2011 Nikolay Nikolov; © 2007 Daniel Mantione; and the Free Pascal development team |
-| **New port code**, build tooling and documentation | `UNIT/xfocus.pas`, `Makefile`, `vpa.cfg`, `preport.py`, `preport-all.sh`, `swapgraph.py`, `setup-env.sh`, `README.md`, `BUILD.es.md`, `BUILD.en.md`, `HOWTO.md`, this `LICENSE.md`, … | **BSD 3-Clause** | © 2026 Pablo Romano Gómez |
+| **New port code**, build tooling and documentation | `UNIT/xfocus.pas`, `Makefile`, `vpa.cfg`, `preport.py`, `preport-all.sh`, `swapgraph.py`, `setup-env.sh`, `README.md`, `README.es.md`, `README.en.md`, `BUILD.es.md`, `BUILD.en.md`, `HOWTO.es.md`, `HOWTO.en.md`, this `LICENSE.md`, … | **BSD 3-Clause** | © 2026 Pablo Romano Gómez |
 | **Map label font** (BGI stroked font "LITT") | `LITT_VPA.CHR` | **© Borland International** — a Borland Graphics Interface (BGI) runtime font, not covered by the licenses above (see note below) | © 1987–1988 Borland International |
 
 ### Important notes
