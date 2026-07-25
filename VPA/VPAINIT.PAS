@@ -1293,7 +1293,13 @@ procedure OpenGraph;
     OutTextXY(MX0+2*8,22*8,'ASSISTANT '+Version);
     SetLineStyle(SolidLn,0,NormWidth);
     Line(MX0+3*8+4,21*8,MX0+3*8+4+11*8-2,21*8);
-    Line(MX0+2*8,23*8,MX0+2*8+14*8-2,23*8);
+    { El subrayado de 'ASSISTANT '+Version usaba un ancho fijo de 14*8-2 px,
+      calculado para la version original de 4 caracteres ('3.67'): 'ASSISTANT '
+      son 10 caracteres + 4 de version = 14. Al pasar a '3.67.1' (6 caracteres)
+      el subrayado se quedaba corto y no cubria el '.1' anadido. Se calcula
+      ahora a partir de la longitud real del texto para que siga la version
+      tenga los caracteres que tenga. }
+    Line(MX0+2*8,23*8,MX0+2*8+(10+Length(Version))*8-2,23*8);
     SetColor(Cyan);
     OutTextXY(MX0,26*8,   'Copyright (c) 1998');
     OutTextXY(MX0,26*8+12,' by Alex V. Ivlev');

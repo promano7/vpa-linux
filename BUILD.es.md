@@ -3,6 +3,8 @@
 Guía de compilación del port de **VGA Planets Assistant 3.67** a GNU/Linux con
 Free Pascal. Pensada para **Arch Linux**; las notas para otras distros van al final.
 
+> 🌍 This document is also available in English: [`BUILD.en.md`](BUILD.en.md).
+
 ---
 
 ## 1. Requisitos
