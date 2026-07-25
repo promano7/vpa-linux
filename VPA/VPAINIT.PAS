@@ -1696,7 +1696,7 @@ function StartVPA : boolean;
     InitVPAData;
 {    Writeln(ReadKey); Writeln(ReadKey); Writeln(ReadKey); writeln(readkey); readkey;}
   Writeln(#13#10'-= VGA Planets Assistant '+Version+'  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-');
-  Writeln(      '=============================================================================================================='#13#10);
+  Writeln(      '================================================================================================================'#13#10);
   Parameters;
   Writeln('Running with ',MemAvail div 1024,'K of free memory');
   Writeln;

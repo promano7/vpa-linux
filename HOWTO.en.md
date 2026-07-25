@@ -1,5 +1,7 @@
 # VPA-Linux — How to run
 
+> 🌍 Este documento también está disponible en español: [`HOWTO.es.md`](HOWTO.es.md).
+
 **VGA Planets Assistant (VPA) 3.67**, native GNU/Linux build.
 
 VPA is a helper/client for the classic play-by-email strategy game **VGA Planets 3**:
