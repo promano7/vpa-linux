@@ -122,7 +122,7 @@ With no arguments, the program prints the banner and usage help and exits — th
 way to check the binary starts:
 ```
 $ ./build/VPA
--= VGA Planets Assistant 3.67  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team =-
+-= VGA Planets Assistant 3.67.2  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
 Use: VPA race [dir] ...
 ```
 
@@ -149,9 +149,42 @@ Copy the result to your game folder:
 cp build/VPA.HLP ~/PLANETS/
 ```
 
-> **Shortcut:** `make data` does it all at once — builds the binary, generates
-> `VPA.HLP` and copies `LITT_VPA.CHR`, leaving everything in `build/` ready to copy
-> to the game folder.
+> **Shortcut:** `make data` does it all at once — see §4.1.
+
+### 4.1 Assembling the distributable package (`make data`)
+
+`make data` builds **both artifacts at the same time** — the `VPA` binary (the
+`build` rule) and the `VPA.HLP` help file (the `hlp` rule) — and then assembles a
+ready-to-ship folder, **`build/vpa-linux_package/`**, with everything an end user
+needs:
+
+```sh
+make data
+```
+
+| Inside `build/vpa-linux_package/` | Where it comes from |
+|---|---|
+| `VPA` | the binary just compiled (`build/VPA`) |
+| `VPA.HLP` | the help file just compiled (`build/VPA.HLP`) |
+| `EXAMPLES/` | copied from the repo root (sample `VPA.INI`) |
+| `DISTTABL.DAT` | copied from the repo root — **required** to start |
+| `LITT_VPA.CHR` | copied from the repo root — map-label font |
+| `VPA.MSG` | copied from the repo root — message templates |
+| `HOWTO.en.md`, `HOWTO.es.md` | copied from the repo root — end-user guide |
+| `LICENSE.md`, `MPL-2.0.txt` | copied from the repo root — licensing |
+
+The folder is rebuilt from scratch on every run (it's deleted first), so it always
+matches the current sources. From there you can copy it into your game folder or
+pack it up for release:
+
+```sh
+cp -a build/vpa-linux_package/. ~/PLANETS/          # use it right away
+tar -czf vpa-linux-x86_64.tar.gz -C build vpa-linux_package   # or ship it
+```
+
+> Since `make data` also runs the `hlp` rule, it needs **xvfb** (or a graphical
+> session) just like `make hlp` does. `make clean` removes
+> `build/vpa-linux_package/` along with the rest of the build artifacts.
 
 ---
 

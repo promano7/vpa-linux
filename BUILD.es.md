@@ -122,7 +122,7 @@ Sin argumentos, el programa imprime el banner y la ayuda de uso y sale — es la
 forma rápida de comprobar que el binario arranca:
 ```
 $ ./build/VPA
--= VGA Planets Assistant 3.67  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team =-
+-= VGA Planets Assistant 3.67.2  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
 Use: VPA race [dir] ...
 ```
 
@@ -149,8 +149,42 @@ Copia el resultado a tu carpeta de partida:
 cp build/VPA.HLP ~/PLANETS/
 ```
 
-> **Atajo:** `make data` hace todo de golpe — compila el binario, genera `VPA.HLP`
-> y copia `LITT_VPA.CHR`, dejándolo en `build/` listo para copiar a la partida.
+> **Atajo:** `make data` hace todo de golpe — ver §4.1.
+
+### 4.1 Montar el paquete distribuible (`make data`)
+
+`make data` construye **los dos artefactos a la vez** — el binario `VPA` (regla
+`build`) y el fichero de ayuda `VPA.HLP` (regla `hlp`) — y después monta una
+carpeta lista para distribuir, **`build/vpa-linux_package/`**, con todo lo que
+necesita un usuario final:
+
+```sh
+make data
+```
+
+| Dentro de `build/vpa-linux_package/` | De dónde sale |
+|---|---|
+| `VPA` | el binario recién compilado (`build/VPA`) |
+| `VPA.HLP` | la ayuda recién compilada (`build/VPA.HLP`) |
+| `EXAMPLES/` | copiado de la raíz del repo (`VPA.INI` de ejemplo) |
+| `DISTTABL.DAT` | copiado de la raíz del repo — **obligatorio** para arrancar |
+| `LITT_VPA.CHR` | copiado de la raíz del repo — fuente de las etiquetas del mapa |
+| `VPA.MSG` | copiado de la raíz del repo — plantillas de mensajes |
+| `HOWTO.en.md`, `HOWTO.es.md` | copiados de la raíz del repo — guía de usuario |
+| `LICENSE.md`, `MPL-2.0.txt` | copiados de la raíz del repo — licencias |
+
+La carpeta se rehace desde cero en cada ejecución (se borra antes), así que siempre
+corresponde al estado actual de los fuentes. Desde ahí puedes copiarla a tu carpeta
+de partida o empaquetarla para publicarla:
+
+```sh
+cp -a build/vpa-linux_package/. ~/PLANETS/          # usarlo ya
+tar -czf vpa-linux-x86_64.tar.gz -C build vpa-linux_package   # o distribuirlo
+```
+
+> Como `make data` ejecuta también la regla `hlp`, necesita **xvfb** (o una sesión
+> gráfica) igual que `make hlp`. `make clean` borra `build/vpa-linux_package/`
+> junto con el resto de artefactos de compilación.
 
 ---
 
