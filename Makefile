@@ -14,7 +14,17 @@ BIN   = build/VPA
 PTCSRC   = VENDOR/ptc
 PTCUNITS = build/ptcunits
 
+# Distributable package assembled by 'make data': the compiled binary, the
+# compiled help file, the EXAMPLES/ folder and the runtime data + documents.
+PKGDIR    = build/vpa-linux_package
+PKGFILES  = DISTTABL.DAT HOWTO.en.md HOWTO.es.md LICENSE.md LITT_VPA.CHR \
+            MPL-2.0.txt VPA.MSG
+
 .PHONY: all build clean run help hlp data ptc
+
+# 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
+# directory: never run them concurrently, even with 'make -jN'.
+.NOTPARALLEL:
 
 all: build
 
@@ -50,6 +60,7 @@ run: build
 ## clean : remove build artifacts
 clean:
 	rm -f build/*.ppu build/*.o build/*.rsj build/*.a $(BIN)
+	rm -rf $(PKGDIR)
 	@echo ">> Cleaned."
 
 ## hlp  : generate the VPA.HLP help file from VHLP/VPA.HHH
@@ -64,14 +75,22 @@ hlp:
 	@echo ""
 	@echo ">> Generated build/VPA.HLP — copy it to your game folder:  cp build/VPA.HLP ~/PLANETS/"
 
-## data : gather the runtime data files in build/ (binary + VPA.HLP
-##        + LITT_VPA.CHR) ready to copy to your game folder.
-##        VPA.HLP is built (the 'hlp' rule); LITT_VPA.CHR is a static data file.
+## data : build BOTH the VPA binary and VPA.HLP, and assemble the ready-to-ship
+##        package in build/vpa-linux_package/ : the freshly compiled VPA and
+##        VPA.HLP, the EXAMPLES/ folder, and DISTTABL.DAT, HOWTO.en.md,
+##        HOWTO.es.md, LICENSE.md, LITT_VPA.CHR, MPL-2.0.txt and VPA.MSG.
 data: build hlp
 	@cp -f LITT_VPA.CHR build/ 2>/dev/null || true
+	@rm -rf $(PKGDIR)
+	@mkdir -p $(PKGDIR)
+	@cp -f $(BIN) $(PKGDIR)/
+	@cp -f build/VPA.HLP $(PKGDIR)/
+	@cp -a EXAMPLES $(PKGDIR)/
+	@cp -f $(PKGFILES) $(PKGDIR)/
 	@echo ""
-	@echo ">> Runtime data in build/:  VPA  VPA.HLP  LITT_VPA.CHR"
-	@echo ">> Copy them to your game folder, e.g.:  cp build/VPA build/VPA.HLP build/LITT_VPA.CHR ~/PLANETS/"
+	@echo ">> Package ready in $(PKGDIR)/ :"
+	@echo "   VPA  VPA.HLP  EXAMPLES/  $(PKGFILES)"
+	@echo ">> Copy its contents to your game folder, e.g.:  cp -a $(PKGDIR)/. ~/PLANETS/"
 
 ## help : list the targets
 help:
