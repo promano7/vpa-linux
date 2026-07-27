@@ -27,6 +27,9 @@ fiel a Linux del programa original de DOS — mismo aspecto, mismas teclas.
   de turno (`GENx.DAT`, `SHIPx.DAT`, `PLANETx.DAT`, `BDATAx.DAT`, `PLAYERx.RST`,
   etc.), donde `x` es tu número de raza. VPA **no** incluye ninguna partida; esos
   ficheros los obtienes de tu host de VGA Planets.
+- Los **ficheros del propio VGA Planets** (`PLANET.NM`, `RESOURCE.PLN`,
+  `PLANETS.EXE`, las `*SPEC.DAT`…), que no se distribuyen con VPA-Linux —
+  ver «Ficheros ajenos a VPA-Linux» en §2.
 
 ### Librerías en tiempo de ejecución
 El binario usa un puñado de librerías X11 estándar que ya están presentes en
@@ -64,7 +67,7 @@ Ejemplo (jugando la raza 3, partida en `~/PLANETS/mipartida`):
 Ejecútalo sin argumentos para ver el banner y confirmar que arranca:
 ```
 $ ./VPA
--= VGA Planets Assistant 3.67  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team =-
+-= VGA Planets Assistant 3.67.2  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
 Use: VPA race [dir] ...
 ```
 
@@ -91,6 +94,44 @@ binario:
 
 Solo `DISTTABL.DAT` es estrictamente obligatorio para arrancar; el resto son
 opcionales, pero convienen para la experiencia completa y correcta.
+
+### Ficheros ajenos a VPA-Linux, obligatorios para correr una partida
+
+VPA-Linux es solo el cliente: **no incluye** ni los datos del juego VGA Planets
+ni los ficheros de tu partida. Estos vienen de tu instalación original de VGA
+Planets y de tu host, y tienen que estar presentes para poder jugar.
+
+**En el directorio de VPA** (junto al binario):
+
+| Fichero | Para qué sirve |
+|---|---|
+| `PLANET.NM` | los nombres de los planetas. |
+| `RESOURCE.PLN` | los recursos gráficos que usa VPA. |
+| `PLANETS.EXE` | VPA-Linux **lee de aquí el registro** (no lo ejecuta; solo lo abre para leer tus datos de registro). |
+
+**En el directorio de la partida:**
+
+| Fichero | Para qué sirve |
+|---|---|
+| `PLAYERx.RST` | tu turno, donde `x` es tu número de raza. Lo proporciona el host. |
+| `PCONFIG.SRC` | la configuración del host. Solo si juegas con **PHost**; lo proporciona el host. |
+| `UTILx.DAT` | datos auxiliares del turno. Solo si juegas con **PHost**; lo proporciona el host. |
+| `MISSION.INI` | definiciones de misiones. Solo si juegas con **PHost**. |
+
+**En el directorio de VPA o en el de la partida** — se busca **primero en el de
+la partida**, así que una copia en la partida tiene prioridad sobre la del
+directorio de VPA (útil cuando el host usa una lista de naves modificada):
+
+| Ficheros | Para qué sirven |
+|---|---|
+| `BEAMSPEC.DAT`, `TORPSPEC.DAT`, `ENGSPEC.DAT` | características de rayos, torpedos y motores. |
+| `HULLSPEC.DAT`, `HULLFUNC.DAT`, `TRUEHULL.DAT` | características de los cascos, sus funciones especiales y qué casco puede construir cada raza. |
+| `RACE.NM` | los nombres de las razas. |
+
+> **Mayúsculas y minúsculas:** VPA-Linux busca todos estos ficheros **sin
+> distinguir la caja del nombre**, así que da igual que tu partida traiga
+> `PLAYER3.RST` o `player3.rst`, `PCONFIG.SRC` o `pconfig.src`. Se respeta el
+> nombre tal y como esté en disco; no hace falta renombrar nada.
 
 ---
 

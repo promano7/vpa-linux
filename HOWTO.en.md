@@ -25,6 +25,9 @@ look, same keys.
   (`GENx.DAT`, `SHIPx.DAT`, `PLANETx.DAT`, `BDATAx.DAT`, `PLAYERx.RST`, etc.), where
   `x` is your race number. VPA does **not** come with a game; you get those files
   from your VGA Planets host.
+- The **VGA Planets files themselves** (`PLANET.NM`, `RESOURCE.PLN`,
+  `PLANETS.EXE`, the `*SPEC.DAT` files…), which are not shipped with VPA-Linux —
+  see "Files not shipped with VPA-Linux" in §2.
 
 ### Runtime libraries
 The binary uses a handful of standard X11 libraries that are already present on
@@ -62,7 +65,7 @@ Example (playing race 3, game in `~/PLANETS/mygame`):
 Run it with no arguments to see the banner and confirm it starts:
 ```
 $ ./VPA
--= VGA Planets Assistant 3.67  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team =-
+-= VGA Planets Assistant 3.67.2  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
 Use: VPA race [dir] ...
 ```
 
@@ -86,6 +89,44 @@ Keep these files where you run VPA — in your game directory or next to the bin
 
 Only `DISTTABL.DAT` is strictly required to start; the rest are optional but wanted
 for the full, correct experience.
+
+### Files not shipped with VPA-Linux, required to play a game
+
+VPA-Linux is just the client: it does **not** include the VGA Planets game data nor
+your game files. Those come from your original VGA Planets installation and from
+your host, and they must be present for you to play.
+
+**In the VPA directory** (next to the binary):
+
+| File | What it's for |
+|---|---|
+| `PLANET.NM` | the planet names. |
+| `RESOURCE.PLN` | the graphic resources VPA uses. |
+| `PLANETS.EXE` | VPA-Linux **reads your registration from it** (it does not run it; it only opens it to read your registration data). |
+
+**In the game directory:**
+
+| File | What it's for |
+|---|---|
+| `PLAYERx.RST` | your turn, where `x` is your race number. Provided by the host. |
+| `PCONFIG.SRC` | the host configuration. Only if you play with **PHost**; provided by the host. |
+| `UTILx.DAT` | auxiliary turn data. Only if you play with **PHost**; provided by the host. |
+| `MISSION.INI` | mission definitions. Only if you play with **PHost**. |
+
+**In either the VPA directory or the game directory** — the **game directory is
+searched first**, so a copy there takes precedence over the one in the VPA
+directory (handy when your host uses a modified ship list):
+
+| Files | What they're for |
+|---|---|
+| `BEAMSPEC.DAT`, `TORPSPEC.DAT`, `ENGSPEC.DAT` | beam, torpedo and engine specs. |
+| `HULLSPEC.DAT`, `HULLFUNC.DAT`, `TRUEHULL.DAT` | hull specs, their special functions, and which hull each race can build. |
+| `RACE.NM` | the race names. |
+
+> **Upper/lower case:** VPA-Linux looks all these files up **case-insensitively**, so
+> it doesn't matter whether your game ships `PLAYER3.RST` or `player3.rst`,
+> `PCONFIG.SRC` or `pconfig.src`. The name is used exactly as it is on disk — you
+> don't need to rename anything.
 
 ---
 
