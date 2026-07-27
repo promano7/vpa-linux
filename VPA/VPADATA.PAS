@@ -1280,11 +1280,15 @@ function EraseGameFile (const name:string) : boolean;
     EraseGameFile := IOResult=0;
   end;
 
+{ Nota (port Linux): igual que OpenData/OpenRW/Exists/OpenText, el nombre pasa
+  por ResolveCase para tolerar la caja del nombre en disco. Por aqui entran
+  RESOURCE.PLN, VPA.HLP y la fuente del mapa, que en DOS venian siempre en
+  mayusculas pero pueden llegar en minusculas desde cualquier otra fuente. }
 function OpenFile (var f:file; name:str79; mode:byte; mustbe:boolean) : boolean;
   begin
     OpenFile:=No;
     FileMode:=mode;
-    Assign(f,name);
+    Assign(f,ResolveCase(name));
     Reset(f,1);
     if (IOResult<>0) or (FileSize(f)=0) then
       if mustbe then begin Writeln(#13#10'Can''t read file ',name); Halt end
