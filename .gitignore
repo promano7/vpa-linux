@@ -16,6 +16,14 @@ fpcmade.*
 /vpalin
 /vpamm
 
+# --- Directorio de compilacion ---
+# Lo crea el Makefile: units de ptc, el binario VPA, VPA.HLP y el paquete
+# distribuible vpa-linux_package/ que monta 'make data'. Todo regenerable.
+/build/
+
+# Tarballs de release generados a mano desde build/vpa-linux_package/
+/vpa-linux-*.tar.gz
+
 # --- Artefactos heredados de Borland Pascal (se eliminan en limpieza) ---
 *.tpu
 *.tpp
