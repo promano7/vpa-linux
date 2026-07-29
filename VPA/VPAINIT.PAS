@@ -49,6 +49,16 @@ Const
   XYPLAN1 : array [1..6] of char = 'XYPLAN';
   XYPLAN2 : array [1..4] of char = '.DAT';
 
+  { Separador de directorios del sistema anfitrion: '/' en GNU/Linux y macOS,
+    '\' en DOS/Windows (de cara a un futuro vpa-winnt). Las rutas que da el
+    usuario se normalizan a este caracter (ver FixPath), asi que en cualquier
+    sistema valen las dos formas de escribirlas. }
+{$IFDEF UNIX}
+  DirSep = '/';
+{$ELSE}
+  DirSep = '\';
+{$ENDIF}
+
 type
   PwdType = array [1..2,1..10] of byte;
   PwdStr  = string[10];
@@ -63,6 +73,43 @@ procedure InvalidParm (var parm:string);
   begin
     Writeln('Invalid parameter "',parm,'"');
     Halt;
+  end;
+
+{ Nota (port multiplataforma): en DOS los directorios se separaban con '\' y las
+  opciones se escribian '/X', asi que bastaba con ver si el parametro empezaba
+  por '/' para saber que era una opcion. En GNU/Linux y macOS las rutas
+  absolutas empiezan justamente por '/' ("/home/ded/DOS/vpl/_lu5-5"), de modo
+  que hay que ser estricto: solo se considera opcion lo que coincide
+  exactamente con una de las documentadas en /?, y todo lo demas se toma como
+  directorio de partida. Ojo: la comprobacion laxa de antes tampoco valdria
+  aunque se descartase el primer caracter, porque '/media/...', '/opt/...',
+  '/proc/...', '/root/...' o '/srv/...' colisionan con /M, /O, /P, /R y /S. }
+function IsOption (parm:string) : boolean;
+  var pfx : string[5];
+      i   : int;
+  begin
+    IsOption := No;
+    if (byte(parm[0])<2) or (parm[1]<>'/') then Exit;
+    pfx := Copy(parm,1,5);
+    for i:=2 to byte(pfx[0]) do pfx[i]:=UChr[byte(pfx[i])];
+    if byte(parm[0])=2 then
+      IsOption := pfx[2] in ['B','K','M','O','P','R','S']
+    else
+      IsOption := (Copy(pfx,1,4)='/PW:') or (Copy(pfx,1,5)='/REP:') or
+                  (Copy(pfx,1,5)='/BGI:');
+  end;
+
+{ Normaliza el directorio de partida que da el usuario: unifica los separadores
+  al del sistema (acepta tanto 'dir/sub' como 'dir\sub' en cualquier sistema) y
+  garantiza el separador final, porque addir se concatena directamente con el
+  nombre del fichero. }
+function FixPath (p:string) : string;
+  var i : int;
+  begin
+    for i:=1 to byte(p[0]) do
+      if (p[i]='/') or (p[i]='\') then p[i]:=DirSep;
+    if (byte(p[0])>0) and (p[byte(p[0])]<>DirSep) then p:=p+DirSep;
+    FixPath := p;
   end;
 
 procedure Parameters;
@@ -119,7 +166,7 @@ procedure Parameters;
     for i:=2 to ParamCount do
     begin
       parm:=ParamStr(i);
-      if parm[1]='/' then
+      if IsOption(parm) then
       begin
   case UChr[byte(parm[2])] of
     'B' : if (byte(parm[0])>5) and (UChr[byte(parm[3])]='G') and (UChr[byte(parm[4])]='I') then
@@ -156,8 +203,15 @@ procedure Parameters;
       end
       else if byte(addir[0])=0 then
       begin
-  addir:=ParamStr(i);
-  if not (addir[byte(addir[0])] in [#0,'/']) then addir:=addir+'/';  { Linux: separador '/' (era '\' de DOS) }
+  { addir es string[67] y aun tiene que albergar el separador final: mas vale
+    avisar aqui que truncar en silencio y fallar luego al abrir los ficheros. }
+  if byte(parm[0])>SizeOf(addir)-2 then
+  begin
+    Writeln('Game directory path too long (',byte(parm[0]),' chars, max ',
+            SizeOf(addir)-2,'): "',parm,'"');
+    Halt
+  end;
+  addir:=FixPath(parm);
       end
       else InvalidParm(parm);
     end;
