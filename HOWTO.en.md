@@ -19,8 +19,10 @@ look, same keys.
 
 - A **64-bit x86 Linux** system with a graphical (X11 or Wayland) session.
 - The **`VPA` binary** (in this package), plus the support files shipped with it:
-  **`DISTTABL.DAT`** (required — a distance table VPA needs to start), **`VPA.MSG`**
-  (message templates), the **`VPA.HLP`** help file and the **`LITT_VPA.CHR`** map font.
+  **`DISTTABL.DAT`** (required — a distance table VPA needs to start),
+  **`VPA.HLP`** (required — the help file; VPA **won't start** without it),
+  **`VPA.MSG`** (message templates) and the **`LITT_VPA.CHR`** map font.
+  **`VPA_RUS.HLP`**, the same help in Russian, is also included (see §2).
 - A **VGA Planets game directory** of your own: the folder with your turn files
   (`GENx.DAT`, `SHIPx.DAT`, `PLANETx.DAT`, `BDATAx.DAT`, `PLAYERx.RST`, etc.), where
   `x` is your race number. VPA does **not** come with a game; you get those files
@@ -55,7 +57,11 @@ chmod +x VPA          # only the first time
 
 - `<race>` — your player number (1–11).
 - `[game-directory]` — the folder with your turn files. If omitted, the current
-  directory is used.
+  directory is used. Either an **absolute** path
+  (`/home/your-user/PLANETS/mygame`) or a **relative** one (`mygame`) works, with
+  forward slashes `/` or, if you're coming from DOS, with backslashes `\`. The
+  trailing slash is optional. Maximum 66 characters; if you go over, VPA says so
+  and exits instead of failing later on.
 
 Example (playing race 3, game in `~/PLANETS/mygame`):
 ```sh
@@ -65,7 +71,7 @@ Example (playing race 3, game in `~/PLANETS/mygame`):
 Run it with no arguments to see the banner and confirm it starts:
 ```
 $ ./VPA
--= VGA Planets Assistant 3.67.2  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
+-= VGA Planets Assistant 3.67.3  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
 Use: VPA race [dir] ...
 ```
 
@@ -81,14 +87,43 @@ Keep these files where you run VPA — in your game directory or next to the bin
   messages. If it's missing, VPA still runs but warns and can't parse messages. It's
   a plain-text file in **Unix (LF)** line endings — keep it that way; a DOS (CRLF)
   copy won't parse correctly on Linux.
-- **`VPA.HLP`** — the built-in help. With it present, press **F1** inside VPA for the
-  help screen; without it, F1 simply shows nothing.
+- **`VPA.HLP`** — the built-in help (**F1** inside VPA). **Required:** VPA loads it
+  during startup, and if it can't find it, it aborts with
+  `Can't read file VPA.HLP` after having already read the game data. It has to be
+  in the **directory you run VPA from** (the current directory), not in the game
+  directory — same as `RESOURCE.PLN`.
 - **`LITT_VPA.CHR`** — the small vector font used for the map labels (planet and ship
   names). If it's missing, VPA still runs but falls back to a built-in font, so those
   labels won't look quite right.
 
-Only `DISTTABL.DAT` is strictly required to start; the rest are optional but wanted
-for the full, correct experience.
+`DISTTABL.DAT` and `VPA.HLP` are **strictly required** to start; the rest are
+optional but wanted for the full, correct experience.
+
+### Russian help (`VPA_RUS.HLP`)
+
+The package ships the help in two languages: **`VPA.HLP`** (English) and
+**`VPA_RUS.HLP`** (Russian), both compiled from the original `VHLP/VPA.HHH` and
+`VHLP/VPA_RUS.HHH` sources.
+
+VPA always reads the file named by the `HelpFile` key in `VPA.INI`, which defaults
+to `VPA.HLP`. So there are two ways to switch to Russian:
+
+**Option A — edit `VPA.INI`** (recommended, leaves the files alone):
+
+```ini
+HelpFile        = VPA_RUS.HLP
+```
+
+**Option B — rename**, the way the original DOS VPA did it:
+
+```sh
+rm VPA.HLP
+mv VPA_RUS.HLP VPA.HLP
+```
+
+> **Upper/lower case:** the help file name is looked up **case-insensitively**,
+> both the one from `VPA.INI` and the default. It doesn't matter whether the file
+> on disk is `VPA_RUS.HLP`, `vpa_rus.hlp` or `Vpa_Rus.Hlp`.
 
 ### Files not shipped with VPA-Linux, required to play a game
 

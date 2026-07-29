@@ -20,9 +20,10 @@ fiel a Linux del programa original de DOS — mismo aspecto, mismas teclas.
 - Un sistema **Linux x86 de 64 bits** con sesión gráfica (X11 o Wayland).
 - El **binario `VPA`** (incluido en este paquete), más los ficheros de apoyo que
   se distribuyen con él: **`DISTTABL.DAT`** (obligatorio — una tabla de
-  distancias que VPA necesita para arrancar), **`VPA.MSG`** (plantillas de
-  mensajes), el fichero de ayuda **`VPA.HLP`** y la fuente de mapa
-  **`LITT_VPA.CHR`**.
+  distancias que VPA necesita para arrancar), **`VPA.HLP`** (obligatorio — el
+  fichero de ayuda; VPA **no arranca** sin él), **`VPA.MSG`** (plantillas de
+  mensajes) y la fuente de mapa **`LITT_VPA.CHR`**. Se incluye además
+  **`VPA_RUS.HLP`**, la misma ayuda en ruso (ver §2).
 - Un **directorio de partida** de VGA Planets propio: la carpeta con tus ficheros
   de turno (`GENx.DAT`, `SHIPx.DAT`, `PLANETx.DAT`, `BDATAx.DAT`, `PLAYERx.RST`,
   etc.), donde `x` es tu número de raza. VPA **no** incluye ninguna partida; esos
@@ -57,7 +58,11 @@ chmod +x VPA          # solo la primera vez
 
 - `<raza>` — tu número de jugador (1–11).
 - `[directorio-de-partida]` — la carpeta con tus ficheros de turno. Si se omite,
-  se usa el directorio actual.
+  se usa el directorio actual. Vale tanto una ruta **absoluta**
+  (`/home/tu-usuario/PLANETS/mipartida`) como **relativa** (`mipartida`), con
+  barras `/` o, si vienes de DOS, con barras invertidas `\`. La barra final es
+  opcional. Como máximo 66 caracteres; si te pasas, VPA lo dice y sale en lugar
+  de fallar más adelante.
 
 Ejemplo (jugando la raza 3, partida en `~/PLANETS/mipartida`):
 ```sh
@@ -67,7 +72,7 @@ Ejemplo (jugando la raza 3, partida en `~/PLANETS/mipartida`):
 Ejecútalo sin argumentos para ver el banner y confirmar que arranca:
 ```
 $ ./VPA
--= VGA Planets Assistant 3.67.2  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
+-= VGA Planets Assistant 3.67.3  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
 Use: VPA race [dir] ...
 ```
 
@@ -86,14 +91,43 @@ binario:
   avisa y no puede interpretar los mensajes. Es un fichero de texto plano con
   finales de línea **Unix (LF)** — mantenlo así; una copia en formato DOS (CRLF)
   no se interpretará correctamente en Linux.
-- **`VPA.HLP`** — la ayuda integrada. Con él presente, pulsa **F1** dentro de VPA
-  para ver la pantalla de ayuda; sin él, F1 simplemente no muestra nada.
+- **`VPA.HLP`** — la ayuda integrada (**F1** dentro de VPA). **Obligatorio:** VPA
+  la carga durante el arranque, y si no la encuentra aborta con
+  `Can't read file VPA.HLP` después de haber leído ya los datos de la partida.
+  Tiene que estar en el **directorio desde el que ejecutas VPA** (el directorio
+  actual), no en el de la partida — igual que `RESOURCE.PLN`.
 - **`LITT_VPA.CHR`** — la pequeña fuente vectorial usada para las etiquetas del
   mapa (nombres de planeta y de nave). Si falta, VPA sigue funcionando pero cae a
   una fuente integrada, así que esas etiquetas no se verán del todo bien.
 
-Solo `DISTTABL.DAT` es estrictamente obligatorio para arrancar; el resto son
-opcionales, pero convienen para la experiencia completa y correcta.
+`DISTTABL.DAT` y `VPA.HLP` son **estrictamente obligatorios** para arrancar; el
+resto son opcionales, pero convienen para la experiencia completa y correcta.
+
+### Ayuda en ruso (`VPA_RUS.HLP`)
+
+El paquete trae la ayuda en dos idiomas: **`VPA.HLP`** (inglés) y
+**`VPA_RUS.HLP`** (ruso), las dos compiladas desde las fuentes originales
+`VHLP/VPA.HHH` y `VHLP/VPA_RUS.HHH`.
+
+VPA lee siempre el fichero indicado por la clave `HelpFile` de `VPA.INI`, que por
+omisión vale `VPA.HLP`. Hay por tanto dos maneras de pasarte al ruso:
+
+**Opción A — editar `VPA.INI`** (recomendada, no toca los ficheros):
+
+```ini
+HelpFile        = VPA_RUS.HLP
+```
+
+**Opción B — renombrar**, como se hacía en el VPA original de DOS:
+
+```sh
+rm VPA.HLP
+mv VPA_RUS.HLP VPA.HLP
+```
+
+> **Mayúsculas y minúsculas:** el nombre del fichero de ayuda se busca **sin
+> distinguir la caja**, tanto el que trae `VPA.INI` como el valor por omisión. Da
+> igual que en disco tengas `VPA_RUS.HLP`, `vpa_rus.hlp` o `Vpa_Rus.Hlp`.
 
 ### Ficheros ajenos a VPA-Linux, obligatorios para correr una partida
 

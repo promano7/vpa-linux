@@ -122,23 +122,34 @@ Sin argumentos, el programa imprime el banner y la ayuda de uso y sale — es la
 forma rápida de comprobar que el binario arranca:
 ```
 $ ./build/VPA
--= VGA Planets Assistant 3.67.2  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
+-= VGA Planets Assistant 3.67.3  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
 Use: VPA race [dir] ...
 ```
 
 ---
 
-## 4. Compilar la ayuda (VPA.HLP)
+## 4. Compilar la ayuda (VPA.HLP y VPA_RUS.HLP)
 
 VPA muestra su ayuda en pantalla (tecla **F1**) desde el fichero `VPA.HLP`. El
 original venía como binario de DOS (empaquetado de records de Borland ≠ FPC), así
-que hay que **regenerarlo** una vez desde `VHLP/VPA.HHH`:
+que hay que **regenerarlo** una vez desde las fuentes `VHLP/*.HHH`:
 
 ```sh
-make hlp        # genera build/VPA.HLP
+make hlp        # genera build/VPA.HLP y build/VPA_RUS.HLP
 ```
 
-Esto compila `VHLP/VHLPMAKE.PAS` y lo ejecuta para producir `VPA.HLP`. Como
+Se compilan **las dos ayudas** que trae el original:
+
+| Fuente | Resultado | Idioma |
+|---|---|---|
+| `VHLP/VPA.HHH` | `build/VPA.HLP` | inglés — la que VPA carga por omisión |
+| `VHLP/VPA_RUS.HHH` | `build/VPA_RUS.HLP` | ruso |
+
+VPA lee siempre el fichero que indique la clave `HelpFile` de `VPA.INI`
+(`VPA.HLP` por omisión), así que para jugar con la ayuda rusa basta con poner
+`HelpFile = VPA_RUS.HLP` o renombrar el fichero — ver `HOWTO.es.md`.
+
+Esto compila `VHLP/VHLPMAKE.PAS` y lo ejecuta sobre cada fuente. Como
 `VHLPMAKE` enlaza la unit gráfica, necesita un display X: el `Makefile` usa
 `xvfb-run` (display virtual) de forma automática, con *fallback* a ejecución
 directa si ya tienes una sesión gráfica. Por eso necesita el paquete **xvfb** (ver
@@ -146,15 +157,18 @@ directa si ya tienes una sesión gráfica. Por eso necesita el paquete **xvfb** 
 
 Copia el resultado a tu carpeta de partida:
 ```sh
-cp build/VPA.HLP ~/PLANETS/
+cp build/VPA.HLP build/VPA_RUS.HLP ~/PLANETS/
 ```
+
+> **Ojo:** `VPA.HLP` es **obligatorio**. VPA la carga durante el arranque y aborta
+> con `Can't read file VPA.HLP` si no la encuentra.
 
 > **Atajo:** `make data` hace todo de golpe — ver §4.1.
 
 ### 4.1 Montar el paquete distribuible (`make data`)
 
-`make data` construye **los dos artefactos a la vez** — el binario `VPA` (regla
-`build`) y el fichero de ayuda `VPA.HLP` (regla `hlp`) — y después monta una
+`make data` construye **todos los artefactos a la vez** — el binario `VPA` (regla
+`build`) y los ficheros de ayuda `VPA.HLP` y `VPA_RUS.HLP` (regla `hlp`) — y después monta una
 carpeta lista para distribuir, **`build/vpa-linux_package/`**, con todo lo que
 necesita un usuario final:
 
@@ -165,7 +179,8 @@ make data
 | Dentro de `build/vpa-linux_package/` | De dónde sale |
 |---|---|
 | `VPA` | el binario recién compilado (`build/VPA`) |
-| `VPA.HLP` | la ayuda recién compilada (`build/VPA.HLP`) |
+| `VPA.HLP` | la ayuda inglesa recién compilada (`build/VPA.HLP`) |
+| `VPA_RUS.HLP` | la ayuda rusa recién compilada (`build/VPA_RUS.HLP`) |
 | `EXAMPLES/` | copiado de la raíz del repo (`VPA.INI` de ejemplo) |
 | `DISTTABL.DAT` | copiado de la raíz del repo — **obligatorio** para arrancar |
 | `LITT_VPA.CHR` | copiado de la raíz del repo — fuente de las etiquetas del mapa |
@@ -234,9 +249,9 @@ referencian, así que puedes ignorarlos o borrarlos.
 | `Can't find unit system` / `...ptcgraph` | Falta el paquete `fpc` o se está usando un `fpc.cfg` local que eclipsa al `/etc/fpc.cfg`. El fichero de config del proyecto debe llamarse `vpa.cfg`, **no** `fpc.cfg`. |
 | `Threading has been used before cthreads was initialized` | Ya resuelto en el port (`cthreads` es la primera unit del `uses` de `VPA.PAS`). Si reaparece, verifica que `VPA.PAS` no se haya regenerado sin ese cambio. |
 | `Exception ... TPTCError` al arrancar | `ptcgraph` no pudo abrir la ventana: no hay display X11. Lanza desde una sesión gráfica (o XWayland). En un servidor sin pantalla puedes probar con `xvfb-run ./build/VPA`. |
-| `make hlp` falla o no genera `VPA.HLP` | Falta **xvfb** y no hay display X. Instala el paquete xvfb de tu distro (ver §1) o ejecuta `make hlp` desde una sesión gráfica. |
+| `make hlp` falla o no genera los `.HLP` | Falta **xvfb** y no hay display X. Instala el paquete xvfb de tu distro (ver §1) o ejecuta `make hlp` desde una sesión gráfica. |
 | Datos de la partida ilegibles / valores raros | Revisa que `SWITCHES.INC` tenga `{$PACKRECORDS 1}` (ver §5). |
-| No aparece la ayuda al pulsar F1 | Falta `VPA.HLP` en la carpeta de partida. Genéralo con `make hlp` y cópialo (ver §4). |
+| VPA aborta con `Can't read file VPA.HLP` | Falta `VPA.HLP` en el directorio desde el que ejecutas VPA. Genéralo con `make hlp` y cópialo (ver §4); es obligatorio para arrancar. |
 
 ---
 
