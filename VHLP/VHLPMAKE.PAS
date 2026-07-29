@@ -73,7 +73,10 @@ Begin
   if pages=0 then begin Writeln('No pages found in the VHLP file'); Halt end;
 
   i:=ls;
-  while (i>0) and not (s[i] in ['.','\']) do dec(i);
+  { El original solo miraba '\' (DOS). Se acepta tambien '/' para que un
+    directorio con punto en el nombre ('/home/x/vpa.d/VPA.HHH') no se confunda
+    con la extension del fichero. }
+  while (i>0) and not (s[i] in ['.','\','/']) do dec(i);
   if (i>0) and (s[i]='.') then ls:=i-1;
   s:=s+'.hlp';
   Assign(f,s);

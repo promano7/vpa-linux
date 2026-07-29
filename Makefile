@@ -63,33 +63,41 @@ clean:
 	rm -rf $(PKGDIR)
 	@echo ">> Cleaned."
 
-## hlp  : generate the VPA.HLP help file from VHLP/VPA.HHH
+## hlp  : generate both help files from their VHLP sources:
+##          VHLP/VPA.HHH      -> build/VPA.HLP      (English, the one VPA loads)
+##          VHLP/VPA_RUS.HHH  -> build/VPA_RUS.HLP  (Russian)
 ##        (VHLPMAKE links the graphics unit, so it needs a display:
-##         xvfb-run is used for a virtual display). Copy it to your game
-##         folder (where you run VPA), just like the .DAT files.
+##         xvfb-run is used for a virtual display). Copy them to your game
+##         folder (where you run VPA), just like the .DAT files. VPA always
+##         reads VPA.HLP: to play with the Russian help, replace VPA.HLP with
+##         VPA_RUS.HLP (see HOWTO).
 hlp:
 	@mkdir -p build
 	$(FPC) @$(CFG) -obuild/vhlpmake VHLP/VHLPMAKE.PAS
-	@cp VHLP/VPA.HHH build/VPA.HHH
-	@cd build && (xvfb-run -a ./vhlpmake VPA.HHH || ./vhlpmake VPA.HHH) && mv -f VPA.hlp VPA.HLP && rm -f VPA.HHH vhlpmake
+	@cp -f VHLP/VPA.HHH VHLP/VPA_RUS.HHH build/
+	@cd build && (xvfb-run -a ./vhlpmake VPA.HHH || ./vhlpmake VPA.HHH) && mv -f VPA.hlp VPA.HLP
+	@cd build && (xvfb-run -a ./vhlpmake VPA_RUS.HHH || ./vhlpmake VPA_RUS.HHH) && mv -f VPA_RUS.hlp VPA_RUS.HLP
+	@cd build && rm -f VPA.HHH VPA_RUS.HHH vhlpmake
 	@echo ""
-	@echo ">> Generated build/VPA.HLP — copy it to your game folder:  cp build/VPA.HLP ~/PLANETS/"
+	@echo ">> Generated build/VPA.HLP and build/VPA_RUS.HLP — copy them to your game folder:"
+	@echo "   cp build/VPA.HLP build/VPA_RUS.HLP ~/PLANETS/"
 
-## data : build BOTH the VPA binary and VPA.HLP, and assemble the ready-to-ship
-##        package in build/vpa-linux_package/ : the freshly compiled VPA and
-##        VPA.HLP, the EXAMPLES/ folder, and DISTTABL.DAT, HOWTO.en.md,
-##        HOWTO.es.md, LICENSE.md, LITT_VPA.CHR, MPL-2.0.txt and VPA.MSG.
+## data : build the VPA binary AND both help files, and assemble the
+##        ready-to-ship package in build/vpa-linux_package/ : the freshly
+##        compiled VPA, VPA.HLP and VPA_RUS.HLP, the EXAMPLES/ folder, and
+##        DISTTABL.DAT, HOWTO.en.md, HOWTO.es.md, LICENSE.md, LITT_VPA.CHR,
+##        MPL-2.0.txt and VPA.MSG.
 data: build hlp
 	@cp -f LITT_VPA.CHR build/ 2>/dev/null || true
 	@rm -rf $(PKGDIR)
 	@mkdir -p $(PKGDIR)
 	@cp -f $(BIN) $(PKGDIR)/
-	@cp -f build/VPA.HLP $(PKGDIR)/
+	@cp -f build/VPA.HLP build/VPA_RUS.HLP $(PKGDIR)/
 	@cp -a EXAMPLES $(PKGDIR)/
 	@cp -f $(PKGFILES) $(PKGDIR)/
 	@echo ""
 	@echo ">> Package ready in $(PKGDIR)/ :"
-	@echo "   VPA  VPA.HLP  EXAMPLES/  $(PKGFILES)"
+	@echo "   VPA  VPA.HLP  VPA_RUS.HLP  EXAMPLES/  $(PKGFILES)"
 	@echo ">> Copy its contents to your game folder, e.g.:  cp -a $(PKGDIR)/. ~/PLANETS/"
 
 ## help : list the targets
