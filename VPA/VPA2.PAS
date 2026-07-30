@@ -3865,25 +3865,19 @@ begin
                                                  else SimGroundAttack(1); 
                   end;
 
+{_c}    ord('C'): begin
 {$IFDEF vpacc}
-{_c}    ord('C'): if RWMode and PHOST and EnableRemote and (ltype=LockS) and (turn=today) then begin
-                    NRemoteControl(0, lock and LockLo);
-                    ChangeData(Sh, lock and LockLo);
-                    MouseDisabled := true;
-                    ShipInfo;
-                    MouseDisabled := false;
-                  end else begin
-                    showC:=not showC; WriteShows; MouseMove; DrawMap(Yes);
+                    if RWMode and PHOST and EnableRemote and (ltype=LockS) and (turn=today) then begin
+                      NRemoteControl(0, lock and LockLo);
+                      ChangeData(Sh, lock and LockLo);
+                      MouseDisabled := true;
+                      ShipInfo;
+                      MouseDisabled := false;
+                    end else
+{$ENDIF}
+                    begin showC:=not showC; WriteShows; MouseMove; DrawMap(Yes) end;
                   end;
-{_f}    ord('F'): if RWMode and PHOST and EnableRemote and (ltype=LockS) and (turn=today) then begin
-                    NRemoteControl(0, lock and LockLo);
-                    ChangeData(Sh, lock and LockLo);
-                    MouseDisabled := true;
-                    ShipInfo;
-                    MouseDisabled := false;
-                  end else begin
-                    showF:=not showF; WriteShows; MouseMove; DrawMap(Yes);
-                  end;                  
+{$IFDEF vpacc}
 {v}     ord('v'): if RWMode and PHOST and EnableGive and (turn=today) then begin
                     if (ltype=LockS) and (lship<>nil) and (lship^.owner=player) and (lship^.when=today)
                      then begin
@@ -3931,7 +3925,8 @@ begin
                            ObjList;
                            ChangeData(Sh,lock and LockLo);
                          end;
-        Ord('F'): if (ltype=LockS) and (lship<>nil) then DisplayShipFunctions(lship);
+        Ord('F'): if (ltype=LockS) and (lship<>nil) then DisplayShipFunctions(lship)
+                  else begin showF:=not showF; WriteShows; MouseMove; DrawMap(Yes) end;
 {^f}    6       : if RWMode and ((ltype=LockP) or (ltype=LockS)) then
                     if (ltype=LockP) and (lplan<>nil) and (lbase=nil) then SetFCode(Pl,No)
                     else if (distlock=0) and (lship<>nil) and (lship^.owner=player) then SetFCode(Sh,No);
