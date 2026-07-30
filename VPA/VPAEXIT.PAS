@@ -579,12 +579,32 @@ procedure WriteGreeting;
 
 procedure SaveScr;
   var	f	: file;
+      cur	: VPAScr;
   begin
     if byte(VPASCR_INI[0])=0 then Exit;
+    { Antes esto se guardaba con BlockWrite(f,ratioN,SizeOf(VPAScr)-2), asumiendo
+      que ratioN, x0, y0 y los show* (variables sueltas, no campos de un record)
+      quedan contiguos en memoria en el mismo orden en que estan declarados -- un
+      truco valido en Turbo Pascal de 16 bits (de donde viene este codigo), pero
+      FPC/x86-64 no da esa garantia: el linker puede (y de hecho lo hace, medido
+      en la practica) dejar decenas de bytes de otras variables no relacionadas
+      entre una y otra. El resultado es que se guardaban y releian bytes ajenos,
+      y los interruptores volvian siempre al mismo patron fijo tras reiniciar en
+      vez de al ultimo estado del jugador. Se copia aqui campo a campo a un
+      VPAScr real (record, sin relleno por el $A- de la unidad) para garantizar
+      el volcado correcto. }
+    cur.ratioN:=ratioN; cur.x0:=x0; cur.y0:=y0;
+    cur.showS:=byte(showS); cur.showE:=byte(showE); cur.showM:=byte(showM);
+    cur.showI:=byte(showI); cur.showU:=byte(showU); cur.showA:=byte(showA);
+    cur.showT:=byte(showT); cur.showP:=byte(showP); cur.showG:=byte(showG);
+    cur.showL:=byte(showL); cur.showX:=byte(showX); cur.showC:=byte(showC);
+    cur.showF:=byte(showF); cur.showY:=showY;       cur.showW:=showW;
+    cur.showN:=byte(showN); cur.showV:=byte(showV);
+    cur.res3:=showR3; cur.res4:=showR4; cur.res5:=showR5;
+    cur.force:=lock;    { el bloque de carga en VPAINIT.OpenGraph restaura esto en `lock` }
     if not OpenRW(f,VPASCR_INI,No) then Rewrite(f,1);
     if IOResult<>0 then Exit;
-    BlockWrite(f,ratioN,SizeOf(VPAScr)-2);
-    BlockWrite(f,lock,2);
+    BlockWrite(f,cur,SizeOf(VPAScr));
     BlockWrite(f,ScreenPos,SizeOf(ScreenPos));
     CloseData(f);
   end;

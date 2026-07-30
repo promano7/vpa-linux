@@ -1282,6 +1282,7 @@ procedure OpenGraph;
   var gd,gm : int;
   s : string[6];
   f : file;
+  cur : VPAScr;
   procedure GrErr (err:int);
     begin
       if err>=0 then Exit;
@@ -1301,9 +1302,24 @@ procedure OpenGraph;
       gd:=FileSize(f);
       if gd=VPASCR_Size then
       begin
-  BlockRead(f,ratioN,SizeOf(VPAScr)-2);
-  BlockRead(f,force,2);
-  if force<>0 then ForceKey:=13;
+  { Lectura simetrica al nuevo SaveScr (VPAEXIT.PAS): un VPAScr real, campo a
+    campo, en vez de asumir que ratioN, x0, y0 y los show* sueltos son
+    contiguos en memoria (ver el comentario en SaveScr). El campo `force` del
+    fichero es en realidad el `lock` guardado por SaveScr -- antes se leia
+    aqui como `force` y solo se usaba para decidir un ForceKey, perdiendo la
+    seleccion/objeto bloqueado de la sesion anterior; ahora se restaura en
+    `lock` correctamente. }
+  BlockRead(f,cur,SizeOf(VPAScr));
+  ratioN:=cur.ratioN; x0:=cur.x0; y0:=cur.y0;
+  showS:=cur.showS<>0; showE:=cur.showE<>0; showM:=cur.showM<>0;
+  showI:=cur.showI<>0; showU:=cur.showU<>0; showA:=cur.showA<>0;
+  showT:=cur.showT<>0; showP:=cur.showP<>0; showG:=cur.showG<>0;
+  showL:=cur.showL<>0; showX:=cur.showX<>0; showC:=cur.showC<>0;
+  showF:=cur.showF<>0; showY:=cur.showY;    showW:=cur.showW;
+  showN:=cur.showN<>0; showV:=cur.showV<>0;
+  showR3:=cur.res3;    showR4:=cur.res4;    showR5:=cur.res5;
+  lock:=cur.force;
+  if lock<>0 then ForceKey:=13;
   BlockRead(f,ScreenPos,SizeOf(ScreenPos));
       end;
       CloseData(f);
