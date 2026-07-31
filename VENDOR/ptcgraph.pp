@@ -52,9 +52,10 @@ type
 
 {$i graphh.inc}
 
-{ VPA: escala de ventana resuelta por la aplicacion (1..8). Si es >0 tiene
-  prioridad sobre la variable de entorno VPA_SCALE. La fija VPA antes de
-  InitGraph (ver xfocus.ResolveScale). 0 = usar VPA_SCALE del entorno. }
+{ VPA: escala de ventana resuelta por la aplicacion, en PORCENTAJE (100 = 1x,
+  220 = 2.2x; rango util 100..800). Si es >0 tiene prioridad sobre la variable
+  de entorno VPA_SCALE. La fija VPA antes de InitGraph (ver xfocus.ResolveScale).
+  0 = usar VPA_SCALE del entorno. }
 var
   VPAForceScale: LongInt = 0;
 
@@ -657,7 +658,11 @@ begin
 
   { VPA: ventana mas grande opcional. El surface sigue AWidth x AHeight; la
     consola (ventana) se agranda y ptc escala el surface para llenarla.
-    Prioridad: VPAForceScale (resuelto por VPA) y, si es 0, la env VPA_SCALE. }
+    Prioridad: VPAForceScale (resuelto por VPA) y, si es 0, la env VPA_SCALE.
+    vpaScale esta en PORCENTAJE (100 = 1x, 220 = 2.2x) -- ver el comentario de
+    xfocus.ResolveScale, que es quien normalmente lo calcula. Compatibilidad:
+    si se llega aqui sin pasar por VPAForceScale (o sea, sin VPA-Linux por medio)
+    un VPA_SCALE de 2 a 20 se sigue interpretando como "N veces" -> N*100. }
   vpaScale := VPAForceScale;
   if vpaScale <= 0 then
   begin
@@ -665,13 +670,14 @@ begin
     if vpaScaleStr <> '' then
     begin
       Val(vpaScaleStr, vpaScale, vpaCode);
-      if vpaCode <> 0 then vpaScale := 1;
+      if (vpaCode <> 0) or (vpaScale < 1) then vpaScale := 100
+      else if vpaScale <= 20 then vpaScale := vpaScale * 100;
     end;
   end;
-  if (vpaScale > 1) and (vpaScale <= 8) then
+  if (vpaScale > 100) and (vpaScale <= 800) then
   begin
-    ConsoleWidth := AWidth * vpaScale;
-    ConsoleHeight := AHeight * vpaScale;
+    ConsoleWidth := (AWidth * vpaScale) div 100;
+    ConsoleHeight := (AHeight * vpaScale) div 100;
   end;
 
   if FullscreenGraph then

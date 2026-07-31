@@ -39,49 +39,76 @@ begin
                          (LowerCase(GetEnvironmentVariable('VPA_VIDEO')) = 'fullscreen');
 end;
 
-{ Resuelve la escala de ventana deseada (1..8):
-    - VPA_SCALE sin definir  -> 2 (por defecto, ventana mas grande)
-    - VPA_SCALE=1            -> 1 (640x480 nativo, sin escalar)
-    - VPA_SCALE=fullscreen   -> la mayor escala entera que cabe en la pantalla
-    - VPA_SCALE=N (2..8)     -> N
-  Siempre se recorta a lo que cabe en pantalla (4:3, escala entera, nitido).
-  VPA pasa el resultado a ptcgraph.VPAForceScale antes de InitGraph. }
+{ Interpreta VPA_SCALE ya normalizado (minusculas, trim) como porcentaje:
+    - un entero de 1 a legacyMax (20) se toma como el multiplicador clasico "N veces"
+      de las versiones anteriores (que solo aceptaban 1..8) y se devuelve N*100 --
+      nadie pide de verdad una escala del "2%", asi que no hay ambiguedad real con
+      los valores mayores de abajo.
+    - cualquier otro entero se toma como porcentaje literal (p.ej. 220 -> 220, es
+      decir 2.2x). Solo enteros: no hace falta punto/coma decimal, basta con pedir
+      el porcentaje que se quiera (137, 220, 325...).
+    - si no es un numero valido, devuelve 100 (sin escalar) en vez de fallar
+      silenciosamente a un valor sorprendente. }
+function ParsePercentOrLegacyScale(const v: string; legacyMax: longint): longint;
+var
+  n, code: longint;
+begin
+  Val(v, n, code);
+  if (code <> 0) or (n < 1) then begin ParsePercentOrLegacyScale := 100; Exit end;
+  if n <= legacyMax then ParsePercentOrLegacyScale := n * 100
+  else ParsePercentOrLegacyScale := n;
+end;
+
+{ Resuelve la escala de ventana deseada, en PORCENTAJE (100 = 1x, 220 = 2.2x):
+    - VPA_SCALE sin definir  -> 200 (por defecto, ventana al doble)
+    - VPA_SCALE=1            -> 100 (640x480 nativo, sin escalar)
+    - VPA_SCALE=fullscreen   -> el mayor porcentaje que cabe en la pantalla
+    - VPA_SCALE=N (2..20)    -> N*100  (compatibilidad con versiones anteriores,
+                                que solo aceptaban "N veces" 1..8)
+    - VPA_SCALE=N (21..800)  -> N por ciento (p.ej. 220 = 2.2x)
+  Siempre se recorta a lo que cabe en pantalla (4:3, nitido; ya no hace falta que
+  sea un multiplo entero -- ptc escala el surface de 640x480 a cualquier tamano
+  de ventana). VPA pasa el resultado a ptcgraph.VPAForceScale antes de InitGraph. }
 function ResolveScale: longint;
+const
+  MinPct = 100;
+  MaxPct = 800;
+  LegacyMax = 20;         { valores <= esto se interpretan como "N veces", no "N%" }
 var
   v: string;
-  n, code, scr, sw, sh, maxfit: longint;
+  n, scr, sw, sh, maxfitpct: longint;
   dpy: PDisplay;
 begin
   v := LowerCase(Trim(GetEnvironmentVariable('VPA_SCALE')));
-  maxfit := 1;
+  maxfitpct := MinPct;
   dpy := XOpenDisplay(nil);
   if dpy <> nil then
   begin
     scr := XDefaultScreen(dpy);
     sw := XDisplayWidth(dpy, scr);
     sh := XDisplayHeight(dpy, scr);
-    maxfit := sw div 640;
-    if (sh div 480) < maxfit then maxfit := sh div 480;
+    { mayor porcentaje que cabe en las dos dimensiones a la vez (4:3) }
+    maxfitpct := Trunc(100.0 * sw / 640);
+    if Trunc(100.0 * sh / 480) < maxfitpct then maxfitpct := Trunc(100.0 * sh / 480);
     XCloseDisplay(dpy);
   end;
-  if maxfit < 1 then maxfit := 1;
-  if maxfit > 8 then maxfit := 8;
+  if maxfitpct < MinPct then maxfitpct := MinPct;
+  if maxfitpct > MaxPct then maxfitpct := MaxPct;
 
   gWantFullscreen := False;
   if v = '' then
-    n := 2                                  { por defecto: ventana mas grande }
+    n := 200                                { por defecto: ventana al doble }
   else if (v = 'fullscreen') or (v = 'full') or (v = 'max') then
   begin
-    n := maxfit;                            { ajuste 4:3 mas grande que cabe }
+    n := maxfitpct;                         { ajuste 4:3 mas grande que cabe }
     gWantFullscreen := True;                { + estado pantalla completa (tapa el panel) }
   end
   else
   begin
-    Val(v, n, code);
-    if (code <> 0) or (n < 1) then n := 1;
+    n := ParsePercentOrLegacyScale(v, LegacyMax);
   end;
-  if n > maxfit then n := maxfit;           { recortar a lo que cabe }
-  if n < 1 then n := 1;
+  if n > maxfitpct then n := maxfitpct;     { recortar a lo que cabe }
+  if n < MinPct then n := MinPct;
   ResolveScale := n;
 end;
 
