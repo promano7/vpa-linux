@@ -179,14 +179,22 @@ VPA_SCALE=1 ./VPA 3 ~/PLANETS/mygame
 
 # 3x window:
 VPA_SCALE=3 ./VPA 3 ~/PLANETS/mygame
+
+# Window at a specific percentage (e.g. 220% = 2.2x):
+VPA_SCALE=220 ./VPA 3 ~/PLANETS/mygame
 ```
 
 | `VPA_SCALE` | Result |
 |---|---|
 | *(unset)* | **2×** window (default). |
 | `1` | Native **640×480**, the smallest. |
-| `2`…`8` | **N×** window (clamped to what fits on your screen). |
+| `2`…`20` | **N×** window (clamped to what fits on your screen). |
+| `21`…`800` | Window at **N %** (e.g. `220` = 2.2×, `137` = 1.37×), for finer control than an integer multiple. |
 | `fullscreen` | **Fullscreen** (largest 4:3 fit, above the desktop panel). Aliases: `full`, `max`. |
+
+Values 2 through 20 are read as "times" (same as before percentages were
+supported); anything from 21 up is read as a direct percentage. There's no
+real ambiguity between the two: nobody asks for a window at "2%" of size.
 
 Fullscreen applies only to VPA's own window — it does **not** change your monitor's
 resolution, and it's released when you close VPA.

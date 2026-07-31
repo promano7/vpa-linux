@@ -184,14 +184,22 @@ VPA_SCALE=1 ./VPA 3 ~/PLANETS/mipartida
 
 # Ventana a 3x:
 VPA_SCALE=3 ./VPA 3 ~/PLANETS/mipartida
+
+# Ventana a un porcentaje concreto (p.ej. 220% = 2.2x):
+VPA_SCALE=220 ./VPA 3 ~/PLANETS/mipartida
 ```
 
 | `VPA_SCALE` | Resultado |
 |---|---|
 | *(sin definir)* | Ventana a **2×** (por defecto). |
 | `1` | **640×480** nativo, la más pequeña. |
-| `2`…`8` | Ventana a **N×** (recortada a lo que quepa en tu pantalla). |
+| `2`…`20` | Ventana a **N×** (recortada a lo que quepa en tu pantalla). |
+| `21`…`800` | Ventana al **N %** indicado (p.ej. `220` = 2.2×, `137` = 1.37×), para ajustar el tamaño con más precisión que con un múltiplo entero. |
 | `fullscreen` | **Pantalla completa** (el mayor ajuste 4:3 posible, por encima del panel del escritorio). Alias: `full`, `max`. |
+
+Los valores del 2 al 20 se interpretan como "veces" (igual que antes de admitir
+porcentajes); a partir de 21 se interpretan como porcentaje directo. No hay
+ambigüedad real entre ambos: nadie pide una ventana al "2 %" de tamaño.
 
 La pantalla completa se aplica solo a la propia ventana de VPA — **no** cambia
 la resolución de tu monitor, y se libera al cerrar VPA.
