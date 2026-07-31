@@ -1202,7 +1202,10 @@ procedure WriteMaxPop(cpos:integer;cdiff:longint);
     CalcMaxPop(lplan,colo,ming,maxcol,growcol,maxnat,grownat,GAmin,GAmax,GA,GARem);
     if not enemy then lplan^.colonists:=lplan^.colonists-cdiff;
 {    with lplan^ do begin}
-      if (colo=0) then r:=race[player] else r:=race[lplan^.owner];
+      { mismo problema que en CalcMaxPop (VPADATA.PAS): lplan^.owner puede ser
+        -1 (sin datos) y race[] es array[1..12]. }
+      if (colo=0) or (lplan^.owner<1) or (lplan^.owner>12) then r:=race[player]
+      else r:=race[lplan^.owner];
 
       Clear(MX0+8,cline,639,cline+7);
  

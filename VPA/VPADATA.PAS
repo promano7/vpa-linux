@@ -2152,7 +2152,13 @@ function NHappyChange (id:int; accurate:boolean) : int;
   begin
     with plan^ do begin
       temp:=100-climate; {should be predicted}
-      if (colonists=0) then r:=race[player] else r:=race[owner];
+      { BBU/port: 'owner' puede venir a -1 (sin datos de propietario, p.ej. un
+        planeta visto solo por sensores remotos) o, en teoria, fuera de 1..12;
+        race[] es array[1..12], asi que race[owner] con owner<1 lee memoria
+        fuera de la tabla -- provoca un Access Violation al arrancar VPA con
+        ShowMaxPop=On si hay algun planeta asi en la partida. Se usa la raza
+        del jugador como antes se hacia para r=0. }
+      if (colonists=0) or (owner<1) or (owner>12) then r:=race[player] else r:=race[owner];
       if (r=0) then r:=race[player];
       grow:=0; supp:=0;
       colo := colonists; 
