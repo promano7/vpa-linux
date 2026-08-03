@@ -204,6 +204,33 @@ ambigüedad real entre ambos: nadie pide una ventana al "2 %" de tamaño.
 La pantalla completa se aplica solo a la propia ventana de VPA — **no** cambia
 la resolución de tu monitor, y se libera al cerrar VPA.
 
+### Sensibilidad del ratón al seleccionar (`StickyMouseRange`)
+
+VPA tiene una función llamada **StickyMouse** que evita perder la selección de
+un objeto (planeta, nave...) por un movimiento involuntario del ratón: mientras
+el puntero no se aleje del objeto seleccionado, el movimiento se ignora y el
+cursor vuelve a él. Es lo que impide fijar rutas por error con la mesa
+temblando o el pulso poco firme.
+
+El radio clásico de VPA era de **2 píxeles**, fijo. Con ratones ópticos
+modernos (que reportan movimiento constantemente) puede quedarse corto. Ahora
+se puede ajustar en `VPA.INI`, en la sección `[Interface]`:
+
+```ini
+StickyMouse      = On
+StickyMouseRange = 15
+```
+
+| Valor | Efecto |
+|---|---|
+| `2` | Comportamiento clásico de VPA (valor por omisión si no pones la clave). |
+| `10`–`20` | Recomendado con ratones ópticos modernos: aguanta bien el temblor sin volverse pegajoso. |
+| `0` | Desactiva el filtro (equivale a `StickyMouse = Off`). |
+| máx. `100` | Valores mayores se recortan a 100; por encima costaría soltar la selección. |
+
+Si prefieres desactivarlo del todo, `StickyMouse = Off` sigue funcionando igual
+que siempre.
+
 ---
 
 ## 4. Controles y cómo salir

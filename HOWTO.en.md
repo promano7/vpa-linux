@@ -199,6 +199,33 @@ real ambiguity between the two: nobody asks for a window at "2%" of size.
 Fullscreen applies only to VPA's own window — it does **not** change your monitor's
 resolution, and it's released when you close VPA.
 
+### Selection mouse sensitivity (`StickyMouseRange`)
+
+VPA has a feature called **StickyMouse** that keeps you from losing an object
+selection (planet, ship...) to an accidental mouse movement: as long as the
+pointer doesn't stray from the selected object, the movement is ignored and the
+cursor snaps back to it. This is what stops you setting waypoints by mistake
+with a shaky table or an unsteady hand.
+
+VPA's classic radius was a hardcoded **2 pixels**. With modern optical mice
+(which report movement constantly) that can be too tight. It's now adjustable
+in `VPA.INI`, under `[Interface]`:
+
+```ini
+StickyMouse      = On
+StickyMouseRange = 15
+```
+
+| Value | Effect |
+|---|---|
+| `2` | Classic VPA behaviour (the default if you don't set the key). |
+| `10`–`20` | Recommended with modern optical mice: absorbs shake without feeling sticky. |
+| `0` | Disables the filter (same as `StickyMouse = Off`). |
+| max `100` | Larger values are clamped to 100; beyond that the selection would be hard to release. |
+
+If you'd rather turn it off entirely, `StickyMouse = Off` still works exactly as
+it always did.
+
 ---
 
 ## 4. Controls & exiting
