@@ -2853,7 +2853,8 @@ procedure MouseMove;
     if lock<>0 then
     begin
       Abs2Scr(lx,ly,sx,sy);
-      if (mEv0=EvMouseMove) and StickyMouse and (Abs(MouseX-sx)<2) and (Abs(MouseY-sy)<2) then
+      if (mEv0=EvMouseMove) and StickyMouse and (Abs(MouseX-sx)<=StickyMouseRange)
+                                           and (Abs(MouseY-sy)<=StickyMouseRange) then
         begin MoveMouseTo(sx,sy); Exit end;
       if DSdrawn then DrawPath;
       if SRdrawn then DrawShipRange;

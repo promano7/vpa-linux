@@ -54,6 +54,13 @@ var
 const
         AutoScroll      : boolean = On;
         StickyMouse     : boolean = On;
+        { Radio en pixeles del filtro StickyMouse: mientras el raton no se aleje
+          mas de esto del objeto seleccionado, se ignora el movimiento y el cursor
+          vuelve al objeto (evita perder la seleccion por un temblor de la mesa).
+          El valor clasico de VPA era 2, fijo en el codigo; ahora se puede subir
+          desde VPA.INI (Interface/StickyMouseRange) porque con raton optico
+          moderno o pantalla escalada 2 px se quedan cortos. }
+        StickyMouseRange : int = 2;
         LargePlanets    : boolean = On;
         PlanetNames     : boolean = On;
         UseSmallFont    : boolean = On;

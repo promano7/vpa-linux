@@ -203,15 +203,15 @@ type
   ScoringMethodKey = (smAutoScore,smPTScore,smUnknown);
   CGExtCfgKey  = (extCConnection,extConnectionDist,extShowMapBorder,extAutoDisapprove,
                   extShowColonistPrediction,extScoringMethod,extShowCheckMark,
-                  extShowScoreValue,extConfirmNotes,kUnknown);
+                  extShowScoreValue,extConfirmNotes,extStickyMouseRange,kUnknown);
 
 const
   ScoringMethodNames      : array[1..20] of char = 'AUTOSCORE PTSCORE   ';
   ScoringMethodLabels     : array[smAutoScore..smUnknown] of str8 = ('AScore','PTScore','unknown');
   ScoringMethodLongLabels : array[smAutoScore..smUnknown] of str20 = ('AutoScore','PTScore','unknown');
-  CGExtKeyNames: array [1..135] of char =
+  CGExtKeyNames: array [1..151] of char =
       'CONNECTION CONNECTIONDIST SHOWMAPBORDER AUTODISAPPROVE SHOWCOLONISTPREDICTION SCORINGMETHOD SHOWCHEC'+
-      'KMARK SHOWSCOREVALUE CONFIRMNOTES  ';
+      'KMARK SHOWSCOREVALUE CONFIRMNOTES STICKYMOUSERANGE ';
 
 {** territory ** }
 
@@ -5218,6 +5218,13 @@ begin
           extAutoDisapprove         : begin AutoDisapprove:=YesNo; r:=true;  end;
           extScoringMethod          : begin ScoringMethod:=s; r:=true; end;
           extConfirmNotes           : begin ConfirmNotes:=YesNo; r:=true;  end;
+          { Radio del filtro StickyMouse, en pixeles (clasico: 2). Se limita a
+            0..100: 0 desactiva el filtro de hecho, y por encima de 100 la
+            seleccion se volveria imposible de soltar con el raton. }
+          extStickyMouseRange       : begin StickyMouseRange:=Value(s);
+                                       if StickyMouseRange<0 then StickyMouseRange:=0;
+                                       if StickyMouseRange>100 then StickyMouseRange:=100;
+                                       r:=true; end;
                     end;
         {moved to config.pas}
         {

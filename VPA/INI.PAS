@@ -95,6 +95,7 @@ Procedure ini_init_vpa;
 begin
    ini_add(ini_file_vpa,'Interface','AutoScroll','',ini_size_bool,@AutoScroll);
    ini_add(ini_file_vpa,'Interface','StickyMouse','',ini_size_bool,@StickyMouse);
+   ini_add(ini_file_vpa,'Interface','StickyMouseRange','',ini_size_int,@StickyMouseRange);
    ini_add(ini_file_vpa,'Interface','LargePlanets','',ini_size_bool,@LargePlanets);
    ini_add(ini_file_vpa,'Interface','PlanetNames','',ini_size_bool,@PlanetNames);
    ini_add(ini_file_vpa,'Interface','SmallFont','',ini_size_bool,@UseSmallFont);
