@@ -303,12 +303,9 @@ begin
                     PTCKEY_F8:            KeyBufAdd(#0#101);
                     PTCKEY_F9:            KeyBufAdd(#0#102);
                     PTCKEY_F10:           KeyBufAdd(#0#103);
-                    PTCKEY_F11:
-                      if KeyMode in [kmGO32, kmFPWINCRT] then
-                        KeyBufAdd(#0#137);
-                    PTCKEY_F12:
-                      if KeyMode in [kmGO32, kmFPWINCRT] then
-                        KeyBufAdd(#0#138);
+                    { VPA: ver la nota de F11 en la rama sin modificador }
+                    PTCKEY_F11:           KeyBufAdd(#0#137);
+                    PTCKEY_F12:           KeyBufAdd(#0#138);
                     PTCKEY_ONE:
                       if KeyMode = kmFPWINCRT then
                         KeyBufAdd(#0#2);
@@ -452,12 +449,9 @@ begin
                       PTCKEY_F8:        KeyBufAdd(#0#91);
                       PTCKEY_F9:        KeyBufAdd(#0#92);
                       PTCKEY_F10:       KeyBufAdd(#0#93);
-                      PTCKEY_F11:
-                        if KeyMode in [kmGO32, kmFPWINCRT] then
-                          KeyBufAdd(#0#135);
-                      PTCKEY_F12:
-                        if KeyMode in [kmGO32, kmFPWINCRT] then
-                          KeyBufAdd(#0#136);
+                      { VPA: ver la nota de F11 en la rama sin modificador }
+                      PTCKEY_F11:       KeyBufAdd(#0#135);
+                      PTCKEY_F12:       KeyBufAdd(#0#136);
                       PTCKEY_BACKSPACE: KeyBufAdd(#8);
                       PTCKEY_TAB:       KeyBufAdd(#0#15);
                       PTCKEY_ENTER:     KeyBufAdd(#13);
@@ -490,12 +484,14 @@ begin
                       PTCKEY_F8:        KeyBufAdd(#0#66);
                       PTCKEY_F9:        KeyBufAdd(#0#67);
                       PTCKEY_F10:       KeyBufAdd(#0#68);
-                      PTCKEY_F11:
-                        if KeyMode in [kmGO32, kmFPWINCRT] then
-                          KeyBufAdd(#0#133);
-                      PTCKEY_F12:
-                        if KeyMode in [kmGO32, kmFPWINCRT] then
-                          KeyBufAdd(#0#134);
+                      { VPA: F11/F12 tambien en kmTP7. El original solo los emitia en
+                        kmGO32/kmFPWINCRT, asi que en kmTP7 (el modo que usa VPA) la
+                        tecla se tragaba en silencio y F11 (GoTurn) no hacia nada. Los
+                        scancodes 133..140 son los mismos que ya usaba para los otros
+                        modos; VPA los espera como $8500 (F11), $8700 (Shift-F11) y
+                        $8900 (Ctrl-F11). }
+                      PTCKEY_F11:       KeyBufAdd(#0#133);
+                      PTCKEY_F12:       KeyBufAdd(#0#134);
                       PTCKEY_BACKSPACE: KeyBufAdd(#8);
                       PTCKEY_TAB:       KeyBufAdd(#9);
                       PTCKEY_ENTER:     KeyBufAdd(#13);
