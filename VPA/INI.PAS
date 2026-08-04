@@ -511,6 +511,7 @@ var
    hasinput     : boolean;
    s,s1       : string;
    entries      : Pini_entry;
+   ioleft       : integer;
 begin
    { todo: save to a tmp-file and rename this file when finished
      at the moment this function writes the config to the screen for debugging
@@ -608,9 +609,18 @@ begin
       if hasinput then close(infile);
       close(tmpfile);
       if save then begin
-        erase(bakfile);
-        rename(infile,bakname);
-        rename(tmpfile,inname);
+        { Con la directiva $I- activa, estas tres operaciones fallan en silencio la primera
+          vez que se guarda un .INI (todavia no existe el .BAK que se intenta
+          borrar), y dejaban el error pendiente en IOResult. El siguiente
+          Reset/Rewrite del programa se encontraba ese IOResult ajeno y lo
+          interpretaba como fallo suyo: en concreto OpenData daba por perdido
+          el PLANET.NM del directorio de la partida y solo funcionaba si habia
+          una copia junto al binario. Se consume aqui el estado de error para
+          no contaminar al resto del programa. }
+        erase(bakfile);            ioleft:=IOResult;
+        rename(infile,bakname);    ioleft:=IOResult;
+        rename(tmpfile,inname);    ioleft:=IOResult;
+        if ioleft=0 then ;         { silencia la pista de "asignada y no usada" }
       end else begin
         Writeln('Saving not implemented yet - Press Enter to continue');
         readln(s);

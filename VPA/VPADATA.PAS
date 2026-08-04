@@ -1285,8 +1285,11 @@ function EraseGameFile (const name:string) : boolean;
   RESOURCE.PLN, VPA.HLP y la fuente del mapa, que en DOS venian siempre en
   mayusculas pero pueden llegar en minusculas desde cualquier otra fuente. }
 function OpenFile (var f:file; name:str79; mode:byte; mustbe:boolean) : boolean;
+  var stale : integer;
   begin
     OpenFile:=No;
+    stale:=IOResult;   { ver la nota en OpenData }
+    if stale<>0 then ;
     FileMode:=mode;
     Assign(f,ResolveCase(name));
     Reset(f,1);
@@ -1299,8 +1302,17 @@ function OpenFile (var f:file; name:str79; mode:byte; mustbe:boolean) : boolean;
 
 
 function OpenData (var f:file; name:filename; mustbe:boolean) : boolean;
+  var stale : integer;
   begin
     OpenData:=No;
+    { Descartar cualquier error de E/S pendiente de una operacion anterior: con
+      la directiva $I- el estado de IOResult es global y se conserva hasta que alguien lo
+      lee, asi que un fallo ajeno no consumido (p.ej. el erase de un .BAK
+      inexistente en ini_save) se leeria abajo como si fuese el resultado de
+      NUESTRO Reset, dando por inexistente un fichero que si esta. Solo nos
+      interesa el resultado de las operaciones que hacemos aqui. }
+    stale:=IOResult;
+    if stale<>0 then ;
     FileMode:=0;
     Assign(f,ResolveCase(addir+name));
     Reset(f,1);
@@ -1317,8 +1329,11 @@ function OpenData (var f:file; name:filename; mustbe:boolean) : boolean;
 
 function Exists (name:filename) : boolean;
   var f : file;
+      stale : integer;
   begin
     Exists:=No;
+    stale:=IOResult;   { ver la nota en OpenData }
+    if stale<>0 then ;
     FileMode:=0;
     Assign(f,ResolveCase(addir+name));
     Reset(f,1);
@@ -1329,8 +1344,11 @@ function Exists (name:filename) : boolean;
   end;
 
 function OpenRW (var f:file; name:filename; mustbe:boolean) : boolean;
+  var stale : integer;
   begin
     OpenRW:=Yes;
+    stale:=IOResult;   { ver la nota en OpenData }
+    if stale<>0 then ;
     FileMode:=2;
     Assign(f,ResolveCase(addir+name));
     Reset(f,1);
