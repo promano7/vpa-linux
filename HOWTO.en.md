@@ -135,7 +135,6 @@ your host, and they must be present for you to play.
 
 | File | What it's for |
 |---|---|
-| `PLANET.NM` | the planet names. |
 | `RESOURCE.PLN` | the graphic resources VPA uses. |
 | `PLANETS.EXE` | VPA-Linux **reads your registration from it** (it does not run it; it only opens it to read your registration data). |
 
@@ -156,7 +155,9 @@ directory (handy when your host uses a modified ship list):
 |---|---|
 | `BEAMSPEC.DAT`, `TORPSPEC.DAT`, `ENGSPEC.DAT` | beam, torpedo and engine specs. |
 | `HULLSPEC.DAT`, `HULLFUNC.DAT`, `TRUEHULL.DAT` | hull specs, their special functions, and which hull each race can build. |
+| `PLANET.NM` | the planet names. |
 | `RACE.NM` | the race names. |
+| `STORM.NM` | the ion storm names (optional). |
 
 > **Upper/lower case:** VPA-Linux looks all these files up **case-insensitively**, so
 > it doesn't matter whether your game ships `PLAYER3.RST` or `player3.rst`,

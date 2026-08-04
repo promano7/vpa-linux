@@ -139,7 +139,6 @@ Planets y de tu host, y tienen que estar presentes para poder jugar.
 
 | Fichero | Para qué sirve |
 |---|---|
-| `PLANET.NM` | los nombres de los planetas. |
 | `RESOURCE.PLN` | los recursos gráficos que usa VPA. |
 | `PLANETS.EXE` | VPA-Linux **lee de aquí el registro** (no lo ejecuta; solo lo abre para leer tus datos de registro). |
 
@@ -160,7 +159,9 @@ directorio de VPA (útil cuando el host usa una lista de naves modificada):
 |---|---|
 | `BEAMSPEC.DAT`, `TORPSPEC.DAT`, `ENGSPEC.DAT` | características de rayos, torpedos y motores. |
 | `HULLSPEC.DAT`, `HULLFUNC.DAT`, `TRUEHULL.DAT` | características de los cascos, sus funciones especiales y qué casco puede construir cada raza. |
+| `PLANET.NM` | los nombres de los planetas. |
 | `RACE.NM` | los nombres de las razas. |
+| `STORM.NM` | los nombres de las tormentas iónicas (opcional). |
 
 > **Mayúsculas y minúsculas:** VPA-Linux busca todos estos ficheros **sin
 > distinguir la caja del nombre**, así que da igual que tu partida traiga
