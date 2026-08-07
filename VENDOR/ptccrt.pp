@@ -384,9 +384,11 @@ begin
                     PTCKEY_BACKQUOTE:
                       if KeyMode = kmFPWINCRT then
                         KeyBufAdd(#0#41);
-                    PTCKEY_TAB:
-                      if KeyMode in [kmGO32, kmFPWINCRT] then
-                        KeyBufAdd(#0#148);
+                    { VPA: ver la nota de F11 en la rama sin modificador. Estas
+                      cuatro las usa VPA en kmTP7: Ctrl-Tab (zoom a galaxia
+                      completa), Ctrl-Arriba/Abajo (objeto anterior/siguiente) y
+                      Ctrl-Menos (volver al primer turno). }
+                    PTCKEY_TAB:       KeyBufAdd(#0#148);
                     PTCKEY_SEMICOLON:
                       if KeyMode = kmFPWINCRT then
                         KeyBufAdd(#0#39);
@@ -408,21 +410,15 @@ begin
                     PTCKEY_DELETE:
                       if KeyMode in [kmGO32, kmFPWINCRT] then
                         KeyBufAdd(#0#147);
-                    PTCKEY_UP:
-                      if KeyMode in [kmGO32, kmFPWINCRT] then
-                        KeyBufAdd(#0#141);
-                    PTCKEY_DOWN:
-                      if KeyMode in [kmGO32, kmFPWINCRT] then
-                        KeyBufAdd(#0#145);
+                    PTCKEY_UP:        KeyBufAdd(#0#141);
+                    PTCKEY_DOWN:      KeyBufAdd(#0#145);
                     PTCKEY_DIVIDE:
                       if KeyMode in [kmGO32, kmFPWINCRT] then
                         KeyBufAdd(#0#149);
                     PTCKEY_MULTIPLY:
                       if KeyMode in [kmGO32, kmFPWINCRT] then
                         KeyBufAdd(#0#150);
-                    PTCKEY_SUBTRACT:
-                      if KeyMode in [kmGO32, kmFPWINCRT] then
-                        KeyBufAdd(#0#142);
+                    PTCKEY_SUBTRACT:  KeyBufAdd(#0#142);
                     PTCKEY_ADD:
                       if KeyMode = kmFPWINCRT then
                         KeyBufAdd(#0#78)
