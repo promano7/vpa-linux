@@ -383,7 +383,8 @@ Comprobado de forma efectiva sobre FPC **3.2.2** en Ubuntu 24.04 (x86_64).
   paquete aparte), en `/usr/lib/fpc/<versión>/units/x86_64-linux/graph/`; basta
   `sudo pacman -S --needed fpc libx11`.
 - En tiempo de ejecución el binario depende de **libX11** (aplicación X11; en Wayland
-  funciona vía XWayland, normalmente ya presente).
+  funciona vía XWayland, normalmente ya presente — con la salvedad del ratón descrita
+  en [Limitaciones conocidas](#limitaciones-conocidas)).
 - **Dependencias de enlazado (X) y `gcc`:** al enlazar, FPC pasa `-lX11 -lXext -lXfixes
   -lXi -lXrandr -lXxf86vm` (ya **no** `-lXxf86dga`, ver el aviso de Arch más abajo) y
   necesita los objetos `crt*.o` de **gcc**. En distros minimalistas (Arch) hay que
@@ -869,6 +870,7 @@ hacían parecer que el programa estaba "congelado":
 | Tema | Estado | Detalle |
 |---|---|---|
 | Decimales del combate | 🔒 Por diseño (asumido) | El visor muestra escudo/daño/tripa con un decimal (como `PVCR.EXE`) y la **parte entera coincide** (p. ej. escudo 9.8). El primer decimal puede diferir ~±0.5: `PVCR.EXE` acumula la fracción sub-unidad distinto a PCC2ng (coinciden en los cruces enteros — de ahí la bit-exactitud del **resultado** — pero no en la fracción). Igualar el decimal exacto exigiría abandonar el algoritmo fiel a PCC2ng, así que **se deja así a propósito**: se prioriza respetar al 100% el código portado y se muestra el valor correcto del algoritmo. |
+| Ratón en Wayland | ⏳ Pendiente (backend nativo) | Bajo Wayland el cursor **se captura pero no se libera** al salir de la ventana. Toda la gestión del puntero es código X11 (`XGrabPointer`/`XWarpPointer` en `xfocus.pas`) ejecutándose a través de **XWayland**: Wayland no permite deliberadamente que un cliente capture y suelte el puntero como hace X11, y ofrece en su lugar protocolos propios (`pointer-constraints-unstable-v1`, `relative-pointer-unstable-v1`). Ningún ajuste dentro del módulo actual puede suplirlo. **Solución mientras tanto:** elegir la sesión **X11** en la pantalla de inicio de sesión, donde funciona correctamente. **Solución de fondo prevista:** dos backends gráficos (X11 y Wayland nativo) tras una API interna común. |
 
 ### Fuentes de mapa de bits (`.FNT`)
 

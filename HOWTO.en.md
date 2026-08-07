@@ -40,8 +40,19 @@ them:
 - **Debian/Ubuntu:** `sudo apt install libx11-6 libxext6 libxfixes3 libxi6 libxrandr2 libxxf86vm1`
 - **Fedora:** `sudo dnf install libX11 libXext libXfixes libXi libXrandr libXxf86vm`
 
-> **Wayland:** works out of the box through **XWayland** (present in almost all
-> desktops). Nothing to configure.
+> **Wayland:** works through **XWayland** (present in almost all desktops) with
+> nothing to configure, **with one known caveat**: the mouse pointer is grabbed
+> when it enters VPA's window but **never released** when it leaves, so it ends
+> up trapped. As a stopgap you can open a screen that releases the cursor (F1 or
+> F10), but if you plan to play regularly the comfortable option is to **pick
+> the X11 session** at your desktop's login screen: same environment, and it
+> behaves correctly there.
+>
+> The reason is that all of VPA-Linux's pointer handling is X11 code running on
+> top of XWayland, and Wayland deliberately does not let a client grab and
+> release the pointer the way X11 does. The proper fix — a native Wayland
+> graphics backend — is planned but is a substantial piece of work. See "Known
+> limitations" in the README.
 
 ---
 

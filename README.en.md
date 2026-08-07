@@ -402,7 +402,8 @@ Effectively verified on FPC **3.2.2** on Ubuntu 24.04 (x86_64).
   separate package), in `/usr/lib/fpc/<version>/units/x86_64-linux/graph/`; just
   `sudo pacman -S --needed fpc libx11`.
 - At runtime the binary depends on **libX11** (an X11 app; on Wayland it runs via
-  XWayland, normally already present).
+  XWayland, normally already present — with the mouse caveat described in
+  [Known limitations](#known-limitations)).
 - **Link-time (X) and `gcc` dependencies:** when linking, FPC passes `-lX11 -lXext
   -lXfixes -lXi -lXrandr -lXxf86vm` (no longer `-lXxf86dga`, see the Arch note
   below) and needs `gcc`'s `crt*.o` objects. On minimal distros (Arch) these need
@@ -965,6 +966,7 @@ made the program look "frozen":
 | Topic | Status | Detail |
 |---|---|---|
 | Combat decimals | 🔒 By design (accepted) | The viewer shows shield/damage/crew with one decimal (like `PVCR.EXE`) and the **integer part matches** (e.g. shield 9.8). The first decimal can differ by ~±0.5: `PVCR.EXE` accumulates the sub-unit fraction differently from PCC2ng (they agree at integer crossings — hence the bit-exactness of the **result** — but not in the fraction). Matching the exact decimal would require abandoning the algorithm faithful to PCC2ng, so it's **left this way on purpose**: staying 100% faithful to the ported code is prioritised, and the algorithm's correct value is shown. |
+| Mouse under Wayland | ⏳ Pending (native backend) | Under Wayland the cursor **is grabbed but never released** when leaving the window. All pointer handling is X11 code (`XGrabPointer`/`XWarpPointer` in `xfocus.pas`) running through **XWayland**: Wayland deliberately does not let a client grab and release the pointer the way X11 does, offering dedicated protocols instead (`pointer-constraints-unstable-v1`, `relative-pointer-unstable-v1`). No setting inside the current module can substitute for that. **Workaround for now:** pick the **X11** session at the login screen, where it behaves correctly. **Planned proper fix:** two graphics backends (X11 and native Wayland) behind a common internal API. |
 
 ### Bitmap font sources (`.FNT`)
 

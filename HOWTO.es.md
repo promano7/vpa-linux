@@ -41,8 +41,19 @@ falta, instálalas:
 - **Debian/Ubuntu:** `sudo apt install libx11-6 libxext6 libxfixes3 libxi6 libxrandr2 libxxf86vm1`
 - **Fedora:** `sudo dnf install libX11 libXext libXfixes libXi libXrandr libXxf86vm`
 
-> **Wayland:** funciona sin nada que configurar, a través de **XWayland**
-> (presente en casi todos los escritorios).
+> **Wayland:** funciona a través de **XWayland** (presente en casi todos los
+> escritorios), sin nada que configurar, **con una salvedad conocida**: el
+> puntero del ratón se captura al entrar en la ventana de VPA pero **no se
+> libera** al salir, así que queda atrapado. Como apaño puedes abrir una
+> pantalla que suelte el cursor (F1 o F10), pero si vas a jugar a menudo lo
+> cómodo es **elegir la sesión X11** en la pantalla de inicio de sesión de tu
+> escritorio: es el mismo entorno y ahí funciona correctamente.
+>
+> El motivo es que toda la gestión del puntero de VPA-Linux es código X11
+> ejecutándose sobre XWayland, y Wayland no permite deliberadamente que un
+> cliente capture y suelte el puntero como sí hace X11. La solución real —
+> un backend gráfico nativo de Wayland — está prevista pero es un trabajo
+> largo. Ver «Limitaciones conocidas» en el README.
 
 ---
 
