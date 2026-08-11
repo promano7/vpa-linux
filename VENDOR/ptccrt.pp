@@ -291,6 +291,29 @@ begin
               else
                 if KeyEv.Control then
                 begin
+                  { VPA: Ctrl-'+' y Ctrl-'-' (ir al ultimo / primer turno; la ayuda
+                    los documenta como "Ctrl/+,-"). En el PC de DOS solo los emitian
+                    el + y el - GRISES del teclado numerico, como scancodes
+                    extendidos $90 y $8E, y por eso VPA espera $9000/$8E00. En
+                    kmTP7 -el modo que usa VPA- esta traduccion se perdia por tres
+                    caminos distintos: Ctrl-numerico-'+' (PTCKEY_ADD) solo se emitia
+                    en kmGO32/kmFPWINCRT, el '-' de la fila principal (PTCKEY_MINUS)
+                    devolvia #31 -el ASCII del TP7 de DOS, que VPA ignora- y el '+'
+                    de la fila principal ni siquiera llega con un codigo de tecla
+                    utilizable: en las distribuciones donde es una tecla propia
+                    (es, de, fr...) su keysym XK_plus no esta en la tabla de X11 y
+                    el evento trae PTCKEY_UNDEFINED, mientras que en us/ru llega
+                    como Shift+PTCKEY_EQUALS.
+                    Se resuelve mirando el CARACTER en lugar del codigo de tecla:
+                    cualquier '+'/'-' pulsado con Ctrl produce el scancode que VPA
+                    espera, venga del teclado numerico o de la fila principal y sea
+                    cual sea la distribucion. Un unico camino para los tres casos.
+                    (Modificacion VPA) }
+                  if (KeyMode = kmTP7) and (KeyEv.Unicode = Ord('+')) then
+                    KeyBufAdd(#0#144)
+                  else if (KeyMode = kmTP7) and (KeyEv.Unicode = Ord('-')) then
+                    KeyBufAdd(#0#142)
+                  else
                   case KeyEv.Code of
                     PTCKEY_ESCAPE:        KeyBufAdd(#27);
                     PTCKEY_F1:            KeyBufAdd(#0#94);
@@ -385,9 +408,8 @@ begin
                       if KeyMode = kmFPWINCRT then
                         KeyBufAdd(#0#41);
                     { VPA: ver la nota de F11 en la rama sin modificador. Estas
-                      cuatro las usa VPA en kmTP7: Ctrl-Tab (zoom a galaxia
-                      completa), Ctrl-Arriba/Abajo (objeto anterior/siguiente) y
-                      Ctrl-Menos (volver al primer turno). }
+                      tres las usa VPA en kmTP7: Ctrl-Tab (zoom a galaxia completa)
+                      y Ctrl-Arriba/Abajo (objeto anterior/siguiente). }
                     PTCKEY_TAB:       KeyBufAdd(#0#148);
                     PTCKEY_SEMICOLON:
                       if KeyMode = kmFPWINCRT then
@@ -418,7 +440,9 @@ begin
                     PTCKEY_MULTIPLY:
                       if KeyMode in [kmGO32, kmFPWINCRT] then
                         KeyBufAdd(#0#150);
-                    PTCKEY_SUBTRACT:  KeyBufAdd(#0#142);
+                    PTCKEY_SUBTRACT:
+                      if KeyMode in [kmGO32, kmFPWINCRT] then
+                        KeyBufAdd(#0#142);
                     PTCKEY_ADD:
                       if KeyMode = kmFPWINCRT then
                         KeyBufAdd(#0#78)
