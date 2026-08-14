@@ -155,6 +155,16 @@ const
   StatMaskValue      = $00FF;
   StatMaskVariant    = $FF00;
 
+  { Color de cada serie de la grafica de estadisticas (Ctrl-F10) y del valor
+    resaltado en la tabla. Antes se usaba directamente el indice de la serie
+    (SetColor(i)), de modo que la serie 1 salia en Blue (0,0,170) sobre fondo
+    negro y era practicamente ilegible, igual que su leyenda y su celda de la
+    tabla. Se pasa a una tabla explicita de colores claros, distinguibles entre
+    si sobre negro y en el mismo orden en los tres sitios donde se pintan. }
+  StatColor          : array[1..StatListMax] of byte =
+                       ( LightBlue, LightGreen, LightRed,  Yellow,  LightCyan,
+                         LightMagenta, White,   LightGray, Brown,   Green );
+
   TransmissionMarker = '<<< VPA Data Transmission >>>';
   MaxOSize  = 10*40;
 
@@ -1773,7 +1783,7 @@ begin
   ny:=Y0-YSize-24;
   for i:=1 to StatListMax do
     if (statList[i]>0) then begin
-      SetColor(i);
+      SetColor(StatColor[i]);
       {legend}
       if (nx+Length(GetValueName(statList[i]))*8)>639 then begin nx:=0; ny:=ny+8; end;
       OutTextXY(nx, ny, GetValueName(statList[i]));
@@ -1888,7 +1898,7 @@ var
     OutTextXY(0+4 + k*8-8 + (13-ls)*8, 40+i*lheight, s[k]);
     for j:=1 to StatListMax do
       if (statList[j] and StatMaskValue) = i then begin
-        SetColor(j);
+        SetColor(StatColor[j]);
         case ( (statList[j] and StatMaskVariant) shr 8 ) of
           $00 : OutTextXY(0+4+(ls0+5)*8, 40+i*lheight, s1);
           $01 : OutTextXY(0+4+(ls0+5)*8+(ls1+3)*8, 40+i*lheight, s2);
@@ -4570,7 +4580,21 @@ var
             dec(j);
           hullStart:=j;
         end;
-        if (k=3) then exit;
+        if (k=3) then begin
+          { Esta salida temprana se llevaba por delante el viewport: DrawFleet lo
+            guarda en vp al entrar y lo restaura al final, pero por aqui se salia
+            dejandolo en (vpx1,vpy1,vpx2,vpy2) = (0,32,639,479). Al volver,
+            ShowFleetReport llama a DrawRightScreen con ese viewport todavia
+            puesto y el panel derecho se dibujaba 32 pixeles mas abajo de su
+            sitio. En DOS no se notaba porque el SetGraphMode(VGAHi) del final
+            de ShowFleetReport reajustaba el viewport a pantalla completa; en el
+            port esa llamada falla con grInvalidMode (-10) y no hace nada, porque
+            el modo se abre con el driver D8bit/m640x480 de ptcgraph y VGAHi no
+            pertenece a ese driver. Se restaura aqui: ninguna salida de DrawFleet
+            debe dejar tocado el estado global de graph. }
+          SetViewPort(vp.x1,vp.y1,vp.x2,vp.y2,vp.clip);
+          exit;
+        end;
         if (k =2) then begin
           LoadPic(Right,Hulls[ship^.hull].pic,No,No,yes,Yes);
           DrawPic(Right,0,sheight*(hullStart-offset-1)+space);
