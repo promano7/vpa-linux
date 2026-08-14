@@ -1461,8 +1461,8 @@ procedure ViewVCR (n:word);
     if not errr then
     begin
       if BadVideoOrMouse then RestoreCrtMode;
-      if customBGI then SetGraphMode(bgiMode) else
-        if not useSVGA then SetGraphMode(VGAHi) else SetGraphMode(gmVesa640x480x256);
+      { SetGraphMode(VGAHi) no reabre nada en el port: ver la nota de INI.PAS. }
+      SetGraphMode(GetGraphMode);
       DrawRightScreen;
       DrawMsgScreen;
     end;

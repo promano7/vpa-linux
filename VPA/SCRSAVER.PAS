@@ -263,11 +263,10 @@ procedure ScreenSaver;
     TCombatFinish;
     LockReservedMemory;
     if BadVideoOrMouse then RestoreCrtMode;
-	if useSVGA then
-    	SetGraphMode(3)
-    else	
-      if customBGI then SetGraphMode(bgiMode)
-      else SetGraphMode(VGAHi);
+    { Ver la nota de INI.PAS sobre SetGraphMode(VGAHi). Aqui ademas la rama de
+      SVGA pedia el modo 3, el modo TEXTO del PC, que tampoco es lo que se
+      quiere al volver del salvapantallas. }
+    SetGraphMode(GetGraphMode);
     DrawRightScreen;
     MouseOn;
     ResetMouse;

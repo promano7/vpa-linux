@@ -4720,9 +4720,8 @@ begin
   TCombatFinish;
   LockReservedMemory;
   if BadVideoOrMouse then RestoreCrtMode;
-  if not useSVGA then
-    if customBGI then SetGraphMode(bgiMode)
-    else SetGraphMode(VGAHi);
+  { Ver la nota de INI.PAS sobre SetGraphMode(VGAHi). }
+  SetGraphMode(GetGraphMode);
   
   helpscr:=0;
   DrawRightScreen;
