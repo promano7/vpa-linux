@@ -150,6 +150,69 @@ begin
    entries^.next^.next:=NIL;
 end; { ini_add }
 
+{ Editor externo para la opcion "Edit file" de los menus de .INI. El original
+  lanzaba edit.com, el editor de MS-DOS, que en Linux no existe: Exec fallaba
+  siempre (DosError 8) y dejaba el programa fuera del modo grafico. Se usa el
+  editor del usuario ($VISUAL, luego $EDITOR) y, si no hay ninguno, nano y por
+  ultimo vi. Ojo: dos.Exec no busca en el PATH (llama a execv directamente), asi
+  que la ruta se resuelve aqui con FSearch y se le pasa absoluta; un $EDITOR con
+  argumentos ('nano -w') no se puede ejecutar asi y se descarta. }
+function VPAEditorPath : string;
+
+  function Which(name:string):string;
+  begin
+    if (name='') or (Pos(' ',name)>0) then Which:=''
+    else if (Pos('/',name)>0) then Which:=name
+    else Which:=FSearch(name,GetEnv('PATH'));
+  end;
+
+var e : string;
+begin
+  e:=Which(GetEnv('VISUAL'));
+  if (e='') then e:=Which(GetEnv('EDITOR'));
+  if (e='') then e:=Which('nano');
+  if (e='') then e:=Which('vi');
+  VPAEditorPath:=e;
+end;
+
+{ Espera de confirmacion cuando NO hay modo grafico (entre RestoreCrtMode y
+  SetGraphMode). PressAnyKey usa ReadKey, que sin ventana de ptc no recibe nada
+  y cuelga el programa; aqui se lee de la terminal. Si el programa se lanzo sin
+  terminal, Readln falla y se sigue sin esperar en vez de bloquearse. }
+procedure WaitEnter;
+var s     : string;
+    ioerr : integer;
+begin
+  Write('Press Enter to continue...');
+  { Sin directivas de E/S a proposito: el proyecto compila con -Ci-
+    (comprobacion de E/S desactivada) y el resto de la unit depende de ello para
+    consultar IOResult a mano; activarla aqui con la directiva I+ la dejaria
+    puesta hasta el final del fichero y convertiria en RunError los fallos que
+    ini_read/ini_save esperan poder leer. }
+  Readln(s);
+  ioerr:=IOResult;
+  if (ioerr=0) then ;
+  Writeln;
+end;
+
+{ Nombre corto del editor, para la etiqueta del menu. }
+function VPAEditorName : string;
+var e : string;
+    i : integer;
+begin
+  e:=VPAEditorPath;
+  if (e='') then begin
+    VPAEditorName:='no editor found';
+    exit;
+  end;
+  for i:=Length(e) downto 1 do
+    if (e[i]='/') then begin
+      e:=Copy(e,i+1,Length(e)-i);
+      break;
+    end;
+  VPAEditorName:=e;
+end;
+
 procedure ini_showmenu(ini_file : ini_files;cansave:boolean);
 const
    maxline    = 20;
@@ -167,6 +230,7 @@ var
    tstr   : string;
    leave  : boolean;	 
 	 clr : int;
+	 editor : string;
 	 
 begin
   leave:=False;
@@ -179,7 +243,7 @@ begin
 		if cansave then begin
 			AddMenuItem('Reload from '+GetIniFile(ini_file),Green,No);
 			AddMenuItem('Save '+GetIniFile(ini_file),Green,No);
-			AddMenuItem('Edit file with ''Edit.com''',Green,No);
+			AddMenuItem('Edit file with '''+VPAEditorName+'''',Green,No);
 			controllines:=controllines+3;
 		end;
 		AddMenuItem('------------------------------------',Green,No);
@@ -229,11 +293,12 @@ begin
 						if (MenuValue-controllines = 1) then hlpfile := '  ' else hlpfile:=name;
 						Exec(lines[1+controllines]^.name,hlpfile); 
 						if DosError<>0 then begin 
-							Writeln('Can''t run '+lines[1+controllines]^.name+' '+hlpfile+'(DOS Error '+NStr0(DosError)+')');
-							PressAnyKey;
+							Writeln('Can''t run '+lines[1+controllines]^.name+' '+hlpfile+' (DosError '+NStr0(DosError)+')');
+							{ Sin ventana grafica no vale PressAnyKey: ver WaitEnter. }
+							WaitEnter;
 						end;
-						if customBGI then SetGraphMode(bgiMode) else
-						if not useSVGA then SetGraphMode(VGAHi) else SetGraphMode(gmVesa640x480x256);						
+						{ Ver la nota del SetGraphMode de la opcion "Edit file". }
+						SetGraphMode(GetGraphMode);
 						NewMenu;
 						LockReservedMemory;
 						ResetMouseAndVideo;
@@ -256,17 +321,36 @@ begin
 			if ((MenuValue=2) and cansave) then ini_read(ini_file);
 			if ((MenuValue=3) and cansave) then ini_save(ini_file);
 			if ((MenuValue=4) and cansave) then begin
-			  RestoreCrtMode;
-				Exec('edit.com',GetIniFile(ini_file));
-				if DosError<>0 then begin 
-							Writeln('Can''t run ''edit.com'' '+GetIniFile(ini_file)+'(DOS Error '+NStr0(DosError)+')');
-							PressAnyKey;
+				{ RestoreCrtMode cierra la ventana de ptc y devuelve la terminal,
+				  que es lo que necesita el editor. A partir de aqui y hasta el
+				  SetGraphMode de abajo NO hay ventana: no se puede usar ReadKey
+				  (ni PressAnyKey, que la usa) porque se quedaria esperando para
+				  siempre una tecla que ya no puede llegar. Se dialoga por la
+				  terminal con Write/Readln. }
+				editor:=VPAEditorPath;
+				RestoreCrtMode;
+				if (editor='') then begin
+					Writeln('No text editor found. Install nano or set $EDITOR.');
+					WaitEnter;
 				end else begin
-					Ini_Read(ini_file_vpahelp); 
-					Check_VPAHelp;
+					Exec(editor,GetIniFile(ini_file));
+					if DosError<>0 then begin
+						Writeln('Can''t run '+editor+' '+GetIniFile(ini_file)+' (DosError '+NStr0(DosError)+')');
+						WaitEnter;
+					end else begin
+						{ Antes se recargaba siempre VPAHELP.INI, se hubiera editado
+						  el fichero que fuera; se recarga el que se acaba de editar. }
+						ini_read(ini_file);
+						if (ini_file=ini_file_vpahelp) then Check_VPAHelp;
+					end;
 				end;
-				if customBGI then SetGraphMode(bgiMode) else
-				if not useSVGA then SetGraphMode(VGAHi) else SetGraphMode(gmVesa640x480x256);
+				{ Volver al modo grafico. SetGraphMode(VGAHi) no servia: el modo se
+				  abre con el driver D8bit/m640x480 de ptcgraph y VGAHi pertenece al
+				  driver VGA, con lo que SetGraphMode salia con grInvalidMode (-10)
+				  sin hacer nada y el programa se quedaba sin ventana. GetGraphMode
+				  sobrevive a RestoreCrtMode y devuelve el modo real en curso, sea
+				  cual sea el driver, asi que reabre siempre el modo correcto. }
+				SetGraphMode(GetGraphMode);
 				NewMenu;
 				LockReservedMemory;
 				ResetMouseAndVideo;
