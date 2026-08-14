@@ -81,6 +81,12 @@ type
        text      : str20;
        found     : boolean;
        changed     : boolean;
+       { Rango y paso de las entradas ini_size_int al pulsar Enter sobre ellas
+         en el menu. Los fija ini_add por defecto y los ajusta despues
+         ini_setintrange para las que lo necesiten (ver ini_init_vpa). }
+       emin      : int;
+       emax      : int;
+       estep     : int;
        case size     : ini_sizes of
          ini_size_void : (buf:Pointer);
          ini_size_bool    : (EBool:^Boolean); 
@@ -91,11 +97,20 @@ type
 var
    ini_entries : Pini_entry;
 
+{ Definida mas abajo, junto a ini_add; se declara aqui porque ini_init_vpa la
+  usa y es interna a la unit (no esta en la interface, donde el tipo int ni
+  siquiera es visible). }
+procedure ini_setintrange(emin,emax,estep:int); forward;
+
 Procedure ini_init_vpa;
 begin
    ini_add(ini_file_vpa,'Interface','AutoScroll','',ini_size_bool,@AutoScroll);
    ini_add(ini_file_vpa,'Interface','StickyMouse','',ini_size_bool,@StickyMouse);
    ini_add(ini_file_vpa,'Interface','StickyMouseRange','',ini_size_int,@StickyMouseRange);
+   { Radio en pixeles. EXTFEAT admite hasta 100, pero por encima de unos pocos
+     pixeles el raton deja de responder, asi que desde el menu solo se llega a
+     20; para valores mayores queda el fichero .INI. }
+   ini_setintrange(0,20,1);
    ini_add(ini_file_vpa,'Interface','LargePlanets','',ini_size_bool,@LargePlanets);
    ini_add(ini_file_vpa,'Interface','PlanetNames','',ini_size_bool,@PlanetNames);
    ini_add(ini_file_vpa,'Interface','SmallFont','',ini_size_bool,@UseSmallFont);
@@ -136,6 +151,12 @@ begin
    Upper(entries^.name);
    if (text='') then entries^.text:=name else entries^.text:=text;
    entries^.size:=size;
+   { Rango y paso por defecto de las entradas numericas: 0..5000 de 1000 en
+     1000, que es lo que espera MaxMoney. Las que necesiten otra cosa lo
+     ajustan con ini_setintrange justo despues de registrarse. }
+   entries^.emin:=0;
+   entries^.emax:=5000;
+   entries^.estep:=1000;
    if (buf<>NIL) then
       entries^.buf:=buf
    else
@@ -149,6 +170,23 @@ begin
    new(entries^.next);
    entries^.next^.next:=NIL;
 end; { ini_add }
+
+{ Ajusta el rango y el paso de la ultima entrada registrada con ini_add. Al
+  pulsar Enter sobre una entrada numerica el menu le suma el paso y, si se
+  sale del rango, vuelve al minimo. El paso de 1000 solo tiene sentido para
+  MaxMoney: aplicado a StickyMouseRange -un radio en pixeles, 2 por defecto-
+  el menu solo podia dejarla en 1000, 2000... y con esos valores el raton se
+  queda pegado en toda la pantalla y el programa parece colgado. }
+procedure ini_setintrange(emin,emax,estep:int);
+var entries : Pini_entry;
+begin
+   entries:=ini_entries;
+   if (entries^.next=NIL) then exit;      { todavia no hay ninguna entrada }
+   while (entries^.next^.next<>NIL) do entries:=entries^.next;
+   entries^.emin:=emin;
+   entries^.emax:=emax;
+   entries^.estep:=estep;
+end; { ini_setintrange }
 
 { Editor externo para la opcion "Edit file" de los menus de .INI. El original
   lanzaba edit.com, el editor de MS-DOS, que en Linux no existe: Exec fallaba
@@ -308,9 +346,9 @@ begin
 					case size of
 						ini_size_bool : EBool^:=not EBool^;
 						ini_size_boolinv : EBoolinv^:=not EBoolinv^;
-						ini_size_int     : begin         {Quapla: Valid 0-5000 only }
-																Eint^:=Eint^+1000;
-																if Eint^>5000 then Eint^:=0;
+						ini_size_int     : begin         { rango y paso por entrada: ini_setintrange }
+																Eint^:=Eint^+estep;
+																if (Eint^>emax) or (Eint^<emin) then Eint^:=emin;
 															 end;
 					end; { case }
 					changed:=True;
