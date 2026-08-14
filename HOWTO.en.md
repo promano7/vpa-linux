@@ -235,6 +235,12 @@ StickyMouseRange = 15
 | `0` | Disables the filter (same as `StickyMouse = Off`). |
 | max `100` | Larger values are clamped to 100; beyond that the selection would be hard to release. |
 
+You can also change it without leaving the program, from the `VPA.INI` menu
+(**Ctrl-O**): pressing `Enter` on `StickyMouseRange` steps the value up one at a
+time to `20` and then back to `0`. The menu stops at `20` because a larger
+radius has no practical use and would leave the pointer stuck all over the
+screen; for a value between `21` and `100`, set it in the file.
+
 If you'd rather turn it off entirely, `StickyMouse = Off` still works exactly as
 it always did.
 
