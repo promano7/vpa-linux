@@ -626,6 +626,17 @@ procedure SaveActList;
 
 procedure SaveAll;
   begin
+    { El bloque reservado (ResMem) es el buffer de E/S de SaveGameData -que lo
+      usa via los alias xBuf/xBufI- y de SaveData. Terminate llama aqui tambien
+      para el guardado de emergencia tras un fallo, y si el fallo ocurrio dentro
+      de un menu el bloque esta liberado, porque los menus lo sueltan mientras
+      estan abiertos para tener sitio donde guardar la imagen de la pantalla.
+      Entonces SaveData abortaba en su "if ResMem=nil then RunError(251)" y
+      SaveGameData, que no comprueba nada, habria escrito a traves de un puntero
+      nil: en ambos casos el jugador perdia el turno justo cuando mas falta le
+      hacia guardarlo. Se vuelve a pedir aqui, el unico punto por el que pasan
+      los dos. }
+    if ResMem=nil then LockReservedMemory;
     if RWMode then begin
       if not Batch then SaveScr;
       if MaySave and (NewTurn or DataChg
