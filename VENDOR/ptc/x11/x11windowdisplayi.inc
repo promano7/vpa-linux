@@ -800,6 +800,15 @@ var
         raise TPTCError.Create('Internal Error');
     end;
 
+    { (Modificacion VPA) x,y vienen en coordenadas de VENTANA. Si la imagen esta
+      centrada (ver HandleConfigureNotifyEvent) hay que referirlas a la imagen,
+      o todo el raton queda desplazado por el ancho de la franja negra. Asi el
+      resto de la cadena -incluido xfocus.MapMouseToSurface, que escala usando
+      el tamano de la consola- sigue valiendo sin tocar nada, y el limite
+      (x<FWidth) de mas abajo descarta solo los eventos de las franjas. }
+    Dec(x, FDestX);
+    Dec(y, FDestY);
+
     if (state and Button1Mask) <> 0 then
       PTCMouseButtonState := PTCMouseButtonState + [PTCMouseButton1];
     if (state and Button2Mask) <> 0 then
@@ -859,7 +868,39 @@ var
   end;
 
   procedure HandleConfigureNotifyEvent;
+  var
+    NewDestX, NewDestY: Integer;
   begin
+    { (Modificacion VPA) Centrar la imagen cuando la ventana es mayor que la
+      consola. ptc ya sabe volcar con desplazamiento -Draw y Update usan
+      FDestX/FDestY-, pero solo los calculaba EnterFullScreen, es decir su
+      pantalla completa propia (la que cambia el modo de video). VPA-Linux usa
+      la del gestor de ventanas (_NET_WM_STATE_FULLSCREEN, ver
+      xfocus.RequestFullscreen): el gestor agranda la ventana, llega este
+      ConfigureNotify y los offsets seguian a 0, con lo que la imagen quedaba
+      pegada arriba a la izquierda y el resto en negro.
+      Va antes del exit de abajo a proposito: la ventana de VPA no es
+      redimensionable (FResizable=False, sin PTC_X11_RESIZABLE_WINDOW), asi que
+      por ese exit no se llegaba nunca a mirar el tamano nuevo. No hace falta
+      distinguir si estamos en pantalla completa o no: en modo ventana ptc crea
+      la ventana justo del tamano de la consola y el desplazamiento sale 0.
+      El fondo de la ventana ya es BlackPixel, asi que XClearWindow deja las
+      franjas en negro. }
+    if not FFullScreen then
+    begin
+      NewDestX := (e.xconfigure.width - FWidth) div 2;
+      NewDestY := (e.xconfigure.height - FHeight) div 2;
+      if NewDestX < 0 then NewDestX := 0;
+      if NewDestY < 0 then NewDestY := 0;
+      if (NewDestX <> FDestX) or (NewDestY <> FDestY) then
+      begin
+        FDestX := NewDestX;
+        FDestY := NewDestY;
+        XClearWindow(FDisplay, FWindow);
+        Draw;
+      end;
+    end;
+
     if FFullScreen or not FResizable then
       exit;
 
@@ -1073,7 +1114,9 @@ function TX11WindowDisplay.MoveMouseTo(X, Y: Integer): Boolean;
 begin
   if not FOpen or (X < 0) or (Y < 0) or (X >= FWidth) or (Y >= FHeight) then
     exit(False);
-  XWarpPointer(FDisplay, None, FWindow, 0, 0, 0, 0, X, Y);
+  { (Modificacion VPA) camino inverso al de los eventos: aqui X,Y vienen en
+    coordenadas de la imagen y XWarpPointer las espera de ventana. }
+  XWarpPointer(FDisplay, None, FWindow, 0, 0, 0, 0, X + FDestX, Y + FDestY);
   Result := True;
 end;
 
