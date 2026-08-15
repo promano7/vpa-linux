@@ -1099,9 +1099,11 @@ procedure CombatSimulator;
 		  end;
 	ord('r'): if result then begin GetResult; ClearResult; ClearStats end;
 	$3B00	: begin
-		    if BadVideoOrMouse then RestoreCrtMode;
-		    { Ver la nota de INI.PAS sobre SetGraphMode(VGAHi). }
-		    SetGraphMode(GetGraphMode);
+		    { Reabrir solo si se salio del modo grafico: ver MESSAGES.PAS. }
+		    if BadVideoOrMouse then begin
+		      RestoreCrtMode;
+		      SetGraphMode(GetGraphMode);
+		    end;
 		    Help;
 		    ClearDevice;
 		    WriteAtt;
@@ -1139,9 +1141,11 @@ procedure CombatSimulator;
     helpscr:=4;
     CombatSimulator;
     helpscr:=0;
-    if BadVideoOrMouse then RestoreCrtMode;
-    { Ver la nota de INI.PAS sobre SetGraphMode(VGAHi). }
-    SetGraphMode(GetGraphMode);
+    { Reabrir solo si se salio del modo grafico: ver MESSAGES.PAS. }
+    if BadVideoOrMouse then begin
+      RestoreCrtMode;
+      SetGraphMode(GetGraphMode);
+    end;
     DrawRightScreen;
     MoveMouseTo(mx,my);
     MouseDisabled:=False;

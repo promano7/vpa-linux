@@ -1151,9 +1151,11 @@ BEGIN
         ord('+'): if RWM and BuildPart(1) then WriteAll;
         ord('-'): if RWM and BuildPart(-1) then WriteAll;
 {F1}    $3B00   : begin
-                    if BadVideoOrMouse then RestoreCrtMode;
-                    { Ver la nota de INI.PAS sobre SetGraphMode(VGAHi). }
-                    SetGraphMode(GetGraphMode);
+                    { Reabrir solo si se salio del modo grafico: ver MESSAGES.PAS. }
+                    if BadVideoOrMouse then begin
+                      RestoreCrtMode;
+                      SetGraphMode(GetGraphMode);
+                    end;
                     Help;
                     DrawFirst;
                   end;
@@ -1179,9 +1181,11 @@ BEGIN
   begin
     TCombatFinish;
     LockReservedMemory;
-    if BadVideoOrMouse then RestoreCrtMode;
-    { Ver la nota de INI.PAS sobre SetGraphMode(VGAHi). }
-    SetGraphMode(GetGraphMode);
+    { Reabrir solo si se salio del modo grafico: ver MESSAGES.PAS. }
+    if BadVideoOrMouse then begin
+      RestoreCrtMode;
+      SetGraphMode(GetGraphMode);
+    end;
     DrawRightScreen;
     helpscr:=0;
     MoveMouseTo(mx,my);

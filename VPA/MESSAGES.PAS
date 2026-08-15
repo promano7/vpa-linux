@@ -1460,9 +1460,15 @@ procedure ViewVCR (n:word);
      end;
     if not errr then
     begin
-      if BadVideoOrMouse then RestoreCrtMode;
-      { SetGraphMode(VGAHi) no reabre nada en el port: ver la nota de INI.PAS. }
-      SetGraphMode(GetGraphMode);
+      { Reabrir el modo grafico SOLO si de verdad se salio de el. SetGraphMode
+        destruye y vuelve a crear la ventana, asi que llamarlo siempre -como se
+        hacia con el inofensivo SetGraphMode(VGAHi), que no hacia nada- tira la
+        pantalla completa del gestor de ventanas cada vez que se sale de aqui
+        con Esc. Ver la nota de INI.PAS. }
+      if BadVideoOrMouse then begin
+        RestoreCrtMode;
+        SetGraphMode(GetGraphMode);
+      end;
       DrawRightScreen;
       DrawMsgScreen;
     end;

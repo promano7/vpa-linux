@@ -69,7 +69,7 @@ procedure ini_parseline(ini_file:ini_files;name:str20;line:string);
 
 Implementation
 
-uses ptcgraph,auxf,Screen,Vpadata,vpainit,rst_trn,extfeat,vpa3,messages, Config,vpa4,dos,vpa2;
+uses ptcgraph,{$IFDEF UNIX}xfocus,{$ENDIF}auxf,Screen,Vpadata,vpainit,rst_trn,extfeat,vpa3,messages, Config,vpa4,dos,vpa2;
 
 type
    Pini_entry = ^Tini_entry;
@@ -335,8 +335,13 @@ begin
 							{ Sin ventana grafica no vale PressAnyKey: ver WaitEnter. }
 							WaitEnter;
 						end;
-						{ Ver la nota del SetGraphMode de la opcion "Edit file". }
+						{ Ver las notas del SetGraphMode de la opcion "Edit file". }
 						SetGraphMode(GetGraphMode);
+						{$IFDEF UNIX}
+						GrabInputFocus;
+						ApplyWindowScale;
+						if xfocus.WantFullscreen then RequestFullscreen;
+						{$ENDIF}
 						NewMenu;
 						LockReservedMemory;
 						ResetMouseAndVideo;
@@ -389,6 +394,16 @@ begin
 				  sobrevive a RestoreCrtMode y devuelve el modo real en curso, sea
 				  cual sea el driver, asi que reabre siempre el modo correcto. }
 				SetGraphMode(GetGraphMode);
+				{ SetGraphMode no reabre la MISMA ventana X, crea otra: hay que rehacer
+				  lo que hace VPAINIT tras OpenGraph o nos quedamos sin foco de teclado,
+				  con la ventana que xfocus tiene cacheada ya destruida -y con ella el
+				  escalado del raton- y, con VPA_SCALE=fullscreen, fuera de la pantalla
+				  completa del gestor de ventanas. }
+				{$IFDEF UNIX}
+				GrabInputFocus;
+				ApplyWindowScale;
+				if xfocus.WantFullscreen then RequestFullscreen;
+				{$ENDIF}
 				NewMenu;
 				LockReservedMemory;
 				ResetMouseAndVideo;

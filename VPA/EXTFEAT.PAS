@@ -4719,9 +4719,11 @@ begin
   {TCombat unit for pictures}
   TCombatFinish;
   LockReservedMemory;
-  if BadVideoOrMouse then RestoreCrtMode;
-  { Ver la nota de INI.PAS sobre SetGraphMode(VGAHi). }
-  SetGraphMode(GetGraphMode);
+  { Reabrir solo si se salio del modo grafico: ver MESSAGES.PAS. }
+  if BadVideoOrMouse then begin
+    RestoreCrtMode;
+    SetGraphMode(GetGraphMode);
+  end;
   
   helpscr:=0;
   DrawRightScreen;
