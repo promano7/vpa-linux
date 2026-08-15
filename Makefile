@@ -20,7 +20,7 @@ PKGDIR    = build/vpa-linux_package
 PKGFILES  = DISTTABL.DAT HOWTO.en.md HOWTO.es.md LICENSE.md LITT_VPA.CHR \
             MPL-2.0.txt VPA.MSG
 
-.PHONY: all build clean run help hlp data ptc
+.PHONY: all build clean run help hlp data ptc debug heaptrc
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -51,6 +51,17 @@ debug: ptc
 	$(FPC) @$(CFG) -gl -O- $(MAIN)
 	@echo ""
 	@echo ">> Done (debug): $(BIN)  — use with: gdb ./$(BIN)"
+
+## heaptrc : like 'debug' but also links the heap checker (-gh). Every block is
+##           guarded, so a buffer overrun is reported when the block is freed,
+##           together with the call trace of where it was allocated, and a leak
+##           summary is printed on exit. Slower and noisier: use it to hunt
+##           memory corruption, not for normal play.
+heaptrc: ptc
+	@mkdir -p build
+	$(FPC) @$(CFG) -gl -gh -O- $(MAIN)
+	@echo ""
+	@echo ">> Done (heaptrc): $(BIN)"
 
 ## run : build and show the usage help (pass arguments with ARGS=...)
 ##       Example:  make run ARGS="3 /path/to/the/game"
