@@ -199,7 +199,7 @@ function  GetStrMore (x,y:int; l:byte; ss:str40) : str40;
 procedure NewMenu;
 procedure SaveMenu (var m:pointer);
 procedure RestoreMenu (m:pointer);
-function  MenuSize (x,y,x2:word; h:byte; SaveScr:boolean) : word;
+function  MenuSize (x,y,x2:word; h:byte; SaveScr:boolean) : long;
 procedure AddMenuItem (t:menutext; color:byte; sort:boolean);
 procedure ChooseMenu (x,y,x1,x2:word; h,c,c1,v0:byte; AskVal,SaveScr:boolean; hlp:int);
 procedure ArrowBlink (x,y:int);
@@ -455,9 +455,13 @@ procedure RestoreMenu (m:pointer);
     Menu:=m;
   end;
 
-function MenuSize (x,y,x2:word; h:byte; SaveScr:boolean) : word;
+function MenuSize (x,y,x2:word; h:byte; SaveScr:boolean) : long;
                 { x,y,x2,h are the same as in ChooseMenu }
-  var   ms      : word;
+                { ms must be a long: ptcgraph's ImageSize is 12+2 bytes per
+                  pixel, not the 4-bit planar packing of the DOS 16-colour BGI,
+                  so a wide menu save easily goes past 64 KB and a word would
+                  wrap around silently. }
+  var   ms      : long;
   begin
     ms:=h*SizeOf(item);
     if SaveScr then inc(ms,ImageSize(x-8,y-8,x2+7,y+h*8+7));
@@ -524,7 +528,8 @@ procedure ChooseMenu (x,y,x1,x2:word; h,c,c1,v0:byte; AskVal,SaveScr:boolean; hl
         c1      - highlighted text color
         hlp     - call help page number on F1
   }
-  var   is      : word;
+  var   is      : long;         { see MenuSize: this is a byte count that can
+                                 exceed 64 KB, it must not be a word }
         p       : pointer;
         top     : byte;
         hei     : byte;

@@ -971,16 +971,20 @@ var
   the ReservedMemory. In VPAMM, screen buffers are twice as big as in regular
   VPA, so we need twice the space.
   Linux port: VPA now runs in 256 colours (D8bit), where ptcgraph's ImageSize
-  is ~2 bytes/pixel instead of the 4-bit planar packing of the DOS 16-colour
+  is 12+2 bytes/pixel instead of the 4-bit planar packing of the DOS 16-colour
   BGI. A wide menu save (e.g. Buy torps/fighters, ~30 KB) therefore exceeds the
-  old 30000 limit and made UnLockReservedMemory raise RunError(250). The screen
-  buffers themselves are stored in a word (<=65535 bytes), so 65536 covers every
-  non-truncated save; on Linux memory is abundant, so reserving 64 KB is free. }
+  old 30000 limit and made UnLockReservedMemory raise RunError(250). The biggest
+  save in VPA is the ship task editor (335x176 = 117932 bytes), followed by the
+  VPA.INI / VPAADDON.INI settings menus (296x176 = 104204), so 256 KB covers
+  every menu with room to spare; on Linux memory is abundant, so reserving it
+  is free. Note this only works together with MenuSize/ChooseMenu counting the
+  save in a long: while those were words the count wrapped and the reserve was
+  never asked for the real size. }
 const
        {$IFDEF VPAMM}
-        ReservedMemory  = 131072;
+        ReservedMemory  = 524288;
        {$ELSE}
-        ReservedMemory  = 65536;
+        ReservedMemory  = 262144;
        {$ENDIF}
         ResMem  : pointer = nil;
     FCChar  : array [0..61] of char = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
