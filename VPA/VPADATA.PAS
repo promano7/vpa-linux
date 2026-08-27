@@ -16,7 +16,7 @@ Interface
 
 uses    Mouse,AuxF,StrF,ptcgraph, Config; 
 
-const   Version = '3.67.5';
+const   Version = '3.67.6';
         VerNum  = 367;
 
 const   NUM_SHIPS    = 999;
