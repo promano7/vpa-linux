@@ -294,7 +294,14 @@ begin
 					case size of
 						 ini_size_bool    : if (EBool^) then tstr:=On_ else tstr:=Off_;
 						 ini_size_boolinv : if (EBoolinv^) then tstr:=Off_ else tstr:=On_;
-						 ini_size_int     : tstr:=Nstr00(EInt^,'0000');
+						 { On_/Off_ estan rellenados a 4 caracteres para que la columna
+						   ' : ' quede alineada en todas las lineas; Nstr00 no rellena,
+						   asi que sin RPad esta entrada quedaba desplazada a la
+						   izquierda respecto al resto (p.ej. StickyMouseRange). }
+						 ini_size_int     : begin
+											 tstr:=Nstr00(EInt^,'0000');
+											 RPad(tstr,Length(On_));
+										   end;
 					end; { case }
 					if (ini_file = ini_file_vpahelp) then begin 
 						if tstr='Off ' then begin
