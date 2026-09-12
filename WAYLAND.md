@@ -29,6 +29,8 @@ que seguimos sesión a sesión.
   - `- [~]` en curso / bloqueada (se explica debajo en una línea)
   - `- [-]` descartada (se explica por qué; **no se borra**, el descarte es
     información)
+- Estado de una fase en la tabla de 0.3: `☐` pendiente, `◐` en curso,
+  `☑` cerrada (con todos sus criterios de aceptación verificados).
 - Cada **fase** termina con un bloque **Criterio de aceptación**. Una fase no
   se cierra si alguno de sus criterios falla, aunque todas sus casillas estén
   marcadas.
@@ -57,7 +59,7 @@ más fácil es saltárselas:
 
 | Fase | Título | Estado |
 |------|--------|--------|
-| 0 | Preparación y red de seguridad | ☐ |
+| 0 | Preparación y red de seguridad | ◐ en curso |
 | 1 | Inventario de la frontera gráfica | ☐ |
 | 2 | Definición de la ABI v1 | ☐ |
 | 3 | Cargador dinámico | ☐ |
@@ -413,11 +415,12 @@ Antes de tocar una línea de código gráfico hay que poder demostrar que no se 
 roto nada. Las imágenes de referencia tienen que capturarse **con el binario
 actual**, porque después ya no habrá «actual» con el que comparar.
 
-- [ ] **T0.1** — Crear la rama de trabajo `feature/wayland` a partir de `main`.
+- [x] **T0.1** — Crear la rama de trabajo `feature/wayland` a partir de `main`.
       La migración toca 25 unidades y va a durar semanas; `main` debe seguir
       siendo compilable y liberable en cualquier momento. Se integra a `main`
       por fusión al cerrar cada bloque (fases 0-6 primero, fases 7-12 después).
-- [ ] **T0.2** — Añadir este documento (`WAYLAND.md`) al repositorio.
+      — `ca514fa`
+- [x] **T0.2** — Añadir este documento (`WAYLAND.md`) al repositorio. — `ca514fa`
 - [ ] **T0.3** — Registrar la línea base de dependencias del binario actual y
       guardarla en `docs/baseline-3.67.6.txt`:
       `readelf -d build/VPA | grep NEEDED` y `ldd build/VPA`.
