@@ -421,15 +421,54 @@ actual**, porque después ya no habrá «actual» con el que comparar.
       por fusión al cerrar cada bloque (fases 0-6 primero, fases 7-12 después).
       — `ca514fa`
 - [x] **T0.2** — Añadir este documento (`WAYLAND.md`) al repositorio. — `ca514fa`
-- [ ] **T0.3** — Registrar la línea base de dependencias del binario actual y
+- [x] **T0.3** — Registrar la línea base de dependencias del binario actual y
       guardarla en `docs/baseline-3.67.6.txt`:
-      `readelf -d build/VPA | grep NEEDED` y `ldd build/VPA`.
-- [ ] **T0.4** — Implementar el **volcado de framebuffer** en el camino actual
+      `readelf -d build/VPA | grep NEEDED` y `ldd build/VPA`. — `babf280`
+      Resultado: el binario arrastra **siete** bibliotecas del servidor gráfico
+      (`libX11`, `libXrandr`, `libXxf86vm`, `libXext`, `libXi`, `libXfixes` y,
+      por dependencia, `libxcb`). Las siete tienen que haber desaparecido al
+      cerrar la Fase 6 (`T6.12`).
+- [x] **T0.4** — Implementar el **volcado de framebuffer** en el camino actual
       de `ptcgraph`: si `VPA_GRAPH_DUMP` está definida, volcar la superficie de
       640×480 más su paleta a un `.ppm` numerado. Es la herramienta que sostiene
       toda la validación posterior, y tiene que existir **antes** de que haya un
-      segundo backend. Se implementa en `VPA/SCREEN.PAS` o como función nueva de
-      `VENDOR/ptcgraph.pp`, según qué resulte menos invasivo.
+      segundo backend. — `e409022`
+
+  Cómo quedó, porque son decisiones que habrá que respetar más adelante:
+
+  - **Dónde.** En `VENDOR/ptcgraph.pp`, como código añadido
+    (`VPADumpEnabled` / `VPADumpFrame`), no como modificación de ninguna rutina
+    original; el aviso de modificación de la cabecera que exige la LGPL se ha
+    ampliado con un cuarto punto. Se eligió ptcgraph y no `VPA/SCREEN.PAS`
+    porque ahí están `ptc_surface_lock` y `ptc_palette_lock`, es decir el
+    framebuffer tal y como se presenta, en vez de lo que `GetImage`
+    reconstruye.
+  - **Activación.** Variable de entorno `VPA_GRAPH_DUMP=<prefijo>`. Sin ella la
+    funcionalidad no existe y no cuesta nada.
+  - **Disparo.** `Ctrl-F12`, interceptado en `RawReadKey` de
+    `UNIT/KEYBOARD.PAS`, que es el único punto por el que pasan todas las
+    teclas de VPA. Verificado empíricamente: `ptccrt` traduce `Ctrl-F12` a
+    `#0#138`, que VPA ve como **`$8A00`**, y ese código **no lo usa ninguna
+    pantalla**. La tecla **no se consume**: sigue su camino y cae en el `else`
+    de los `case`, igual que cualquier tecla desconocida. Consumirla obligaría
+    a devolver otra cosa o a esperar a la siguiente, y eso sí cambiaría el
+    comportamiento, porque `PreviewKey` se llama después de `KeyPressed` y no
+    puede bloquear.
+  - **Formato.** `<prefijo>NNNN.ppm` (PPM binario P6, sin comprimir, sin marca
+    de tiempo en la cabecera: dos ejecuciones de la misma escena dan ficheros
+    idénticos byte a byte) más `<prefijo>NNNN.pal` con las 256 entradas RGB en
+    crudo, que permite distinguir una diferencia de dibujo de una diferencia de
+    paleta.
+  - **Cerrojos.** La paleta se copia y se suelta de inmediato; el de la
+    superficie se mantiene durante la escritura del fichero. La alternativa
+    —copiar los 300 KB del framebuffer a un buffer intermedio— obligaría a
+    reservar ese bloque en el montón de VPA, que está ajustado y tiene
+    historial de corrupciones; retener el cerrojo unos milisegundos en una
+    captura manual es el riesgo menor.
+  - **Verificado:** compilación limpia sin avisos nuevos (24 avisos y 221
+    notas, exactamente los de la línea base), valores de paleta VGA exactos,
+    dos ejecuciones de la misma escena con el mismo MD5, y el disparo por
+    teclado probado inyectando `Ctrl-F12` en la ventana.
 - [ ] **T0.5** — Definir el **catálogo de escenas de referencia**: una lista
       corta y reproducible de pantallas de VPA que ejerciten lo que importa
       (mapa estelar con etiquetas, ventana de mensajes, menú Ctrl-O, simulador
@@ -439,12 +478,20 @@ actual**, porque después ya no habrá «actual» con el que comparar.
 - [ ] **T0.6** — Capturar las escenas de T0.5 con el binario 3.67.6 y guardarlas
       como **imágenes doradas** en `TESTS/golden/` junto con sus hashes.
       Documentar la versión de FPC y la máquina usada.
-- [ ] **T0.7** — Escribir `TESTS/compare.py`: compara dos volcados `.ppm`,
+- [x] **T0.7** — Escribir `TESTS/compare.py`: compara dos volcados `.ppm`,
       informa del número de píxeles distintos, su localización y genera una
       imagen de diferencias. Sin dependencias externas más allá de la
       biblioteca estándar (el repositorio ya usa Python en `preport.py`).
-- [ ] **T0.8** — Verificar que la captura funciona en `xvfb-run` sin display
-      real, para poder automatizarla.
+      — `62c960b`
+      Compara ficheros sueltos o directorios enteros; informa de número y
+      porcentaje de píxeles distintos, caja envolvente de los cambios, primer
+      píxel discrepante, delta máximo por canal y, si los `.pal` difieren, qué
+      entradas de paleta han cambiado. Con `--diff-dir` escribe un PNG por par
+      con los píxeles distintos en magenta sobre la captura atenuada.
+      `--tolerancia=N` admite hasta N píxeles, y el código de salida es 0 si
+      todo cuadra y 1 si no, para poder encadenarlo en un guion.
+- [x] **T0.8** — Verificar que la captura funciona en `xvfb-run` sin display
+      real, para poder automatizarla. — `e409022`
 
 **Criterio de aceptación de la Fase 0:**
 `VPA_GRAPH_DUMP=/tmp/f xvfb-run -a ./build/VPA 3 EXAMPLES/...` produce ficheros
