@@ -18,7 +18,7 @@ procedure CpuNap;   { cede CPU brevemente (port Linux: evita el busy-loop) }
 
 Implementation
 
-uses ptccrt, Mouse{$IFDEF UNIX}, xfocus, baseunix, unixtype{$ENDIF};
+uses ptccrt, Mouse{$IFDEF UNIX}, ptcgraph, xfocus, baseunix, unixtype{$ENDIF};
 
 var
   bufKey  : word;      { buffer de retroceso de 1 tecla (para PreviewKey/peek) }
@@ -40,12 +40,26 @@ procedure CpuNap;
   ascii normal -> byte bajo; tecla extendida (#0 + scancode) -> scancode en byte alto }
 function RawReadKey : word;
   var c : char;
+      k : word;
   begin
     c := ptccrt.ReadKey;
     if c = #0 then
-      RawReadKey := word(ord(ptccrt.ReadKey)) shl 8
+      k := word(ord(ptccrt.ReadKey)) shl 8
     else
-      RawReadKey := ord(c);
+      k := ord(c);
+    {$IFDEF UNIX}
+    { T0.4 de WAYLAND.md: Ctrl-F12 ($8A00) vuelca el framebuffer a disco cuando
+      VPA_GRAPH_DUMP esta definida. Es el unico punto por el que pasan todas las
+      teclas de VPA, asi que basta con interceptar aqui.
+      La tecla NO se consume: $8A00 no lo usa ninguna pantalla de VPA, de modo
+      que sigue su camino y cae en el 'else' de los case, que es exactamente lo
+      que ya ocurre hoy con cualquier tecla desconocida. Consumirla obligaria a
+      devolver otra cosa o a esperar a la siguiente, y eso si cambiaria el
+      comportamiento (PreviewKey se llama tras KeyPressed y no puede bloquear). }
+    if (k = $8A00) and ptcgraph.VPADumpEnabled then
+      ptcgraph.VPADumpFrame;
+    {$ENDIF}
+    RawReadKey := k;
   end;
 
 function FastKeyPressed : boolean;

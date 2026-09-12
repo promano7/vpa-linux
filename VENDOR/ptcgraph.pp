@@ -24,6 +24,10 @@
        mas grande opcional sin cambiar el modo de video.
     2. Anadida la directiva de modo objfpc (el build de VPA usa modo tp).
     3. Anadida la unidad sysutils al uses (para GetEnvironmentVariable y Val).
+    4. Anadidas VPADumpEnabled y VPADumpFrame: volcado del framebuffer indexado
+       y de su paleta a ficheros PPM/PAL, para poder comparar pixel a pixel el
+       resultado de este backend con el de otros backends futuros (tarea T0.4
+       de WAYLAND.md). Es codigo anadido, no modifica ninguna rutina original.
   El resto del fichero es el original de FPC. Sigue bajo la LGPL modificada
   con excepcion de enlazado estatico de Free Pascal; se conservan intactos los
   avisos de copyright de arriba. Este aviso cumple el requisito de la LGPL de
@@ -58,6 +62,26 @@ type
   0 = usar VPA_SCALE del entorno. }
 var
   VPAForceScale: LongInt = 0;
+
+{ VPA (tarea T0.4 de WAYLAND.md): volcado del framebuffer a disco.
+
+  Existe para construir las "imagenes doradas" con las que se comprueba, mas
+  adelante, que un backend nuevo dibuja exactamente lo mismo que este. Se activa
+  definiendo la variable de entorno VPA_GRAPH_DUMP con el PREFIJO de ruta de los
+  ficheros de salida; sin ella la funcionalidad no existe y no cuesta nada.
+
+    VPA_GRAPH_DUMP=/tmp/vpa-   ->   /tmp/vpa-0001.ppm  +  /tmp/vpa-0001.pal
+
+  El disparo lo hace VPA al pulsar Ctrl-F12 (ver UNIT/KEYBOARD.PAS); aqui solo
+  esta el volcado. El .ppm es la imagen ya resuelta contra la paleta (formato P6
+  binario, sin comprimir, sin marca de tiempo: dos ejecuciones de la misma
+  escena producen ficheros identicos byte a byte). El .pal son las 256 entradas
+  RGB en crudo, para poder distinguir una diferencia de dibujo de una diferencia
+  de paleta.
+
+  Solo opera en el modo indexado de 8 bits, que es el unico que usa VPA. }
+function VPADumpEnabled: Boolean;
+function VPADumpFrame: LongInt;   { >0 numero de fotograma escrito; <0 error }
 
 {Driver number for PTC.}
 const
@@ -394,6 +418,180 @@ end;
 procedure ptc_surface_unlock;
 begin
   PTCWrapperObject.Unlock;
+end;
+
+{ ==========================================================================
+  VPA: volcado del framebuffer (tarea T0.4 de WAYLAND.md). Ver la explicacion
+  en la interface. Codigo anadido por el port; no existe en el FPC original.
+  ========================================================================== }
+
+const
+  VPADumpMaxFiles = 9999;
+
+var
+  VPADumpPrefix : AnsiString = '';
+  VPADumpChecked: Boolean = False;
+  VPADumpCounter: LongInt = 0;
+
+function VPADumpEnabled: Boolean;
+begin
+  { la variable de entorno se lee una sola vez, en la primera consulta }
+  if not VPADumpChecked then
+  begin
+    VPADumpPrefix := GetEnvironmentVariable('VPA_GRAPH_DUMP');
+    VPADumpChecked := True;
+  end;
+  VPADumpEnabled := VPADumpPrefix <> '';
+end;
+
+{ numero de fotograma con relleno a 4 digitos, para que el orden alfabetico de
+  los ficheros coincida con el orden de captura }
+function VPADumpNum4(ANumber: LongInt): AnsiString;
+var
+  s: AnsiString;
+begin
+  Str(ANumber, s);
+  while Length(s) < 4 do
+    s := '0' + s;
+  VPADumpNum4 := s;
+end;
+
+function VPADumpFrame: LongInt;
+var
+  pal    : array [0..255] of LongWord;
+  palptr : PLongWord;
+  pixels : PByte;
+  row    : PByte;
+  f      : file;
+  hdr    : AnsiString;
+  name   : AnsiString;
+  i, x, y, w, h, rowbytes: LongInt;
+  c      : Byte;
+  failed : Boolean;
+begin
+  VPADumpFrame := -1;
+  if not VPADumpEnabled then Exit;
+
+  { sin modo grafico no hay superficie que volcar }
+  if not IsGraphMode then Exit;
+
+  { ColorMask vale 255 solo en los modos indexados de 256 colores (lo fija
+    ptc_InitMode256); en 16 colores vale 15 y en color directo es una mascara
+    de 15/16/32 bits. Es el discriminante mas barato que hay a mano. }
+  if ColorMask <> 255 then
+  begin
+    VPADumpFrame := -2;
+    Exit;
+  end;
+
+  w := PTCWidth;
+  h := PTCHeight;
+  if (w <= 0) or (h <= 0) then Exit;
+  rowbytes := w * 3;
+
+  if VPADumpCounter >= VPADumpMaxFiles then
+  begin
+    VPADumpFrame := -3;
+    Exit;
+  end;
+  Inc(VPADumpCounter);
+  name := VPADumpPrefix + VPADumpNum4(VPADumpCounter);
+
+  { La paleta se copia y se suelta su cerrojo de inmediato: no hace falta
+    retenerlo durante la escritura en disco. }
+  palptr := PLongWord(ptc_palette_lock);
+  for i := 0 to 255 do
+    pal[i] := palptr[i];
+  ptc_palette_unlock;
+
+  { --- imagen: PPM binario (P6) --- }
+  row := nil;
+  GetMem(row, rowbytes);
+  if row = nil then
+  begin
+    VPADumpFrame := -4;
+    Exit;
+  end;
+
+  failed := False;
+  Assign(f, name + '.ppm');
+  Rewrite(f, 1);
+  if IOResult <> 0 then
+  begin
+    FreeMem(row, rowbytes);
+    VPADumpFrame := -5;
+    Exit;
+  end;
+
+  { cabecera sin comentarios ni fecha: el fichero tiene que ser reproducible }
+  hdr := 'P6' + #10 + IntToStr(w) + ' ' + IntToStr(h) + #10 + '255' + #10;
+  BlockWrite(f, hdr[1], Length(hdr));
+  if IOResult <> 0 then failed := True;
+
+  { El cerrojo de la superficie se mantiene durante toda la escritura. Es una
+    captura manual y puntual, asi que la alternativa -copiar los 300 KB del
+    framebuffer a un buffer intermedio- saldria mas cara: reservar ese bloque
+    en el monton de VPA, que esta ajustado, tiene mas riesgo que retener el
+    cerrojo unos milisegundos. }
+  if not failed then
+  begin
+    pixels := PByte(ptc_surface_lock);
+    for y := 0 to h - 1 do
+    begin
+      for x := 0 to w - 1 do
+      begin
+        c := pixels[y * w + x];
+        row[x * 3    ] := Byte((pal[c] shr 16) and $FF);   { R }
+        row[x * 3 + 1] := Byte((pal[c] shr  8) and $FF);   { G }
+        row[x * 3 + 2] := Byte( pal[c]         and $FF);   { B }
+      end;
+      BlockWrite(f, row^, rowbytes);
+    end;
+    ptc_surface_unlock;
+    { una sola comprobacion al final: con -Ci- el error no aborta, y revisar
+      IOResult en cada fila solo anadiria ruido }
+    if IOResult <> 0 then failed := True;
+  end;
+
+  Close(f);
+  if IOResult <> 0 then failed := True;
+  FreeMem(row, rowbytes);
+
+  if failed then
+  begin
+    VPADumpFrame := -6;
+    Exit;
+  end;
+
+  { --- paleta en crudo: 256 tripletes RGB --- }
+  Assign(f, name + '.pal');
+  Rewrite(f, 1);
+  if IOResult = 0 then
+  begin
+    for i := 0 to 255 do
+    begin
+      hdr := Chr((pal[i] shr 16) and $FF) +
+             Chr((pal[i] shr  8) and $FF) +
+             Chr( pal[i]         and $FF);
+      BlockWrite(f, hdr[1], 3);
+    end;
+    if IOResult <> 0 then failed := True;
+    Close(f);
+    if IOResult <> 0 then failed := True;
+  end
+  else
+    failed := True;
+
+  if failed then
+    VPADumpFrame := -7
+  else
+  begin
+    { aviso por la salida de error: durante una sesion de capturas conviene ver
+      que la tecla ha hecho algo, y no estorba a la ventana grafica }
+    Writeln(StdErr, 'VPA: volcado -> ', name, '.ppm');
+    Flush(StdErr);
+    VPADumpFrame := VPADumpCounter;
+  end;
 end;
 
 procedure ptc_update;
