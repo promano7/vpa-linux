@@ -605,6 +605,48 @@ actual**, porque después ya no habrá «actual» con el que comparar.
       rellenar la tabla de validación de `docs/reference-scenes.md`, sección
       5, y `TESTS/golden/README.md` con partida, raza, turno, versión de FPC,
       distribución y máquina.
+
+  Estado (2026-09-13): **hecho salvo la confirmación en la máquina de
+  desarrollo**. Se marca cuando `python3 TESTS/compare.py TESTS/golden /tmp/cap`
+  dé 20 de 20 allí con las doradas de `SHA256SUMS`.
+
+  Cómo quedó. Al validar las 20 capturas de la máquina de desarrollo una a
+  una contra la tabla del catálogo, **siete no mostraban lo que decía la
+  tabla**, y cuatro de ellas eran duplicados byte a byte de otra escena (E07,
+  E18 y E19 de E01; E20 de E04): la tecla no hacía nada. Causas y arreglos,
+  con el detalle en `docs/reference-scenes.md`, secciones 3.1 y 5:
+
+  - `s` y `p` desde el mapa actúan sobre el objeto actual (*sell supplies*,
+    planeta bajo el puntero), no abren fichas. E06 y E07 seleccionan ahora
+    por posición (`@X,Y` + `Return`, token nuevo de `TESTS/capture.sh`) la
+    nave 1 en el vacío y el planeta Anditius, y **capturan con el puntero
+    sobre el objeto**: `MouseMove` (`VPA/VPA2.PAS`) suelta el bloqueo y borra
+    el panel en cuanto el puntero se aleja más de `StickyMouseRange`. Es una
+    regla nueva de la sección 1 del catálogo: el panel pertenece al puntero.
+  - `F1` desde el mapa abre la ayuda contextual del objeto actual, no la
+    general; leyenda y créditos son páginas de la ayuda general (`VHLP/VPA.HHH`,
+    tabla `KEY`), así que E19 y E20 pasan por `F1 space`. E04 y E05 cambian de
+    título, no de secuencia.
+  - `Return` en (240,240) reseleccionaba Carillon: E18 pasa a ser la ficha del
+    campo de minas 7 (`1`, objeto del mismo punto).
+  - `Ctrl-F10` dejaba el gráfico vacío: E13 activa las diez series (una letra
+    cada una), que son las diez entradas de `StatColor`.
+  - E10 dependía del editor instalado (`VPA/INI.PAS` resuelve `$VISUAL`,
+    `$EDITOR`, `nano`, `vi`): el guion fija `VISUAL=/usr/bin/nano`.
+  - Con E06 corregida, **ninguna escena cae en un bucle de `ArrowBlink`**: dos
+    pasadas dan 20 de 20 idénticas sin tolerancia alguna. La decisión pendiente
+    sobre la caja queda implementada igualmente, por si una escena futura lo
+    necesita: `TESTS/compare.py` lee `TESTS/excepciones.txt`, una caja admitida
+    por escena; los píxeles distintos dentro se cuentan aparte y los de fuera
+    siguen siendo fallo. Hoy el fichero no tiene entradas, a propósito.
+
+  Doradas: generadas en el contenedor de desarrollo con el `RESOURCE.PLN` real
+  (Ubuntu 24.04, FPC 3.2.2, mismo binario de la rama), dos pasadas idénticas,
+  `SHA256SUMS` y `README.md` en `TESTS/golden/`. Las 14 escenas cuya secuencia
+  no cambió son **idénticas píxel a píxel a las capturadas en la máquina de
+  desarrollo** (Arch, FPC 3.2.2): con el `RESOURCE.PLN` real el volcado no
+  depende de la máquina. Las seis corregidas se han validado mirándolas en el
+  contenedor y están pendientes solo de la pasada de confirmación de arriba.
 - [x] **T0.7** — Escribir `TESTS/compare.py`: compara dos volcados `.ppm`,
       informa del número de píxeles distintos, su localización y genera una
       imagen de diferencias. Sin dependencias externas más allá de la
@@ -638,9 +680,10 @@ misma escena, misma caja, mismos 30 píxeles, con las fases al revés. Es decir,
 el parpadeo es reproducible como fenómeno y no como imagen, que es justo lo que
 dice la sección 1.3.
 
-Queda para T0.6 decidir cómo se compara esa caja: tolerancia por escena en
-`TESTS/compare.py` o máscara de la región. Hoy `--tolerancia=N` es global, y
-poner 30 para todas taparía diferencias reales en las otras 19.
+Resuelto en T0.6: la E06 que parpadeaba no era la ficha de nave, y con la
+secuencia corregida ninguna escena cae en `ArrowBlink`; dos pasadas dan 20 de
+20 idénticas. Para el caso futuro, `TESTS/compare.py` admite una caja por
+escena en `TESTS/excepciones.txt` (hoy vacío).
 
 ---
 
