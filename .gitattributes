@@ -13,6 +13,11 @@
 *.sh   text eol=lf
 
 # Binarios: que git no los toque
+# Los patrones distinguen mayusculas y los ficheros heredados de DOS estan en
+# mayusculas, asi que hace falta la variante de cada extension: sin ella estos
+# binarios caian en la regla general 'text=auto' y solo se libraban de la
+# conversion de finales de linea por la heuristica del NUL en los primeros 8 KB,
+# que depende del contenido y no de lo que aqui se declare.
 *.obj  binary
 *.bgi  binary
 *.chr  binary
@@ -20,7 +25,16 @@
 *.fnt  binary
 *.rzg  binary
 *.dat  binary
+*.zip  binary
+*.OBJ  binary
+*.BGI  binary
+*.CHR  binary
+*.HLP  binary
+*.FNT  binary
+*.RZG  binary
+*.DAT  binary
+*.ZIP  binary
 # VPA.MSG son plantillas de texto: el port FPC/Linux necesita LF
 # (un CRLF deja un CR colgante que RTrim no elimina y corrompe el parseo)
 *.msg  text eol=lf
-*.zip  binary
+*.MSG  text eol=lf
