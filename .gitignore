@@ -51,3 +51,6 @@ TESTS/fixture/
 TESTS/golden/*
 !TESTS/golden/README.md
 !TESTS/golden/SHA256SUMS
+
+# Cache de Python (TESTS/inventory.py, TESTS/compare.py)
+__pycache__/
