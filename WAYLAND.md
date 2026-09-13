@@ -59,7 +59,7 @@ más fácil es saltárselas:
 
 | Fase | Título | Estado |
 |------|--------|--------|
-| 0 | Preparación y red de seguridad | ◐ en curso |
+| 0 | Preparación y red de seguridad | ☑ cerrada (2026-09-13) |
 | 1 | Inventario de la frontera gráfica | ☐ |
 | 2 | Definición de la ABI v1 | ☐ |
 | 3 | Cargador dinámico | ☐ |
