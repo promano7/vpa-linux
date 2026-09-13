@@ -23,7 +23,28 @@ Opciones
                      distintos marcados en magenta
     --tolerancia N   admite hasta N pixeles distintos sin considerarlo fallo
                      (por defecto 0: la equivalencia tiene que ser exacta)
+    --excepciones F  fichero de cajas admitidas por escena (ver abajo); por
+                     defecto TESTS/excepciones.txt si existe, junto a este
+                     guion. --excepciones= (vacio) desactiva el fichero.
     --quiet          solo imprime los fallos y el resumen final
+
+Excepciones por escena
+----------------------
+Algunas pantallas de VPA no pueden ser identicas pixel a pixel entre dos
+pasadas: el indicador de ArrowBlink (VPA/SCREEN.PAS) alterna dos glifos con
+el reloj y el volcado pilla la fase que haya (docs/reference-scenes.md,
+seccion 1.3). Para esas escenas, y solo para esas, el fichero de excepciones
+da la caja donde se admite diferencia. Una linea por escena:
+
+    E06  624,257-638,261   indicador ArrowBlink de "sell supplies"
+
+Es decir: identificador de escena (el prefijo del .ppm hasta el guion), caja
+x0,y0-x1,y1 inclusive, y un comentario libre. Lineas vacias y las que
+empiezan por # se ignoran. Una escena puede tener varias lineas (varias
+cajas). Los pixeles distintos DENTRO de la caja se cuentan aparte y no son
+fallo; cualquier pixel distinto FUERA de la caja sigue siendo fallo. Es
+deliberadamente mas estricto que una tolerancia numerica: --tolerancia=30
+para una escena admitiria 30 pixeles en cualquier sitio.
 
 Codigos de salida
 -----------------
@@ -37,7 +58,8 @@ import struct
 import sys
 import zlib
 
-MAGENTA = (255, 0, 255)
+MAGENTA = (255, 0, 255)          # pixel distinto: fallo
+AMARILLO = (255, 255, 0)         # pixel distinto dentro de una caja admitida
 
 
 # ---------------------------------------------------------------- lectura PPM
@@ -122,6 +144,49 @@ def escribir_png(ruta, ancho, alto, rgb):
         f.write(png)
 
 
+# ------------------------------------------------------------- excepciones
+
+def leer_excepciones(ruta):
+    """Devuelve {escena: [(x0, y0, x1, y1), ...]} leido del fichero de
+    excepciones. Una linea mal formada es error de uso, no un aviso: una
+    excepcion que no se lee es una diferencia que pasa como fallo, o peor,
+    una caja mal situada que tapa lo que no debe."""
+    cajas = {}
+    with open(ruta, 'r') as f:
+        for n, linea in enumerate(f, 1):
+            linea = linea.strip()
+            if not linea or linea.startswith('#'):
+                continue
+            partes = linea.split(None, 2)
+            if len(partes) < 2:
+                raise PPMError('%s:%d: se esperaba "ESCENA x0,y0-x1,y1 [comentario]"'
+                               % (ruta, n))
+            escena, caja = partes[0], partes[1]
+            try:
+                a, b = caja.split('-')
+                x0, y0 = (int(v) for v in a.split(','))
+                x1, y1 = (int(v) for v in b.split(','))
+            except ValueError:
+                raise PPMError('%s:%d: caja "%s" no es x0,y0-x1,y1' % (ruta, n, caja))
+            if x0 > x1 or y0 > y1:
+                raise PPMError('%s:%d: caja "%s" vacia o invertida' % (ruta, n, caja))
+            cajas.setdefault(escena, []).append((x0, y0, x1, y1))
+    return cajas
+
+
+def escena_de(nombre):
+    """E06-0001.ppm -> E06. Es el prefijo que pone TESTS/capture.sh."""
+    base = os.path.splitext(os.path.basename(nombre))[0]
+    return base.split('-', 1)[0]
+
+
+def en_caja(x, y, cajas):
+    for x0, y0, x1, y1 in cajas:
+        if x0 <= x <= x1 and y0 <= y <= y1:
+            return True
+    return False
+
+
 # -------------------------------------------------------------- comparacion
 
 class Resultado(object):
@@ -135,14 +200,17 @@ class Resultado(object):
         self.delta_max = 0
         self.paleta_distinta = False
         self.paleta_entradas = []
+        self.admitidos = 0        # pixeles distintos dentro de una caja admitida
+        self.cajas = []           # cajas admitidas que aplican a esta escena
 
     @property
     def identicos(self):
         return self.error is None and self.distintos == 0
 
 
-def comparar(ref, act, nombre, dir_diff=None):
+def comparar(ref, act, nombre, dir_diff=None, cajas=()):
     r = Resultado(nombre)
+    r.cajas = list(cajas)
     try:
         w1, h1, p1 = leer_ppm(ref)
         w2, h2, p2 = leer_ppm(act)
@@ -186,6 +254,12 @@ def comparar(ref, act, nombre, dir_diff=None):
             b = fila2[o:o + 3]
             if a == b:
                 continue
+            if r.cajas and en_caja(x, y, r.cajas):
+                r.admitidos += 1
+                if marcas is not None:
+                    m = base + o
+                    marcas[m:m + 3] = bytes(AMARILLO)
+                continue
             r.distintos += 1
             d = max(abs(a[k] - b[k]) for k in range(3))
             if d > r.delta_max:
@@ -203,10 +277,10 @@ def comparar(ref, act, nombre, dir_diff=None):
     if r.distintos:
         r.caja = (x0, y0, x1, y1)
 
-    if dir_diff and r.distintos:
+    if dir_diff and (r.distintos or r.admitidos):
         # atenuar lo que coincide para que las marcas destaquen
         for i in range(0, len(marcas), 3):
-            if bytes(marcas[i:i + 3]) != bytes(MAGENTA):
+            if bytes(marcas[i:i + 3]) not in (bytes(MAGENTA), bytes(AMARILLO)):
                 marcas[i] = marcas[i] // 3
                 marcas[i + 1] = marcas[i + 1] // 3
                 marcas[i + 2] = marcas[i + 2] // 3
@@ -228,7 +302,11 @@ def informe(r, tolerancia, quiet):
 
     if r.identicos:
         if not quiet:
-            print('  ok      %s (%d pixeles identicos)' % (r.nombre, r.total))
+            if r.admitidos:
+                print('  ok      %s (%d pixeles identicos, %d distintos en caja admitida)'
+                      % (r.nombre, r.total - r.admitidos, r.admitidos))
+            else:
+                print('  ok      %s (%d pixeles identicos)' % (r.nombre, r.total))
         return True
 
     etiqueta = 'TOLERADO' if ok else 'DIFIERE '
@@ -240,6 +318,8 @@ def informe(r, tolerancia, quiet):
     x, y, a, b = r.primero
     print('            primer distinto : (%d,%d) ref=%s act=%s' % (x, y, a, b))
     print('            delta maximo    : %d por canal' % r.delta_max)
+    if r.admitidos:
+        print('            en caja admitida: %d pixeles mas, no contados' % r.admitidos)
     if r.paleta_distinta:
         entradas = r.paleta_entradas
         muestra = ', '.join(str(c) for c in entradas[:12])
@@ -260,6 +340,10 @@ def main(argv):
     dir_diff = None
     tolerancia = 0
     quiet = False
+    excepciones = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               'excepciones.txt')
+    if not os.path.exists(excepciones):
+        excepciones = None
     i = 0
     while i < len(opts):
         o = opts[i]
@@ -273,6 +357,13 @@ def main(argv):
             dir_diff = o.split('=', 1)[1]
         elif o.startswith('--tolerancia='):
             tolerancia = int(o.split('=', 1)[1])
+        elif o == '--excepciones':
+            if not args:
+                print('error: --excepciones necesita un fichero', file=sys.stderr)
+                return 2
+            excepciones = args.pop()
+        elif o.startswith('--excepciones='):
+            excepciones = o.split('=', 1)[1] or None
         elif o == '--quiet':
             quiet = True
         else:
@@ -309,8 +400,19 @@ def main(argv):
     else:
         pares = [(ref, act, os.path.basename(act))]
 
+    cajas = {}
+    if excepciones:
+        try:
+            cajas = leer_excepciones(excepciones)
+        except (PPMError, IOError) as e:
+            print('error: %s' % e, file=sys.stderr)
+            return 2
+
     print('Comparando %d captura(s). Tolerancia: %d pixeles.'
           % (len([p for p in pares if p]), tolerancia))
+    if cajas:
+        print('Excepciones: %s (%s).'
+              % (excepciones, ', '.join(sorted(cajas))))
     print()
 
     fallos = 0
@@ -319,7 +421,8 @@ def main(argv):
         if par is None:
             fallos += 1
             continue
-        r = comparar(par[0], par[1], par[2], dir_diff)
+        r = comparar(par[0], par[1], par[2], dir_diff,
+                     cajas.get(escena_de(par[2]), ()))
         if not informe(r, tolerancia, quiet):
             fallos += 1
         elif r.identicos:

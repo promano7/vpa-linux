@@ -1,0 +1,11 @@
+# Cajas admitidas por escena para TESTS/compare.py (docs/reference-scenes.md,
+# seccion 1.3). Formato: ESCENA x0,y0-x1,y1 comentario. Solo entran aqui las
+# escenas cuya captura cae en un bucle de ArrowBlink; los pixeles distintos
+# fuera de la caja siguen siendo fallo.
+#
+# Vacio a proposito: tras corregir las secuencias en T0.6 ninguna de las 20
+# escenas del catalogo termina en un bucle de ArrowBlink. La E06 antigua
+# ("s" desde el mapa, que era "sell supplies" y no la ficha de nave) tenia
+# el indicador en 624,257-638,261; queda aqui como ejemplo de la forma:
+#
+#   E06  624,257-638,261   indicador ArrowBlink de "sell supplies"
