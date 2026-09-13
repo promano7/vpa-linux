@@ -49,23 +49,23 @@ el desglose por fichero. Prioridad: `v1` = necesario en la ABI v1;
 
 | Símbolo | Firma (`graphh.inc`) | Usos | Ficheros | Prio. | Compl. | Equivalencia prevista en el backend |
 |---|---|---:|---|:-:|:-:|---|
-| `OutTextXY` (var) | `procedure(x,y: SmallInt; const TextString: string)` | 1071 | VPA2 271, VPA3 136, VPA4 129, EXTFEAT 129, BUILDING 88, SCREEN 87, VCS 84, PLANSIM 82, MESSAGES 25, VPAINIT 14, REPORT 12, SCORES 12, VHLP 1, VPAEXIT 1 (+ TASKS* 32, DETAILS* 8, MSGWIN* 6, VPACC* 1) | v1 | **alta** | El envoltorio `VPAGraph.OutTextXY` convierte el shortstring a `PAnsiChar`+longitud y llama al plugin. El plugin rasteriza con la fuente, justificación y modo de escritura actuales (`SetTextStyle`, `SetTextJustify`, `SetWriteMode`); ver §6 para las tres fuentes en juego. Alta porque un píxel de diferencia en el trazado de `LITT_VPA.CHR` descuadra todo el mapa. |
+| `OutTextXY` (var) | `procedure(x,y: SmallInt; const TextString: string)` | 1071 | VPA2 271, VPA3 136, VPA4 129, EXTFEAT 129, BUILDING 88, SCREEN 87, VCS 84, PLANSIM 82, MESSAGES 25, VPAINIT 14, REPORT 12, SCORES 12, VHLP 1, VPAEXIT 1 (+ TASKS* 32, DETAILS* 8, MSGWIN* 6, VPACC* 1) | v1 | **alta** | El envoltorio `VPAGraph.OutTextXY` convierte el shortstring a `PAnsiChar`+longitud y llama al plugin. El plugin rasteriza con la fuente y la justificación actuales (`SetTextStyle`, `SetTextJustify`) y **siempre en `NormalPut`**: `gtext.inc:476` fuerza el modo normal mientras dibuja texto, aunque VPA tenga `XORPut` activo. Ver §6 para las tres fuentes en juego. Alta porque un píxel de diferencia en el trazado de `LITT_VPA.CHR` descuadra todo el mapa. |
 | `SetColor` | `procedure SetColor(Color: ColorType)` | 648 | VPA2 151, VPA4 90, EXTFEAT 87, VPA3 82, SCREEN 73, BUILDING 41, VCS 32, MESSAGES 24, PLANSIM 24, TCOMBAT 14, SCORES 12, VPAINIT 8, REPORT 5, VHLP 4, VPAEXIT 1 (+ TASKS* 17, MSGWIN* 4, DETAILS* 2, VPACC* 1) | v1 | baja | Estado «color actual» (índice 0..255) del plugin. |
 | `Line` (var) | `procedure(X1, Y1, X2, Y2: smallint)` | 270 | VPA2 92, BUILDING 41, EXTFEAT 40, TCOMBAT 26, VPA4 17, SCREEN 16, VPA3 16, SCORES 14, VCS 4, VPAINIT 2, PLANSIM 1, VHLP 1 (+ DETAILS* 1) | v1 | **alta** | Bresenham con el estilo (`SolidLn`, `DottedLn`, `DashedLn`, `UserBitLn` con patrón de 16 bits), grosor (`NormWidth`/`ThickWidth`) y modo de escritura actuales, recortado al *viewport*. Alta por el patrón de puntos: tiene que caer en las mismas fases que en BGI o cambian las líneas discontinuas del mapa. |
 | `SetLineStyle` | `procedure SetLineStyle(LineStyle: word; Pattern: word; Thickness: word)` | 75 | VPA2 25, EXTFEAT 15, VPA3 11, SCREEN 6, VPA4 4, BUILDING 3, VCS 3, VHLP 2, TCOMBAT 2, MESSAGES 1, PLANSIM 1, SCORES 1, VPAINIT 1 (+ MSGWIN* 1, VPACC* 1, TASKS* 1) | v1 | baja | Estado de línea del plugin; `Pattern` solo cuenta con `UserBitLn`. |
 | `PutImage` (var) | `procedure (X,Y: smallint; var Bitmap; BitBlt: Word)` | 39 | TCOMBAT 19, SCRSAVER 8, SCREEN 4, BUILDING 2, EXTFEAT 2, VCS 2, VPA2 1, VPA3 1 (+ TASKS* 1) | v1 | media | Recibe un puntero crudo al búfer de VPA con el formato de §5 y el modo `NormalPut`/`XORPut`/`OrPut` (los tres que se usan; `AndPut`/`NotPut` no). Recorta al *viewport* como ptcgraph. |
-| `PutPixel` (var) | `procedure(X,Y: smallint; Color: ColorType)` | 38 | VPA2 21, SCREEN 7, TCOMBAT 5, EXTFEAT 2, VPAINIT 2, BUILDING 1 | v1 | baja | Píxel con color explícito, relativo al *viewport*, recortado. Es además la primitiva con la que VPA rasteriza **él mismo** la fuente 8×16 (§6). |
-| `SetWriteMode` | `procedure SetWriteMode(WriteMode: smallint)` | 34 | TCOMBAT 9, VPA2 7, EXTFEAT 5, SCREEN 4, VPA4 4, MESSAGES 2, VPA3 2, BUILDING 1 | v1 | media | Estado `NormalPut`/`XORPut` que afecta a `Line`, `Rectangle`, `LineTo`, `LineRel`, `OutTextXY` y `Circle` (así lo hace ptcgraph). Restricción §2.3.5 de `WAYLAND.md`: es lo más fácil de hacer «casi bien». |
+| `PutPixel` (var) | `procedure(X,Y: smallint; Color: ColorType)` | 38 | VPA2 21, SCREEN 7, TCOMBAT 5, EXTFEAT 2, VPAINIT 2, BUILDING 1 | v1 | baja | Píxel con color explícito, relativo al *viewport*, recortado, sin pasar por el modo de escritura. Es además la primitiva con la que VPA rasteriza **él mismo** la fuente 8×16 (§6). |
+| `SetWriteMode` | `procedure SetWriteMode(WriteMode: smallint)` | 34 | TCOMBAT 9, VPA2 7, EXTFEAT 5, SCREEN 4, VPA4 4, MESSAGES 2, VPA3 2, BUILDING 1 | v1 | media | Estado `NormalPut`/`XORPut`. En ptcgraph lo respetan **solo** las primitivas que pasan por `DirectPutPixel`: `Line`, `LineTo`, `LineRel`, `Rectangle`, `Circle`, `Ellipse`. No lo respetan `OutTextXY` (fuerza `NormalPut`, `gtext.inc:476`), `Bar` (`PatternLine` fuerza `NormalPut`, `graph.inc:836`) ni `PutPixel` (color explícito). `PutImage` lleva su propio modo por parámetro. `SetWriteMode` además normaliza: `AndPut`→`XORPut`, `NotPut`/`OrPut`/`CopyPut`→`NormalPut` (`graph.inc:1988`). Restricción §2.3.5 de `WAYLAND.md`: es lo más fácil de hacer «casi bien», y esta lista de quién lo respeta es parte del contrato. |
 | `SetViewPort` | `procedure SetViewPort(X1, Y1, X2, Y2: smallint; Clip: Boolean)` | 31 | VPA3 18, VPA2 8, EXTFEAT 5 | v1 | media | Origen y recorte del plugin. Todas las primitivas de dibujo son relativas a él; `ClearDevice` no, `ClearViewPort` no se usa. |
 | `SetTextJustify` | `procedure SetTextJustify(horiz,vert: word)` | 28 | VPA2 12, PLANSIM 3, SCORES 3, EXTFEAT 2, MESSAGES 2, SCREEN 2, VPA3 2, VPA4 2 (+ MSGWIN* 1, VPACC* 1) | v1 | baja | Estado de texto; combinaciones usadas: `LeftText`/`CenterText`/`RightText` × `TopText`/`BottomText`. |
-| `Bar` | `procedure Bar(x1,y1,x2,y2: smallint)` | 21 | SCREEN 5, TCOMBAT 5, VPA4 5, VPA2 2, EXTFEAT 1, VCS 1, VHLP 1, VPAEXIT 1 (+ MSGWIN* 1, VPACC* 1) | v1 | baja | Relleno con el estilo de `SetFillStyle` (solo `SolidFill` se usa) y su color, **no** el color actual. |
+| `Bar` | `procedure Bar(x1,y1,x2,y2: smallint)` | 21 | SCREEN 5, TCOMBAT 5, VPA4 5, VPA2 2, EXTFEAT 1, VCS 1, VHLP 1, VPAEXIT 1 (+ MSGWIN* 1, VPACC* 1) | v1 | baja | Relleno con el estilo de `SetFillStyle` (solo `SolidFill` se usa) y su color, **no** el color actual; siempre en `NormalPut`. |
 | `Rectangle` | `procedure Rectangle(x1,y1,x2,y2: smallint)` | 17 | EXTFEAT 3, MESSAGES 2, SCORES 2, SCREEN 2, VPA2 2, BUILDING 1, PLANSIM 1, TCOMBAT 1, VHLP 1, VPAEXIT 1, VPAINIT 1 (+ MSGWIN* 1, VPACC* 1, TASKS* 1) | v1 | baja | Cuatro `Line` con el estilo actual (ptcgraph lo implementa así). |
 | `ClearDevice` | `procedure ClearDevice` | 17 | EXTFEAT 5, TCOMBAT 4, PLANSIM 2, SCORES 2, VCS 2, BUILDING 1, SCRSAVER 1 | v1 | baja | Borra **toda** la superficie al color de fondo (0) ignorando el *viewport* y deja el cursor gráfico en (0,0). |
 | `SetFillStyle` | `procedure SetFillStyle(Pattern: word; Color: ColorType)` | 16 | SCREEN 5, TCOMBAT 5, VPA2 2, EXTFEAT 1, VCS 1, VHLP 1, VPAEXIT 1 (+ MSGWIN* 1, VPACC* 1) | v1 | baja | Estado de relleno; solo `SolidFill`. Los otros 11 patrones y `SetFillPattern` quedan fuera. |
 | `MoveTo` | `procedure MoveTo(X,Y: smallint)` | 14 | PLANSIM 5, SCORES 4, EXTFEAT 3, VPA2 2 | v1 | baja | Cursor gráfico (`CP`) del plugin, usado por `LineTo`/`LineRel`. |
 | `SetTextStyle` | `procedure SetTextStyle(font,direction: word; charsize: word)` | 11 | VPA2 6, BUILDING 2, VPA3 2, SCREEN 1 (+ MSGWIN* 1) | v1 | media | Solo dos combinaciones: `(DefaultFont, HorizDir, 1)` y `(LittFont, HorizDir, 4)`. `VertDir` y otros tamaños no se usan. |
 | `SetGraphMode` | `procedure SetGraphMode(Mode: smallint)` | 10 | BUILDING 2, INI 2, VCS 2, EXTFEAT 1, MESSAGES 1, SCRSAVER 1, TCOMBAT 1 | v1 | media | Ver §1.1: siempre como `SetGraphMode(GetGraphMode)` tras `RestoreCrtMode`, o blindado con `BadVideoOrMouse` (`TCOMBAT.PAS:1595`, modo 3). En la ABI es la mitad «reabrir» de *suspender/reanudar ventana*, no un cambio de modo. |
-| `Circle` (var) | `procedure(X, Y: smallint; Radius: Word)` | 10 | VPA2 4, BUILDING 2, VPAINIT 2, TCOMBAT 1, VHLP 1 | v1 | media | Círculo de punto medio con el color y modo actuales. `VPAINIT.PAS:1355` lo captura con `GetImage` (8×8) y lo pega después: el trazado tiene que ser idéntico píxel a píxel al de ptcgraph. |
+| `Circle` (var) | `procedure(X, Y: smallint; Radius: Word)` | 10 | VPA2 4, BUILDING 2, VPAINIT 2, TCOMBAT 1, VHLP 1 | v1 | media | Círculo de punto medio con el color y modo de escritura actuales (pasa por `DirectPutPixel`). `VPAINIT.PAS:1355` lo captura con `GetImage` (8×8) y lo pega después: el trazado tiene que ser idéntico píxel a píxel al de ptcgraph. |
 | `GetGraphMode` | `function GetGraphMode: smallint` | 9 | BUILDING 2, INI 2, VCS 2, EXTFEAT 1, MESSAGES 1, SCRSAVER 1 | v1 | baja | Solo como argumento de `SetGraphMode`. Con la ABI de §1.1 desaparece del código de VPA. |
 | `RestoreCrtMode` | `procedure RestoreCrtMode` | 9 | BUILDING 2, INI 2, VCS 2, EXTFEAT 1, MESSAGES 1, SCRSAVER 1 | v1 | media | Mitad «suspender» de §1.1: cierra la ventana y devuelve la terminal para ejecutar un programa externo. |
 | `LineRel` | `procedure LineRel(Dx, Dy: smallint)` | 9 | EXTFEAT 3, PLANSIM 3, SCORES 3 | v1 | baja | `Line` desde `CP`, mueve `CP`. Gráficas de estadísticas. |
@@ -81,7 +81,7 @@ el desglose por fichero. Prioridad: `v1` = necesario en la ABI v1;
 | `GraphResult` | `function GraphResult: smallint` | 1 | VPAINIT 1 (+ VHLPSHOW* 2) | v1 | baja | Solo se compara con `grOk` tras `InitGraph` (`GrErr`). En la ABI, el código de retorno de `Init`. |
 | `GetRGBPalette` (var) | `procedure(ColorNum: smallint; var RedValue, GreenValue, BlueValue: smallint)` | 1 | TCOMBAT 1 | v1 | baja | Lee una entrada de paleta (salvado de 0..15 en `TCombatInit`). |
 | `GetColor` | `function GetColor: ColorType` | 1 | VPA4 1 | v1 | baja | Devuelve el color actual. |
-| `Ellipse` | `procedure Ellipse(X,Y: smallint; stAngle, EndAngle: word; XRadius, YRadius: word)` | 1 | TCOMBAT 1 | v1 | media | Una llamada, en el combate. Se puede sustituir por `Circle` si el radio es igual en ambos ejes; se decide en la Fase 2 mirando la llamada. |
+| `Ellipse` | `procedure Ellipse(X,Y: smallint; stAngle, EndAngle: word; XRadius, YRadius: word)` | 1 | TCOMBAT 1 | v1 | media | Una llamada (`DrawShield`, `TCOMBAT.PAS:617`), pero es un **arco de elipse**: `Ellipse(x, y, 270, 90, 9, ry)` o `(…, 90, 270, 9, ry)`, la semielipse del escudo con radios distintos. No se puede sustituir por `Circle`; entra en la v1 con ángulos y dos radios, y respeta el modo de escritura. |
 | `VPAForceScale` (var, `ptcgraph.pp`) | `VPAForceScale: LongInt = 0` | 1 | VPAINIT 1 | v1 | baja | Añadido del port: porcentaje de escala que ptcgraph aplica al abrir la ventana. Pasa a ser parámetro de `Init`. |
 | `VPADumpEnabled` (`ptcgraph.pp`) | `function VPADumpEnabled: Boolean` | 1 | KEYBOARD 1 | v1 | baja | Añadido de la Fase 0 (T0.4). El volcado del *framebuffer* a `.ppm`/`.pal` es exactamente lo que la Fase 11 necesita del plugin nuevo: entra en la ABI como `DumpFrame`. |
 | `VPADumpFrame` (`ptcgraph.pp`) | `function VPADumpFrame: LongInt` | 1 | KEYBOARD 1 | v1 | baja | Ídem. |
@@ -361,25 +361,31 @@ Sitios que lo escriben o leen sin pasar por `GetImage`:
 - `VPA/TCOMBAT.PAS:361-366` — `ImgW`/`ImgH` leen los bytes 0-1 y 4-5.
 - `VPA/EXTFEAT.PAS:4468-4474` (`DrawPic`) — lee el ancho como `img[lr]^[1]`
   y el alto como `img[lr]^[3]` (índices de `word`) y llama a `PutImage`.
+- `VPA/SCRSAVER.PAS:204-205` — ídem, `img[lr]^[1]` y `^[3]` para saber cuánto
+  mide la nave que pasea.
 - `VPA/TCOMBAT.PAS:407-440` (`convertImage`) — la rama `useSVGA` (hoy
   siempre falsa en Linux) convierte al formato de un byte por píxel.
 
 Reglas que se derivan: el plugin acepta y produce **exactamente** ese diseño
 (little-endian, `longint` de 32 bits, `word` de 16); nunca reserva ni libera
 esos búferes (§2.3.9); `ImageSize` devuelve 32 bits (§2.3.4, la corrupción de
-`MenuSize` en 3.67.5); y `PutImage` recorta al *viewport* como ptcgraph, porque
-`SCRSAVER` pega imágenes que se salen.
+`MenuSize` en 3.67.5); y `PutImage` recorta al *viewport* como ptcgraph (`ptc_PutImageproc_8bpp`
+recorta arriba, abajo, izquierda y derecha cuando `ClipPixels` está activo).
 
 Modos de `PutImage` usados: `NormalPut` (copia), `XORPut` (`SCRSAVER`,
 `SCREEN`, `TCOMBAT`, `VPA2`…) y `OrPut` (`TCOMBAT`). `AndPut` y `NotPut`, no.
 
 ## 8. Contrato de paleta
 
-- Modo `D8bit`: 256 entradas RGB de 8 bits. Al arrancar, ptcgraph carga la
-  paleta VGA por defecto (0..15 con los colores de la tabla 2 y el resto la
-  escala estándar de 256 de BGI). VPA no la toca fuera del combate, así que
-  **la paleta inicial del plugin tiene que ser la misma** o cambian todos los
-  colores del juego. Está en `TESTS/golden/*.pal` (T0.4) para comprobarlo.
+- Modo `D8bit`: 256 entradas RGB de 8 bits. Al arrancar, `ptc_InitPalette256`
+  (`ptcgraph.pp:652`) carga `DefaultVGA256Palette` (`:284`), que es la paleta
+  del modo 13h del VGA en 6 bits, convertida con `VGA6to8 = dac6 shl 2`
+  (`:615`): 0..15 son los colores de la tabla 2 (`White` = 63,63,63 → 252,252,252,
+  **no** 255), 16..31 la rampa de grises, 32..247 las tres rampas de tono y
+  248..255 negro. VPA no la toca fuera del combate, así que **la paleta inicial
+  del plugin tiene que ser exactamente esa tabla con esa conversión** o cambian
+  todos los colores del juego. Está grabada en `TESTS/golden/*.pal` (T0.4)
+  para comprobarlo.
 - **Combate** (`VPA/TCOMBAT.PAS`): `TCombatInit` (`:1571-1576`) salva las
   entradas 0..15 con `GetRGBPalette`; `SetPal` (`:1431-1446`) escribe 1..15
   desde `pal[i,1..3]`, que vienen de los ficheros de sprites como **6 bits
@@ -472,5 +478,7 @@ ABI no necesita consultas de tamaño de superficie; el tamaño es parámetro de
 - Entran en la ABI dos añadidos del port que hoy viven en `ptcgraph.pp`:
   la escala (`VPAForceScale` → parámetro de `Init`) y el volcado
   (`VPADumpFrame`), que es la herramienta de la Fase 11.
-- `Ellipse` (una llamada) y `TextWidth` (solo `MSGWIN*`) son las únicas
-  decisiones abiertas; se toman en T2.1 mirando el sitio.
+- El modo de escritura es un contrato **por primitiva**: lo respetan las
+  seis que pasan por `DirectPutPixel` y no lo respetan texto, `Bar` ni
+  `PutPixel` (tabla 1, fila `SetWriteMode`).
+- `TextWidth` (solo `MSGWIN*`) es la única decisión abierta; se toma en T2.1.
