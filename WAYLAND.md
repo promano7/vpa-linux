@@ -518,6 +518,45 @@ actual**, porque después ya no habrá «actual» con el que comparar.
       de regresión de quien hace la migración, no un artefacto publicable.
       Contrapartida práctica: la copia local es la única que hay, y un
       `git clean -xfd` se la lleva; conviene guardarla fuera del árbol.
+  Endurecimiento de `TESTS/capture.sh` antes de T0.6, tras el primer intento
+  fallido de captura, en el que todas las escenas fallaron con «no aparece la
+  ventana» y ese no era el motivo:
+
+  - **Directorio de ejecución propio.** VPA abre `VPA.HLP`, `RESOURCE.PLN` y
+    `DISTTABL.DAT` por el nombre pelado, relativos al directorio actual y no a
+    `addir` (`OpenFile`/`OpenData` en `VPA/VPADATA.PAS`), y aborta si faltan,
+    antes de abrir la ventana. El guion monta ahora un directorio propio en el
+    temporal con enlaces a esos ficheros y lanza VPA desde ahí, así que da
+    igual desde dónde se ejecute. Los obligatorios se comprueban **antes** de
+    arrancar Xvfb, con un mensaje que dice qué falta y de dónde sale.
+  - **Salvapantallas apagado de verdad.** `VPA/VPA.INI` trae
+    `ScreenSaverTime = 1`; el guion pone `0` en la copia que deja en el
+    directorio de ejecución, y también en el `VPA.INI` de la partida si lo
+    hubiera, porque ese se lee después y pisa (`ReadConfig1` en
+    `VPA/CONFIG.PAS`). De paso, la configuración de las doradas queda fijada
+    por el repositorio y no por el `~/PLANETS` de quien capture.
+  - **Xvfb: espera activa, no `sleep`.** Con la espera fija de 2 s la primera
+    escena podía arrancar antes de que el servidor aceptase conexiones y morir
+    con «no display», fallando solo ella. Ahora se sondea con
+    `xdotool getdisplaygeometry`.
+  - **Ventana buscada por título exacto.** `WindowTitle := ParamStr(0)`
+    (`VENDOR/ptcgraph.pp`), así que la ventana se llama como la ruta con la que
+    se lanzó el binario; antes se cogía «cualquier ventana visible». Y si el
+    proceso muere antes de abrirla, se distingue de «tarda» y se enseña la cola
+    del log.
+  - **Fin del volcado por el `.pal`.** `VPADumpFrame` escribe el `.ppm` y luego
+    el `.pal`; esperar a que el `.pal` tenga sus 768 bytes garantiza que el
+    `.ppm` está entero. Antes se esperaba a que el `.ppm` fuese no vacío.
+  - **`VPA_KEYMODE`.** Por defecto `xtest`, con foco explícito
+    (`xdotool windowfocus`), que es lo que hace falta sin gestor de ventanas;
+    `sendevent` como alternativa. `ptc` no filtra `send_event`, así que valen
+    las dos.
+
+  **Diagnóstico futuro:** `stderr` se pierde en cuanto `OpenGraph` toma la
+  pantalla, así que cualquier `Writeln(StdErr, ...)` posterior a la apertura de
+  la ventana es invisible. Lo que haya que instrumentar a partir de ese punto
+  tiene que escribirse a fichero.
+
 - [ ] **T0.6** — Capturar las escenas de T0.5 con el binario 3.67.6 y guardarlas
       como **imágenes doradas** en `TESTS/golden/` junto con sus hashes.
       Documentar la versión de FPC y la máquina usada.
