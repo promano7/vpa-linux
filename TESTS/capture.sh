@@ -71,6 +71,9 @@ VPA_KEYMODE="${VPA_KEYMODE:-xtest}"
 VPA_RESOURCE="${VPA_RESOURCE:-}"
 
 # Catalogo: id|teclas (notacion xdotool, separadas por espacios)|puntero final
+# Un elemento "@X,Y" en la lista de teclas no es una tecla: mueve el puntero a
+# (X,Y) de la ventana antes de la tecla siguiente (E06 lo usa para poner el
+# puntero sobre una nave y seleccionarla con Return).
 # El puntero final es "park" (vuelve a (240,240)) o "X,Y" (se queda ahi).
 # Debe coincidir con la tabla de docs/reference-scenes.md, seccion 3.
 SCENES='
@@ -79,21 +82,21 @@ E02|Tab|park
 E03|ctrl+Tab|park
 E04|F1|park
 E05|F1 F1|park
-E06|s|park
-E07|p|park
+E06|@71,464 Return|71,464
+E07|@382,213 Return|382,213
 E08|b|park
 E09|F3|park
 E10|ctrl+o|park
 E11|F5|park
 E12|F10|park
-E13|ctrl+F10|park
+E13|ctrl+F10 c n m a d s f e u o|park
 E14|ctrl+F11|park
 E15|F6|park
 E16|b b|park
 E17|Return space|300,200
-E18|Return|park
-E19|l|park
-E20|F1 c|park
+E18|1|park
+E19|F1 space l|park
+E20|F1 space c|park
 '
 
 die()  { echo "capture.sh: $*" >&2; exit 2; }
@@ -278,7 +281,12 @@ capture_scene() {
     return 1
   fi
 
+  # VISUAL fija la etiqueta "Edit file with 'nano'" del menu Ctrl-O (E10):
+  # VPA/INI.PAS resuelve $VISUAL, luego $EDITOR, luego nano y vi en el PATH, y
+  # sin ninguno escribe 'no editor found', asi que la escena dependia de la
+  # maquina. Una ruta con barra se acepta tal cual, exista o no.
   ( cd "$RUN" && exec env VPA_SCALE=1 VPA_GRAPH_DUMP="$OUT/$id-" \
+      VISUAL=/usr/bin/nano \
       "$VPA_BIN" "$VPA_RACE" "$game" ) >"$OUT/$id.log" 2>&1 &
   app=$!
 
@@ -296,8 +304,11 @@ capture_scene() {
   xdotool mousemove --window "$win" "$PARK_X" "$PARK_Y"; sleep 0.5
 
   for k in $keys; do
-    send_key "$win" "$k"
-    sleep "$VPA_KEYWAIT"
+    case "$k" in
+      @*) k="${k#@}"; xdotool mousemove --window "$win" ${k//,/ }; sleep 0.5 ;;
+      *)  send_key "$win" "$k"
+          sleep "$VPA_KEYWAIT" ;;
+    esac
   done
   case "$pointer" in
     park) xdotool mousemove --window "$win" "$PARK_X" "$PARK_Y" ;;

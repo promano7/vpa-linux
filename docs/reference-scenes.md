@@ -27,31 +27,10 @@ condiciones. Estas son las que ha fijado la inspección del código en 3.67.6:
 | Directorio de ejecución | Directorio propio montado por el guion, con `VPA.HLP`, `RESOURCE.PLN`, `DISTTABL.DAT`, `VPA.MSG` y `LITT_VPA.CHR` | VPA abre esos ficheros por el nombre pelado, o sea relativos al directorio actual, no a `addir` (`OpenFile`/`OpenData` en `VPA/VPADATA.PAS`). Los tres primeros son obligatorios y VPA aborta antes de abrir la ventana si faltan. Con un directorio propio la captura no depende de desde dónde se lance el guion |
 | Configuración | `VPA.INI` del repositorio (`VPA/VPA.INI`) en el directorio de ejecución | La configuración con la que se toman las doradas queda fijada por el repositorio, no por el `~/PLANETS` de quien capture |
 | Teclas aleatorias | Nunca `R`, `Ctrl-R`, `Alt-R` en una secuencia | Códigos amistosos aleatorios: `Randomize` en `VPA/VPADATA.PAS` |
+| Puntero y objeto seleccionado | Toda escena que seleccione un objeto **deja el puntero sobre él** (E06, E07, E17) | `MouseMove` en `VPA/VPA2.PAS`: con un objeto bloqueado, mover el puntero más de `StickyMouseRange` píxeles fuera de él llama a `ClearInfo` y suelta el bloqueo. El panel derecho pertenece al puntero, no a una selección persistente. Por eso E01 y E18 pueden aparcar en (240,240): Carillon y el campo de minas 7 están justo ahí |
+| Editor | `VISUAL=/usr/bin/nano` en el entorno de VPA | El menú `Ctrl-O` (E10) escribe `Edit file with 'nano'`: `VPA/INI.PAS` resuelve `$VISUAL`, `$EDITOR`, `nano`, `vi` en el `PATH`, y sin ninguno escribe `no editor found`, así que la escena dependía de la máquina. Una ruta con barra se acepta sin comprobar que exista |
 | Salida | Matar el proceso tras la captura | No hace falta guardar: la copia se descarta. Evita el diálogo de `Ctrl-Alt-X` y cualquier escritura en disco |
 | Cursor del ratón | Sin efecto | Lo dibuja el servidor X (`ptcmouse` → `PTCWrapperObject.Option('show cursor')`), no VPA; nunca aparece en el volcado |
-
-### 1.3 Lo que no se puede fijar: el indicador parpadeante
-
-`VPA/SCREEN.PAS` tiene `ArrowBlink`, que alterna `←` y `→` en amarillo cada 7
-ticks del reloj, y varias pantallas se quedan esperando dentro de un
-`repeat ArrowBlink(x,y) until KeyPressed` (`VPA/BUILDING.PAS:567`,
-`VPA/EXTFEAT.PAS:3098` y siguientes). El volcado pilla la fase que haya en ese
-momento, y no hay forma de fijarla desde fuera: `Ctrl-F12` es justamente la
-tecla que rompe el bucle.
-
-Medido: la escena E06 difiere entre dos pasadas en **30 píxeles de 307 200**
-(0,0098 %), los dos glifos del indicador, en una caja de 15×5 en el borde
-derecho. Todo lo demás de la pantalla es idéntico.
-
-Consecuencia para T0.6 y para la comparación entre backends: una escena que
-caiga en uno de esos bucles no puede ser exacta píxel a píxel. Hay que decidir
-—cuando se doren— entre darle una tolerancia propia a esas escenas o
-enmascarar la caja del indicador; `TESTS/compare.py` admite hoy
-`--tolerancia=N`, pero global, no por escena.
-
-`MemAvail` (el `2047M free`) es constante en Free Pascal sobre Linux dentro de
-una misma máquina, pero no está garantizado entre máquinas. Si una dorada
-capturada en otra máquina difiere solo en esa esquina, es esto.
 
 ### 1.1 Un proceso por escena
 
@@ -69,6 +48,35 @@ X y `ptcgraph` los recoge en su hilo de eventos. Entre tecla y tecla hay que
 esperar lo suficiente para que la pantalla esté terminada antes de `Ctrl-F12`.
 Los valores del guion (`TESTS/capture.sh`) son generosos; si una captura sale
 a medio dibujar, es que la espera es corta, no que el backend falle.
+
+### 1.3 Lo que no se puede fijar: el indicador parpadeante
+
+`VPA/SCREEN.PAS` tiene `ArrowBlink`, que alterna `←` y `→` en amarillo cada 7
+ticks del reloj, y los diálogos de entrada numérica se quedan esperando dentro
+de un `repeat ArrowBlink(x,y) until KeyPressed` (`VPA/BUILDING.PAS`,
+`VPA/EXTFEAT.PAS`, `VPA/VPA3.PAS`, `VPA/VPA4.PAS`). El volcado pilla la fase
+que haya en ese momento, y no hay forma de fijarla desde fuera: `Ctrl-F12` es
+justamente la tecla que rompe el bucle.
+
+Se midió en la E06 original, cuya secuencia (`s` desde el mapa) no abría la
+ficha de nave sino el diálogo *sell supplies* del planeta actual, con el
+indicador junto a `Supplies`: 30 píxeles de 307 200 entre dos pasadas, los dos
+glifos, en la caja (624,257)-(638,261). Tras corregir las secuencias en T0.6,
+**ninguna de las 20 escenas termina en un bucle de `ArrowBlink`**, y dos
+pasadas completas dan 20 de 20 idénticas píxel a píxel.
+
+Por si una escena futura cae en uno de esos bucles, la comparación no usa una
+tolerancia numérica sino una **caja admitida por escena**: `TESTS/compare.py`
+lee `TESTS/excepciones.txt` (`ESCENA x0,y0-x1,y1 comentario`) y cuenta aparte
+los píxeles distintos dentro de la caja; cualquier píxel distinto fuera de ella
+sigue siendo fallo. Es más estricto que `--tolerancia=30`, que admitiría 30
+píxeles en cualquier sitio de la pantalla. Hoy el fichero no tiene ninguna
+escena, a propósito.
+
+`MemAvail` (el `2047M free`) es constante en Free Pascal sobre Linux dentro de
+una misma máquina, pero no está garantizado entre máquinas. Si una dorada
+capturada en otra máquina difiere solo en esa esquina, es esto.
+
 
 ---
 
@@ -155,9 +163,10 @@ sección 1).
 ## 3. Escenas
 
 Convenciones de la columna de teclas: notación de `xdotool key`
-(`ctrl+F10`, `Tab`, `Return`, `space`, `Escape`). El puntero se aparca en
-(240,240) justo antes de la captura, y la captura es siempre `ctrl+F12`, que
-no se repite en cada fila. Todas las secuencias parten del **mapa estelar
+(`ctrl+F10`, `Tab`, `Return`, `space`, `Escape`); `@X,Y` no es una tecla, es
+mover el puntero a (X,Y) de la ventana antes de la tecla siguiente. El puntero
+se aparca en (240,240) justo antes de la captura salvo donde se dice lo
+contrario, y la captura es siempre `ctrl+F12`, que no se repite en cada fila. Todas las secuencias parten del **mapa estelar
 recién arrancado**, con la partida limpia.
 
 La columna «Ejercita» dice qué parte de la frontera gráfica pone a prueba la
@@ -168,58 +177,76 @@ escena, para que al fallar una comparación se sepa por dónde empezar a mirar.
 | E01 | Mapa estelar, vista inicial | *(ninguna)* | `Circle`, `Line`, `PutPixel`, `LittFont` en etiquetas, paleta base, panel derecho con `DefaultFont` |
 | E02 | Mapa con un nivel de zoom | `Tab` | Escalado de coordenadas, recorte de círculos en el borde del mapa, etiquetas más densas |
 | E03 | Galaxia entera | `ctrl+Tab` | Recorte extremo, muchas primitivas pequeñas, `PutPixel` |
-| E04 | Ayuda general | `F1` | Página entera de `DefaultFont` en varios colores; `SetTextJustify`; la primera línea subrayada |
-| E05 | Ayuda general, continuación | `F1` `F1` | Ídem, distinto contenido; comprueba que dos páginas seguidas no dejan restos |
-| E06 | Ficha de nave | `s` | Panel derecho denso, lista de naves con resaltado invertido (barra gris), ayuda contextual a la izquierda |
-| E07 | Ficha de planeta | `p` | Tabla de minerales (`Rectangle` + `Line` en rejilla), texto en varios colores, `{62}` entre llaves |
+| E04 | Ayuda de la ficha de planeta | `F1` | Página entera de `DefaultFont` en varios colores; `SetTextJustify`; la primera línea subrayada. `F1` es contextual: con un planeta como objeto actual abre la página de la ficha de planeta, no la general |
+| E05 | Ayuda general, continuación | `F1` `F1` | Ídem, distinto contenido («General help (continue)»); comprueba que dos páginas seguidas no dejan restos |
+| E06 | Ficha de nave | `@71,464` `Return` *(el puntero se queda en (71,464))* | Ficha de la nave 1 (Troll Minelayer en el vacío, a 73 ly del planeta más próximo, en (1532,2413)): panel derecho denso con misión, carga y combustible |
+| E07 | Ficha de un planeta con naves en órbita | `@382,213` `Return` *(el puntero se queda en (382,213))* | Planeta 288 Anditius, sin nativos y sin base: tabla de minerales, y al pie la lista de objetos del mismo punto (dos naves y un campo de minas). Distinto de E01, que ya es la ficha del planeta actual |
 | E08 | Ficha de base | `b` | Ídem, con la lista de campos de minas |
 | E09 | Procesador de mensajes | `F3` | Ventana de texto, `Bar` de fondo, cabeceras |
 | E10 | Menú de configuración `VPA.INI` | `ctrl+o` | `GetImage`/`PutImage` del fondo (el de la corrupción de heap de 3.67.5), columnas `On_`/`Off_` (el desalineamiento de 3.67.6) |
 | E11 | Simulador de combate | `F5` | `PutImage` con buffers construidos a mano (`VPA/TCOMBAT.PAS`), paleta modificada con `SetRGBPalette` |
 | E12 | Puntuaciones y gráfico de poder | `F10` | Gráfico con `Line` y `SetLineStyle`; tabla |
-| E13 | Estadísticas de recursos | `ctrl+F10` | Tabla `StatColor` (el azul ilegible de 3.67.5); cada color de la serie tiene que ser el mismo |
+| E13 | Estadísticas de recursos, diez series | `ctrl+F10` `c` `n` `m` `a` `d` `s` `f` `e` `u` `o` | Cada letra activa una serie del gráfico; diez series son las diez entradas de `StatColor` (el azul ilegible de 3.67.5), en la tabla y en el gráfico. Sin ellas el gráfico sale vacío |
 | E14 | Informe de flota | `ctrl+F11` | `SetViewPort` del panel derecho (el desplazamiento de 32 píxeles de 3.67.5) |
 | E15 | Simulador de economía planetaria | `F6` | Formulario con campos editables, `Bar` + `Rectangle` |
 | E16 | Astillero (construcción de naves) | `b` `b` | Diálogo de construcción con lista de cascos y precios; se llega desde la ficha de base |
 | E17 | Modo distancia (goma elástica) | `Return` `space` *(mover puntero a (300,200))* | `SetWriteMode(XORPut)`: la línea elástica desde el objeto seleccionado hasta el puntero. Es la escena más sensible al modo XOR |
-| E18 | Selección de objeto en el mapa | `Return` | Marca de selección (círculo rojo) y panel derecho del objeto más cercano al puntero aparcado |
-| E19 | Leyenda del mapa | `l` | Muestrario de todos los símbolos y colores del mapa en una sola pantalla |
-| E20 | Créditos | `F1` `c` | Texto en `LittFont` y `DefaultFont` mezclados con distintos tamaños |
+| E18 | Ficha de campo de minas | `1` | Objeto 1 del mismo punto que el planeta actual: campo de minas 7, centrado en Carillon. Panel con la tabla de equivalencias y probabilidades |
+| E19 | Leyenda del mapa | `F1` `space` `l` | Página 2 del sistema de ayuda (solo se llega desde la ayuda general): muestrario de todos los símbolos y colores del mapa |
+| E20 | Créditos | `F1` `space` `c` | Página 1 del sistema de ayuda: texto centrado en varios colores y los adornos de línea |
 
 ### 3.1 Notas por escena
 
 - **E01–E03.** El mapa depende de la posición guardada en `VPAx.DB`; por eso
   la partida de referencia se guarda con la vista que se quiere como E01 y no
   se toca después.
-- **E06–E08.** La nave, el planeta y la base que se muestran son «el objeto
-  actual» al arrancar, que también viene del `.DB`. No hace falta seleccionar
-  ninguno con `F7`/`Shift-F7`: la copia limpia garantiza que sea siempre el
-  mismo. **A validar en T0.6:** la ayuda general describe `P,B` en el mapa
-  como «select planet or SB under the pointer», así que con el puntero
-  aparcado en el vacío puede que no abran la ficha. Si es así, la secuencia
-  pasa a ser `Return` (ficha del objeto más cercano al puntero aparcado, la
-  misma de E18) seguido de `p` o `b` desde esa ficha, que sí conmutan entre
-  pantallas de información («P - switch to planet info screen», «B - switch
-  to starbase info screen»), y se corrige aquí y en `TESTS/capture.sh`.
+- **E04–E05.** `F1` desde el mapa abre la ayuda **contextual** del objeto
+  actual (`VHLP/VPA.HHH`, página `$0800` con un planeta), y desde ahí `F1`
+  lleva a «General help (continue)» (página 10) y `space` a la ayuda general
+  (página 0). La leyenda y los créditos son páginas de la ayuda general, no
+  teclas del mapa: de ahí las secuencias de E19 y E20.
+- **E06–E07.** Las teclas `s` y `p` del mapa actúan sobre el objeto actual
+  (`s` = *sell supplies*, `p` = planeta bajo el puntero, que ya era el actual),
+  así que no abren fichas nuevas. Se selecciona por posición: `Return` es
+  `MouseLtPress`, que llama a `NearestObject` sobre el puntero (planetas
+  primero; luego naves **en el vacío**, `splan=0`; luego campos de minas). La
+  posición en pantalla sale de las coordenadas de la partida con la vista de
+  E01: `x = X − 1461`, `y = 2877 − Y`. Como la selección se suelta al mover el
+  puntero (sección 1), estas dos escenas capturan con el puntero sobre el
+  objeto, y su línea de coordenadas es distinta de las demás: es correcto.
+  Un planeta con base abre la ficha de **base** (`if lbase<>nil then BaseInfo`),
+  por eso E07 usa Anditius, que no la tiene.
+- **E08.** `b` conmuta la ficha del planeta actual a su base
+  («B - switch to starbase info screen»); Carillon la tiene.
 - **E10.** `Ctrl-O` reescribe `VPA.INI` al salir del menú. Como el proceso se
   mata tras la captura y la copia se descarta, no importa; pero es el motivo
   de que esta escena **no** pueda ir seguida de otra en el mismo proceso.
-- **E11.** El simulador de combate puede arrancar pidiendo datos. Si en la
-  partida elegida abre directamente el visor con la última simulación, la
-  captura es esa pantalla; si abre el formulario, es el formulario. Se anota
-  cuál de las dos es al capturar (T0.6) y no se cambia después.
+- **E11.** El simulador de combate abre el **formulario** (`<None> versus
+  <None>`), no el visor: la partida de referencia no trae simulación previa.
+  Anotado en T0.6 y no se cambia. Los buffers de `PutImage` de
+  `VPA/TCOMBAT.PAS` no se ejercitan aquí; si hace falta, se añade una escena
+  con nave y planeta elegidos.
+- **E13.** `statList` no persiste entre ejecuciones: la pantalla arranca sin
+  series, y las diez letras las activan en orden (`ToggleStatValue` en
+  `VPA/EXTFEAT.PAS`). Se omite `r` (Tritanio) por la regla de teclas
+  aleatorias; con `c n m a d s f e u o` ya son diez, el máximo (`StatListMax`).
 - **E16.** `b` desde el mapa lleva a la ficha de base; un segundo `b` desde
   la ficha de base abre el astillero (`B - switch to ship construction
   screen`). Requiere que el objeto actual tenga base; la partida de referencia
   debe cumplirlo.
-- **E17.** `Return` selecciona el objeto más cercano al puntero aparcado (el
-  mismo de E18); `space` entra en modo distancia; después se mueve el puntero
+- **E14 y E16.** Las imágenes de casco salen de `RESOURCE.PLN`: con un
+  fichero ficticio VPA arranca igual, pero esas dos escenas difieren de las
+  doradas justo en las columnas de imágenes ((28,54)-(74,401) y (38,22)-(64,69)).
+  Todo lo demás es idéntico entre máquinas.
+- **E17.** `Return` selecciona el objeto más cercano al puntero aparcado
+  (Carillon); `space` entra en modo distancia; después se mueve el puntero
   con `xdotool mousemove` a (300,200) y se captura **sin volver a aparcarlo**,
   porque la goma elástica termina en el puntero. Es la única escena con el
   puntero en otro sitio, y por eso su línea de coordenadas del panel derecho
   será distinta de las demás: es correcto.
-- **E20.** `c` en la pantalla de ayuda general muestra los créditos
-  («Credits screen (press C)»).
+- **E18.** `1` es «select another object at the same spot»: en Carillon el
+  objeto 1 es el campo de minas 7, con centro en el propio planeta, así que el
+  puntero aparcado sigue sobre él y el panel no se suelta.
 
 ### 3.2 Escenas descartadas
 
@@ -240,7 +267,7 @@ escena, para que al fallar una comparación se sepa por dónde empezar a mirar.
 Una vez, antes de nada: montar el directorio de ejecución (enlaces a
 `VPA.HLP`, `RESOURCE.PLN`, `DISTTABL.DAT`, `VPA.MSG`, `LITT_VPA.CHR` y el
 `VPA.INI` del repositorio con el salvapantallas apagado), comprobar que los
-obligatorios están, arrancar `Xvfb -s 0` y esperar a que **acepte conexiones**,
+obligatorios están, exportar `VISUAL=/usr/bin/nano`, arrancar `Xvfb -s 0` y esperar a que **acepte conexiones**,
 no un `sleep` a ojo.
 
 Para cada escena:
@@ -253,8 +280,8 @@ Para cada escena:
 4. dar el foco a la ventana (`xdotool windowfocus`) y `xdotool mousemove
    --window $WIN 240 240`
 5. inyectar la secuencia de la tabla con `xdotool key`, con una pausa tras cada
-   tecla
-6. volver a aparcar el puntero (salvo E17)
+   tecla; un `@X,Y` de la secuencia es `xdotool mousemove --window $WIN X Y`
+6. volver a aparcar el puntero (salvo E06, E07 y E17, que lo dejan sobre el objeto)
 7. `xdotool key ctrl+F12`
 8. esperar a que `$OUT/E06-0001.pal` tenga sus 768 bytes —el `.pal` se escribe
    después del `.ppm`, así que es la señal de que el volcado ha terminado— y
@@ -280,23 +307,30 @@ produce lo que dice la tabla, se marca aquí:
 
 | Id | Validada | Observaciones |
 |----|:--------:|---------------|
-| E01 | | |
-| E02 | | |
-| E03 | | |
-| E04 | | |
-| E05 | | |
-| E06 | | indicador parpadeante: ~30 px de diferencia entre pasadas (ver 1.3) |
-| E07 | | |
-| E08 | | |
-| E09 | | |
-| E10 | | |
-| E11 | | ¿formulario o visor? |
-| E12 | | |
-| E13 | | |
-| E14 | | |
-| E15 | | |
-| E16 | | requiere base en el objeto actual |
-| E17 | | |
-| E18 | | |
-| E19 | | |
-| E20 | | |
+| E01 | ✔ | Ficha de Carillon (planeta 178, con base) en el panel; es la ficha de planeta por defecto |
+| E02 | ✔ | |
+| E03 | ✔ | Panel vacío: el zoom a galaxia suelta el objeto |
+| E04 | ✔ | Era «ayuda general» y es la ayuda de la ficha de planeta (contextual); corregido el título |
+| E05 | ✔ | «General help (continue)» |
+| E06 | ✔ | La secuencia original (`s`) era *sell supplies*; ahora selecciona la nave 1 por posición |
+| E07 | ✔ | La secuencia original (`p`) no hacía nada: captura idéntica a E01. Ahora Anditius por posición |
+| E08 | ✔ | Base de Carillon |
+| E09 | ✔ | Mensaje de LanzaMinas 1, campo 280 |
+| E10 | ✔ | Depende de `VISUAL`: fijado en el guion |
+| E11 | ✔ | Formulario, `<None> versus <None>` |
+| E12 | ✔ | |
+| E13 | ✔ | La secuencia original dejaba el gráfico vacío; ahora diez series |
+| E14 | ✔ | Imágenes de casco de `RESOURCE.PLN` |
+| E15 | ✔ | |
+| E16 | ✔ | Astillero de Carillon, Taurus Scout; imagen de casco de `RESOURCE.PLN` |
+| E17 | ✔ | Distancia 72.1 desde Carillon |
+| E18 | ✔ | La secuencia original (`Return`) no hacía nada: captura idéntica a E01. Ahora campo de minas 7 |
+| E19 | ✔ | La secuencia original (`l`) no hacía nada: captura idéntica a E01. Ahora vía ayuda general |
+| E20 | ✔ | La secuencia original (`F1 c`) se quedaba en la ayuda de planeta: captura idéntica a E04. Ahora vía ayuda general |
+
+Validación hecha el 2026-09-13 mirando una a una las 20 capturas de la máquina
+de desarrollo (secuencias originales) y, para las seis corregidas, las del
+contenedor de desarrollo con `RESOURCE.PLN` ficticio. Cuatro de las veinte
+originales eran duplicados byte a byte de otra (E07, E18 y E19 de E01; E20 de
+E04): comprobar los hashes entre escenas es la forma barata de detectar una
+tecla que no hace nada, y conviene repetirlo cada vez que se regeneren.
