@@ -623,7 +623,24 @@ actual**, porque después ya no habrá «actual» con el que comparar.
 **Criterio de aceptación de la Fase 0:**
 `TESTS/capture.sh` ejecutado dos veces sobre `TESTS/fixture/` produce las 20
 escenas de `docs/reference-scenes.md`, y `TESTS/compare.py` da 0 píxeles de
-diferencia entre las dos ejecuciones.
+diferencia entre las dos ejecuciones, **salvo en las escenas que caen en un
+bucle de `ArrowBlink`**, donde la diferencia admisible es la caja del indicador
+y nada más (`docs/reference-scenes.md`, sección 1.3). El criterio original pedía
+cero píxeles en todas; con el parpadeo eso es inalcanzable, y fingir que se
+cumple seria peor que anotarlo.
+
+**Estado: cumplido** (2026-09-13). Dos pasadas completas en la máquina de
+desarrollo (Arch, FPC 3.2.2, `RESOURCE.PLN` real) capturan las 20 escenas y dan
+19 de 20 idénticas píxel a píxel; la vigésima es E06, con 30 píxeles de 307 200
+en la caja (624,257)-(638,261), que son las dos fases del indicador. El mismo
+resultado sale en el contenedor de desarrollo con un `RESOURCE.PLN` ficticio:
+misma escena, misma caja, mismos 30 píxeles, con las fases al revés. Es decir,
+el parpadeo es reproducible como fenómeno y no como imagen, que es justo lo que
+dice la sección 1.3.
+
+Queda para T0.6 decidir cómo se compara esa caja: tolerancia por escena en
+`TESTS/compare.py` o máscara de la región. Hoy `--tolerancia=N` es global, y
+poner 30 para todas taparía diferencias reales en las otras 19.
 
 ---
 
