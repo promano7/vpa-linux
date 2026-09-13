@@ -61,7 +61,7 @@ más fácil es saltárselas:
 |------|--------|--------|
 | 0 | Preparación y red de seguridad | ☑ cerrada (2026-09-13) |
 | 1 | Inventario de la frontera gráfica | ☑ cerrada (2026-09-13) |
-| 2 | Definición de la ABI v1 | ☐ |
+| 2 | Definición de la ABI v1 | ☑ cerrada (2026-09-13) |
 | 3 | Cargador dinámico | ☐ |
 | 4 | Detección y selección de backend | ☐ |
 | 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ☐ |
@@ -771,69 +771,121 @@ la sección 2 de aquí, que es la entrada de la Fase 2.
 
 ### Fase 2 — Definición de la ABI v1 🔒
 
-- [ ] **T2.1** — Crear `GRAPH/vpagraph_abi.inc` con la constante
+- [x] **T2.1** — Crear `GRAPH/vpagraph_abi.inc` con la constante
       `VPAGRAPH_ABI_VERSION = 1` y los tipos de tamaño fijo
       (`TVPAGraphInt8/16/32`, `TVPAGraphUInt8/16/32/64` y sus punteros).
-- [ ] **T2.2** — Definir los **códigos de error**. Punto de partida del
+      — `d68fd91`
+      Definidos sobre los tipos base de Pascal, no sobre `Int32`/`UInt32`, que
+      no existen en los dos modos. Se añade `TVPAGraphBool` (un byte).
+- [x] **T2.2** — Definir los **códigos de error**. Punto de partida del
       documento original, que es bueno: `0` correcto, `-1` parámetro inválido,
       `-2` ABI incompatible, `-3` tamaño de estructura inválido, `-10` error de
       inicialización, `-20` error de vídeo, `-30` error de memoria, `-100`
       excepción interna capturada. Añadir `-40` «función no soportada por este
-      backend».
-- [ ] **T2.3** — Definir `TVPAGraphInitParams`: `StructSize`, ancho y alto
+      backend». — `d68fd91`
+- [x] **T2.3** — Definir `TVPAGraphInitParams`: `StructSize`, ancho y alto
       lógicos, escala en porcentaje (sustituye a la variable global
       `ptcgraph.VPAForceScale`), indicador de pantalla completa, título de
-      ventana como `PAnsiChar`.
-- [ ] **T2.4** — Definir `TVPAGraphInterface`: `StructSize`, `ABIVersion`,
+      ventana como `PAnsiChar`. — `d68fd91`
+- [x] **T2.4** — Definir `TVPAGraphInterface`: `StructSize`, `ABIVersion`,
       `BackendName`, `BackendVersion` y los punteros a función. **Orden fijo y
-      solo se añade al final**, nunca en medio.
-- [ ] **T2.5** — Bloque de funciones de **ciclo de vida**: `Init`, `Shutdown`,
+      solo se añade al final**, nunca en medio. — `d68fd91`
+      44 funciones y ocho casillas `Reserved` para crecer sin mover nada.
+- [x] **T2.5** — Bloque de funciones de **ciclo de vida**: `Init`, `Shutdown`,
       `GetLastError(Buffer, BufferSize)`, `Present`, `GraphResult`.
-- [ ] **T2.6** — Bloque de **dibujo** (el subconjunto real de la Fase 1, no la
+      — `d68fd91`
+      Se añaden `Suspend`/`Resume`, que no estaban en el plan: son la pareja
+      que sustituye a `RestoreCrtMode`+`SetGraphMode(GetGraphMode)` y a la
+      terna de `xfocus` que siempre la sigue (D-08).
+- [x] **T2.6** — Bloque de **dibujo** (el subconjunto real de la Fase 1, no la
       API Graph completa): `ClearDevice`, `ClearViewPort`, `SetViewPort`,
       `GetViewSettings`, `SetColor`, `GetColor`, `SetBkColor`, `SetLineStyle`,
       `SetFillStyle`, `SetWriteMode`, `PutPixel`, `GetPixel`, `Line`, `LineTo`,
       `LineRel`, `MoveTo`, `Rectangle`, `Bar`, `Circle`, `Ellipse`.
-- [ ] **T2.7** — Bloque de **imágenes**: `ImageSize`, `GetImage`, `PutImage`,
+      — `d68fd91`
+      Con dos descartes: `ClearViewPort` y `SetBkColor` no los usa VPA
+      (tabla 9 del inventario) y, siendo la estructura ampliable solo por el
+      final, añadirlos el día que hagan falta no cuesta nada (D-11).
+      `Ellipse` entra con ángulos y dos radios: la única llamada es un arco.
+- [x] **T2.7** — Bloque de **imágenes**: `ImageSize`, `GetImage`, `PutImage`,
       con el contrato de memoria de T1.6 documentado **dentro del `.inc`**, en
-      comentario, no solo en el inventario.
-- [ ] **T2.8** — Bloque de **paleta**: `SetRGBPalette`, `GetRGBPalette` y lo que
+      comentario, no solo en el inventario. — `d68fd91`
+      `GetImage`/`PutImage` reciben además el tamaño del búfer: es la única
+      defensa posible contra un tamaño mal calculado al otro lado.
+- [x] **T2.8** — Bloque de **paleta**: `SetRGBPalette`, `GetRGBPalette` y lo que
       T1.7 determine. Las tablas se pasan por puntero más número de entradas,
-      nunca como array Pascal.
-- [ ] **T2.9** — Bloque de **texto**: `OutTextXY(X, Y, PAnsiChar)`,
+      nunca como array Pascal. — `d68fd91`
+      T1.7 determinó que hacía falta un tercero, `SetRGBPaletteBlock`, para el
+      combate, que reescribe quince entradas seguidas.
+- [x] **T2.9** — Bloque de **texto**: `OutTextXY(X, Y, PAnsiChar)`,
       `SetTextStyle`, `SetTextJustify`, `TextWidth`, `TextHeight`,
       `InstallUserFont(PAnsiChar)`. Decisión a dejar escrita: la conversión
       shortstring → `PAnsiChar` ocurre **solo** en `GRAPH/vpagraph.pas`.
-- [ ] **T2.10** — Bloque de **ventana, foco y escala** (la aportación que no
+      — `d68fd91`
+      `TextWidth` (solo la usa `CC/MSGWIN.PAS`, no enlazado) y `TextHeight`
+      (nadie) se descartan por D-11, igual que arriba.
+- [x] **T2.10** — Bloque de **ventana, foco y escala** (la aportación que no
       estaba en el plan original): `ResolveScale`, `ApplyWindowScale`,
       `GrabInputFocus`, `ReleaseInputFocus`, `RequestFullscreen`,
       `ReleaseFullscreen`, `WantFullscreen`, `PointerInsideWindow`,
       `MapMouseToSurface`, `MapSurfaceToWindow`, `BackendReady`.
-- [ ] **T2.11** — Bloque de **teclado y ratón**: `KeyPressed`, `ReadKey`,
+      — `d68fd91`
+      Reducido a tres funciones por D-08: `GetScreenSize`, `SetFullscreen` y
+      `GetWindowSize`. `ResolveScale` y `WantFullscreen` son lógica de VPA y
+      se quedan en el núcleo; `GrabInputFocus`, `ApplyWindowScale` y los dos
+      `Map*` sobraban en cuanto la ventana la crea el plugin;
+      `PointerInsideWindow` pasa a ser un parámetro de `GetMouseState`;
+      `BackendReady` lo sustituye el código de retorno de `Init`.
+- [x] **T2.11** — Bloque de **teclado y ratón**: `KeyPressed`, `ReadKey`,
       `GetKbdFlags`, `GetQuitNoSave`, `ShowMouse`, `HideMouse`,
       `GetMouseState`, `SetMousePos`, y `PollEvent(EventOut)` con la
-      convención `0` sin evento / `1` evento / negativo error.
-- [ ] **T2.12** — Definir `TVPAGraphEvent` (`StructSize`, `EventType`,
+      convención `0` sin evento / `1` evento / negativo error. — `d68fd91`
+      `KeyPressed`, `ReadKey` y `GetQuitNoSave` **no entran en la ABI** (D-10):
+      la traducción a scancodes de Turbo Pascal y el búfer de teclas viven en
+      el núcleo, porque si cada backend tradujera por su cuenta, X11 y Wayland
+      divergirían en teclas raras. `GetKbdFlags` se llama `GetModifiers`;
+      `ShowMouse`/`HideMouse` se funden en `ShowMouse(Show)`.
+- [x] **T2.12** — Definir `TVPAGraphEvent` (`StructSize`, `EventType`,
       `Timestamp`, `KeyCode`, `ScanCode`, `UnicodeChar`, `Modifiers`, `MouseX`,
       `MouseY`, `MouseButton`, `Width`, `Height`). **`UnicodeChar` es
       obligatorio**: sin él no se puede replicar el arreglo de `Ctrl-+`/`Ctrl--`
-      de 3.67.5.
-- [ ] **T2.13** — Definir el prototipo del punto de entrada único
+      de 3.67.5. — `d68fd91`
+      Los códigos de tecla `VPAGK_*` reutilizan los valores de los `PTCKEY_*`
+      de PTCPas en vez de inventar una numeración nueva.
+- [x] **T2.13** — Definir el prototipo del punto de entrada único
       `VPAGraph_GetInterface(RequestedABIVersion, InterfaceSize, InterfaceOut)`.
-- [ ] **T2.14** — Escribir `docs/abi-compatibility.md`: qué se puede cambiar sin
+      — `d68fd91`
+      La estructura la reserva el núcleo y se la pasa al plugin, que no puede
+      escribir más allá de `InterfaceSize`.
+- [x] **T2.14** — Escribir `docs/abi-compatibility.md`: qué se puede cambiar sin
       subir la versión de ABI (nada que altere el diseño existente), qué obliga
       a subirla y cómo se comporta un plugin viejo ante un ejecutable nuevo y
-      viceversa.
-- [ ] **T2.15** — Escribir `TESTS/abi/stub_backend.lpr`: un plugin de juguete
+      viceversa. — `2ff5750`
+      Incluye la lista de funciones obligatorias y opcionales, que es lo que
+      tiene que comprobar el cargador de la Fase 3.
+- [x] **T2.15** — Escribir `TESTS/abi/stub_backend.lpr`: un plugin de juguete
       que no dibuja nada pero devuelve una interfaz válida. Es el banco de
-      pruebas del cargador de la Fase 3.
-- [ ] **T2.16** — Escribir también los plugins **defectuosos** de prueba: uno
+      pruebas del cargador de la Fase 3. — `90ac096`
+- [x] **T2.16** — Escribir también los plugins **defectuosos** de prueba: uno
       sin el símbolo de entrada, uno con `ABIVersion` = 99, uno con
       `StructSize` incorrecto y uno que devuelve punteros nulos en funciones
-      obligatorias.
+      obligatorias. — `90ac096`
 
 **Criterio de aceptación:** `vpagraph_abi.inc` compila tanto desde una unidad en
 `-Mtp` como desde una en `{$mode objfpc}`, y `stub_backend.so` se construye.
+
+**Estado: cumplido** (2026-09-13), con FPC 3.2.2. `TESTS/abi/abi_tp.pas` y
+`TESTS/abi/abi_objfpc.pas` compilan sin avisos, y las cinco bibliotecas de
+`TESTS/abi/` se construyen y exportan (o no, en el caso de `bad_nosymbol`) el
+símbolo esperado.
+
+Se comprobó además algo que el criterio no pedía y que habría sido un fallo
+silencioso: que los **dos modos producen la misma disposición en memoria**.
+`TVPAGraphEvent` mide 72 bytes, `TVPAGraphInitParams` 32 y
+`TVPAGraphInterface` 440 en `-Mtp` y en `objfpc`, con los mismos
+desplazamientos. Si los modos empaquetaran distinto, los dos lados compilarían
+igualmente y la ABI estaría rota de nacimiento. La comprobación queda escrita
+como aserciones de compilación en los dos ficheros de prueba.
 
 ---
 
@@ -1404,6 +1456,8 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-06 | 2026-09-12 | Motor de dibujo del plugin Wayland: **pendiente** (Fase 7), con recomendación de la vía B (consola PTC sobre SDL3) | Se decide con prototipos medidos, no por intuición |
 | D-07 | 2026-09-13 | La ABI v1 se define sobre el código que el ejecutable **enlaza**; lo que solo usan `CC/`, `TASKS`, `DETAILS` o las utilidades `VHLP*` queda en `v2` (`TextWidth`, `RegisterBGIDriver`, `GraphErrorMsg`, `Detect`) | `SWITCHES.INC` no define `TASKS`/`VPACC`/`VPAMM` desde hace años; diseñar para código muerto es trabajo de escaparate |
 | D-08 | 2026-09-13 | La frontera de ventana de la ABI son **cuatro** peticiones —tamaño de pantalla, pantalla completa, bit «puntero dentro» y modificadores actuales— y una pareja `Suspend`/`Resume` que sustituye a `RestoreCrtMode`+`SetGraphMode(GetGraphMode)` y a la terna de `xfocus` que siempre la sigue. `GrabInputFocus`, `ApplyWindowScale` y los dos `Map*` desaparecen | Con la ventana dentro del plugin no hay nada que buscar por título ni escala que adivinar; el ratón cruza la ABI en coordenadas de superficie 640×480 |
+| D-10 | 2026-09-13 | La traducción de teclas a los scancodes del Turbo Pascal y el búfer de teclado viven en el **núcleo**, no en cada plugin; la ABI transporta código de tecla físico + carácter Unicode + modificadores, y los códigos reutilizan los valores de los `PTCKEY_*` de PTCPas | Si cada backend tradujera por su cuenta, X11 y Wayland divergirían en teclas raras y lo notaría antes el usuario que nosotros |
+| D-11 | 2026-09-13 | Nada que VPA no use hoy entra en la ABI v1, ni siquiera siendo trivial (`ClearViewPort`, `SetBkColor`, `TextWidth`, `TextHeight`) | La estructura solo crece por el final, así que añadir el día que haga falta no cuesta nada; adelantarlo sí cuesta, porque hay que implementarlo en cada backend |
 | D-09 | 2026-09-13 | El evento de teclado de la ABI lleva el **carácter Unicode** además del código de tecla | El arreglo de 3.67.5 para Ctrl-+/- en distribuciones no estadounidenses depende de él; sin carácter se pierde |
 
 ---
