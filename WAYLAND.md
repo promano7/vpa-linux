@@ -469,15 +469,56 @@ actual**, porque después ya no habrá «actual» con el que comparar.
     notas, exactamente los de la línea base), valores de paleta VGA exactos,
     dos ejecuciones de la misma escena con el mismo MD5, y el disparo por
     teclado probado inyectando `Ctrl-F12` en la ventana.
-- [ ] **T0.5** — Definir el **catálogo de escenas de referencia**: una lista
+- [x] **T0.5** — Definir el **catálogo de escenas de referencia**: una lista
       corta y reproducible de pantallas de VPA que ejerciten lo que importa
       (mapa estelar con etiquetas, ventana de mensajes, menú Ctrl-O, simulador
       de combate, pantalla de puntuaciones, diálogo de construcción, salvapantallas).
       Documentar para cada una la secuencia exacta de teclas que la produce
-      desde una partida de `EXAMPLES/`.
+      desde una partida de `EXAMPLES/`. — `c0cd087`
+
+  Cómo quedó: `docs/reference-scenes.md` (20 escenas, `E01`–`E20`) y su forma
+  ejecutable, `TESTS/capture.sh`, que arranca un VPA por escena sobre una copia
+  limpia de la partida, inyecta las teclas con `xdotool` bajo `Xvfb` y dispara
+  `Ctrl-F12`. Decisiones que condicionan todo lo posterior:
+
+  - **Un proceso por escena, sobre copia limpia.** `VPAx.DB` guarda posición
+    del mapa, zoom, capas visibles y reloj; `Ctrl-O` reescribe `VPA.INI` al
+    salir. Encadenar escenas en un proceso contaminaría la siguiente.
+  - **Puntero aparcado en (600,300) con `VPA_SCALE=1`.** La primera línea del
+    panel derecho muestra las coordenadas de mapa bajo el puntero (o
+    `2047M free` si está fuera del mapa): sin fijarlo, dos capturas iguales
+    difieren ahí. Con escala 1 la ventana es la superficie y `xdotool` trabaja
+    en coordenadas de superficie.
+  - **El cursor del ratón no contamina:** lo dibuja el servidor X vía
+    `ptcmouse`, no VPA. No aparece en el volcado.
+  - **Salvapantallas descartado** de la comparación píxel a píxel:
+    `VPA/SCRSAVER.PAS` usa `Random`. Se comprueba de otra forma (T6.14, Fase 9).
+  - Se añaden desde ya las escenas frágiles que pedía T11.4 (XOR de la goma
+    elástica, `GetImage`/`PutImage` del menú Ctrl-O y del visor de combate,
+    viewport del panel derecho, paleta de estadísticas), para que las doradas
+    de T0.6 ya las cubran y no haya que regenerarlas en la Fase 11.
+  - Las secuencias salen de las pantallas de ayuda y del código; se validan
+    una a una al capturar (T0.6), y el documento lleva una tabla para
+    anotarlo.
+- [ ] **T0.5b** — Añadir la **partida de referencia** al repositorio en
+      `TESTS/fixture/`. `EXAMPLES/` no contiene ninguna partida (solo
+      `VPA.INI` y un guion de lanzamiento), y sin una partida versionada las
+      doradas no son reproducibles por nadie. Requisitos en
+      `docs/reference-scenes.md`, sección 2: un turno, con naves, planetas y
+      al menos una base propia; `VPA.INI` propio; reloj apagado y nombres de
+      planeta encendidos ya guardados en el `.DB`; sin contraseña. Fijar el
+      número de raza en `TESTS/capture.sh` (`RACE=`).
 - [ ] **T0.6** — Capturar las escenas de T0.5 con el binario 3.67.6 y guardarlas
       como **imágenes doradas** en `TESTS/golden/` junto con sus hashes.
       Documentar la versión de FPC y la máquina usada.
+      Procedimiento: `TESTS/capture.sh TESTS/golden` sobre la partida de
+      T0.5b; ejecutarlo **dos veces** en directorios distintos y pasar
+      `TESTS/compare.py` entre ambos antes de dar nada por dorado (cero
+      diferencias, o la escena no es reproducible y hay que entender por qué);
+      `sha256sum TESTS/golden/*.ppm TESTS/golden/*.pal > TESTS/golden/SHA256SUMS`;
+      rellenar la tabla de validación de `docs/reference-scenes.md`, sección
+      5, y `TESTS/golden/README.md` con partida, raza, turno, versión de FPC,
+      distribución y máquina.
 - [x] **T0.7** — Escribir `TESTS/compare.py`: compara dos volcados `.ppm`,
       informa del número de píxeles distintos, su localización y genera una
       imagen de diferencias. Sin dependencias externas más allá de la
@@ -494,9 +535,9 @@ actual**, porque después ya no habrá «actual» con el que comparar.
       real, para poder automatizarla. — `e409022`
 
 **Criterio de aceptación de la Fase 0:**
-`VPA_GRAPH_DUMP=/tmp/f xvfb-run -a ./build/VPA 3 EXAMPLES/...` produce ficheros
-`.ppm` reproducibles, y `TESTS/compare.py` da 0 píxeles de diferencia entre dos
-ejecuciones idénticas.
+`TESTS/capture.sh` ejecutado dos veces sobre `TESTS/fixture/` produce las 20
+escenas de `docs/reference-scenes.md`, y `TESTS/compare.py` da 0 píxeles de
+diferencia entre las dos ejecuciones.
 
 ---
 
