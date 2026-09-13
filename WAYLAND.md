@@ -557,6 +557,43 @@ actual**, porque después ya no habrá «actual» con el que comparar.
   la ventana es invisible. Lo que haya que instrumentar a partir de ese punto
   tiene que escribirse a fichero.
 
+  Y la causa real del fallo de las 19 escenas, que no era ninguna de las
+  anteriores: **el puntero aparcado en (600,300)**. En `VPA/VPA2.PAS`, el bucle
+  interno del `main` (`while mEvent<>0`) se rearma solo mientras el puntero
+  este fuera de `8..471 x 8..477`, porque ahi VPA hace auto-scroll del mapa; y
+  mientras hace auto-scroll **no vuelve a leer el teclado**. En una ventana de
+  640 px, x=600 esta en el panel derecho, pasado el umbral. E17 era la unica
+  escena que terminaba con el puntero dentro del mapa (300,200), y por eso era
+  la unica que capturaba. El catalogo justificaba (600,300) diciendo que caia
+  "dentro del mapa pero fuera del panel", que es al reves: de ahi salio el
+  error. El aparcamiento pasa a (240,240) y la justificacion queda corregida en
+  `docs/reference-scenes.md`, seccion 1.
+  Bisectado: (240,240) vuelca, (475,300) -cuatro pixeles pasado el umbral- no,
+  (600,300) no.
+
+  Otros dos hallazgos de la misma tanda:
+
+  - **`Cannot open X display` intermitente**, ~1 arranque de cada 20, en
+    `TX11Console.CreateDisplay`: `XOpenDisplay` falla al encadenar arranques y
+    muertes de proceso contra el mismo Xvfb. No depende de la escena (cayo en
+    E19 en una pasada y en E16 en la otra, en la misma direccion). El guion deja
+    medio segundo entre escenas y reintenta una vez, avisando.
+  - **El indicador parpadeante de `ArrowBlink`** impide que algunas escenas sean
+    exactas pixel a pixel. Detalle y decision pendiente en
+    `docs/reference-scenes.md`, seccion 1.3.
+
+  Estado del arnes tras esto: **las 20 escenas capturan**, y dos pasadas
+  completas dan **19 de 20 identicas pixel a pixel**, siendo la vigesima E06 con
+  30 pixeles del parpadeo. Medido en el contenedor de desarrollo con FPC 3.2.2 y
+  un `RESOURCE.PLN` ficticio, que basta porque `OpenGraph` solo comprueba que el
+  fichero existe (`OpenFile(f,ResName,0,Yes); CloseData(f)`); las doradas de
+  T0.6 hay que sacarlas en la maquina de desarrollo con el fichero real.
+
+  **Posible bug de VPA, no del arnes, anotado aqui para no perderlo:** mientras
+  el puntero esta en la franja de auto-scroll, VPA ignora el teclado por
+  completo. En uso interactivo se disimula porque uno aparta el raton, pero el
+  bucle se come los eventos de tecla mientras tanto.
+
 - [ ] **T0.6** — Capturar las escenas de T0.5 con el binario 3.67.6 y guardarlas
       como **imágenes doradas** en `TESTS/golden/` junto con sus hashes.
       Documentar la versión de FPC y la máquina usada.
