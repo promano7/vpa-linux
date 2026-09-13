@@ -30,7 +30,7 @@
 
 set -u
 
-RACE=3                      # se fija al elegir la partida (T0.5b)
+RACE=9                      # The Robots, turno 90 (partida de TESTS/fixture)
 PARK_X=600; PARK_Y=300      # puntero aparcado: dentro del mapa, fuera del panel
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

@@ -53,27 +53,75 @@ a medio dibujar, es que la espera es corta, no que el backend falle.
 
 ## 2. La partida de referencia
 
-`EXAMPLES/` no contiene ninguna partida, solo `VPA.INI` y un guion de
-lanzamiento. Las doradas necesitan una partida **versionada en el repositorio**;
-si no, nadie puede regenerarlas ni comprobarlas. Se propone `TESTS/fixture/`
-(tarea T0.5b de `WAYLAND.md`), con estos requisitos:
+Las doradas se capturan siempre sobre la misma partida, que vive en
+`TESTS/fixture/`. La partida es **The Robots, turno 90**, raza **9**; se lanza
+con `./build/VPA 9 TESTS/fixture` y ese número está fijado en
+`TESTS/capture.sh`, en la variable `RACE`.
 
-- Un solo turno, un solo jugador, con naves, planetas y al menos una base
-  propia, minas y algún mensaje: lo justo para que todas las escenas de la
-  sección 3 tengan contenido.
-- `VPA.INI` propio dentro del directorio, con `ScreenSaverTime` alto,
-  `BadVideoOrMouse = No` y el resto de valores de `EXAMPLES/VPA.INI`.
-- Sin reloj (`Shift-S C` apagado) y con nombres de planeta visibles
-  (`Shift-S P` encendido), guardado ya así en `VPAx.DB`.
-- Sin contraseña de jugador (o con `NOPASSWORD`), para que el arranque no pida
-  nada.
-- Anotar en `TESTS/golden/README.md`: nombre de la partida, número de raza,
-  turno, y versión de VPA con la que se generó el `.DB`.
+### 2.1 No está en el repositorio, y es deliberado
 
-El número de raza (`N` en `./build/VPA N TESTS/fixture`) se fija al elegir la
-partida y se escribe en `TESTS/capture.sh`.
+`TESTS/fixture/` y `TESTS/golden/` están en `.gitignore`. Solo existen en la
+copia local de quien captura. Los motivos:
 
----
+- Los ficheros de datos del juego (`HULLSPEC.DAT`, `TRUEHULL.DAT`,
+  `XYPLAN.DAT`, `PLANET.NM`…) son de Tim Wisseman, y el repositorio es público
+  y MPL-2.0.
+- Es una partida real por correo: los mensajes los han escrito otras personas,
+  que no han dado permiso para publicarlos.
+- `FIZZ.BIN` contiene la clave de registro del jugador. Con la partida fuera
+  del repositorio, el riesgo no hay que gestionarlo: no existe.
+- Las doradas son decenas de MB de binarios que solo crecerían, y un commit no
+  se deshace: lo que entra en el historial se queda.
+
+Del directorio de doradas sí se versionan dos ficheros de texto,
+`TESTS/golden/README.md` y `TESTS/golden/SHA256SUMS`, reincluidos
+explícitamente en `.gitignore`. No pesan nada y dejan constancia en el
+repositorio de qué escenas se doraron, sobre qué partida, con qué versión de
+FPC y con qué hashes, aunque las imágenes vivan solo en un disco.
+
+### 2.2 Lo que eso cuesta, y por qué se acepta
+
+Nadie ajeno puede verificar ni regenerar las doradas. Es una pérdida real, pero
+el público de estas imágenes son quienes hacen la migración: son una red de
+regresión de obra, no un artefacto publicable. Las pruebas que hacen los
+colaboradores son partidas reales, no comparaciones de píxeles.
+
+La consecuencia práctica: **la copia local es la única que hay**. Conviene
+guardarla fuera del árbol de trabajo, porque un `git clean -xfd` se la lleva
+por delante sin preguntar. Si aun así se pierde, no es una catástrofe: se
+prepara una partida nueva siguiendo 2.3, se vuelven a capturar las veinte
+escenas y ese juego pasa a ser la referencia, con el procedimiento de
+regeneración de T11.5. Lo que se pierde es la continuidad con lo capturado
+antes, no la capacidad de seguir trabajando.
+
+### 2.3 Qué tiene que cumplir la partida
+
+Para poder rehacerla si hace falta, y para que las escenas de la sección 3
+tengan algo que dibujar:
+
+- Un turno desempaquetado, con naves, planetas y al menos una base propia con
+  campos de minas, y mensajes en el buzón.
+- Sin contraseña de jugador: el arranque no debe pedir nada.
+- `VPA.INI` propio dentro del directorio, con `ScreenSaverTime` alto y
+  `BadVideoOrMouse = No`.
+- Reloj apagado y nombres de planeta encendidos (`Shift-S C` / `Shift-S P`),
+  guardado ya así en `VPA9.DB`, porque de ahí sale la vista inicial de E01.
+- `FIZZ.BIN` no hace falta: VPA lo recrea al arrancar
+  (`VPA/VPAINIT.PAS:1529`) y solo lo usa al desempaquetar un RST y al salir.
+  Ninguna pantalla muestra información de registro.
+- Anotar en `TESTS/golden/README.md` la partida, la raza, el turno y la
+  versión de VPA con la que se generó el `.DB`.
+
+### 2.4 El directorio no se juega in situ
+
+VPA recrea `FIZZ.BIN` y reescribe la vista en `VPA9.DB` al salir, así que
+jugar directamente en `TESTS/fixture/` cambia el punto de partida de la
+siguiente captura. `TESTS/capture.sh` copia a un temporal antes de cada escena
+y descarta la copia; cualquier prueba manual debe hacer lo mismo:
+
+```bash
+cp -r TESTS/fixture /tmp/game && VPA_SCALE=1 ./build/VPA 9 /tmp/game
+```
 
 ## 3. Escenas
 
@@ -172,8 +220,10 @@ Para cada escena:
 7. `xdotool key --window $WIN ctrl+F12`
 8. esperar a que aparezca `$OUT/E06-0001.ppm`, matar el proceso
 
-Las doradas se guardan como `TESTS/golden/Enn-0001.ppm` y `.pal`, con sus
-hashes en `TESTS/golden/SHA256SUMS`. La comparación es:
+Las doradas se guardan como `TESTS/golden/Enn-0001.ppm` y `.pal` (fuera del
+control de versiones, ver 2.1), con sus hashes en `TESTS/golden/SHA256SUMS` y
+la procedencia en `TESTS/golden/README.md`, que sí se versionan. La comparación
+es:
 
 ```bash
 python3 TESTS/compare.py TESTS/golden /tmp/cur
