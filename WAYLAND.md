@@ -60,7 +60,7 @@ más fácil es saltárselas:
 | Fase | Título | Estado |
 |------|--------|--------|
 | 0 | Preparación y red de seguridad | ☑ cerrada (2026-09-13) |
-| 1 | Inventario de la frontera gráfica | ☐ |
+| 1 | Inventario de la frontera gráfica | ☑ cerrada (2026-09-13) |
 | 2 | Definición de la ABI v1 | ☐ |
 | 3 | Cargador dinámico | ☐ |
 | 4 | Detección y selección de backend | ☐ |
@@ -165,7 +165,17 @@ foco + escala + teclado + ratón. Esto está incorporado a las fases 2 y 5.
 ### 2.2 Inventario preliminar de la API Graph
 
 Conteo bruto sobre `VPA/`, `UNIT/`, `CC/`, `VHLP/` (incluye comentarios, así que
-son cotas superiores; la Fase 1 produce el inventario fino):
+son cotas superiores; la Fase 1 produce el inventario fino).
+
+> **Superada.** El inventario fino está en `docs/vpagraph-api-inventory.md`
+> (Fase 1). Difiere de esta tabla en dos cosas que conviene saber al leerla:
+> solo cuenta el código que el ejecutable **enlaza** (ni `CC/`, ni `TASKS`,
+> ni `DETAILS`, ni las utilidades `VHLP*`), y no cuenta las variables locales
+> que se llaman como una primitiva (`line` en `EXTFEAT`/`VPA4`). Con eso,
+> `Line` baja de 397 a 270, `ReadKey`/`KeyPressed` de `ptccrt` se usan solo
+> desde `KEYBOARD.PAS`, y `TextWidth`, `RegisterBGIDriver`, `GraphErrorMsg` y
+> `Detect` salen de la v1. La tabla se conserva como registro del punto de
+> partida.
 
 | Símbolo | Usos | Ficheros | Símbolo | Usos | Ficheros |
 |---------|-----:|---------:|---------|-----:|---------:|
@@ -698,42 +708,64 @@ escena en `TESTS/excepciones.txt` (hoy vacío).
 Objetivo: que no quede ni una llamada al mundo exterior sin catalogar. La tabla
 de la sección 2.2 es el punto de partida, no el resultado.
 
-- [ ] **T1.1** — `docs/vpagraph-api-inventory.md`, tabla 1: **API Graph**. Para
+- [x] **T1.1** — `docs/vpagraph-api-inventory.md`, tabla 1: **API Graph**. Para
       cada símbolo: nombre, firma exacta tal y como la declara
       `VENDOR/graphh.inc`, número real de llamadas (excluyendo comentarios),
       ficheros afectados, prioridad (`v1` / `v2` / `no usada`), complejidad y
-      equivalencia prevista en el backend nuevo.
-- [ ] **T1.2** — Tabla 2: **constantes y tipos** de `ptcgraph` que usa VPA
+      equivalencia prevista en el backend nuevo. — `2e6b853`
+      Las cuentas las produce `TESTS/inventory.py` (`c22e284`), que además
+      separa lo que el ejecutable enlaza de lo que no (ver D-07). Son 32
+      entradas para la v1; `Line` tiene 270 llamadas reales, no 397.
+- [x] **T1.2** — Tabla 2: **constantes y tipos** de `ptcgraph` que usa VPA
       (`D8bit`, `m640x480`, `XORPut`, `NormalPut`, `CopyPut`, `HorizDir`,
       `SmallFont`, `DefaultFont`, `SolidLn`, `SolidFill`, `ColorType`,
       `PaletteType`, `ViewPortType`, `grOk`…). Cada una tiene que ser
       reexportada por `VPAGraph` o el `uses` no se podrá sustituir de una pieza.
-- [ ] **T1.3** — Tabla 3: **teclado** (`ptccrt`). Documentar el camino completo
+      — `2e6b853`
+      41 símbolos con su valor. `CopyPut` y `PaletteType` no se usan.
+- [x] **T1.3** — Tabla 3: **teclado** (`ptccrt`). Documentar el camino completo
       desde la pulsación hasta `Keyboard.ReadKey`, incluyendo `PTCLastKbdFlags`
       y `PTCQuitNoSave`, y el arreglo de 3.67.5 para `Ctrl-+`/`Ctrl--` en
       distribuciones de teclado no estadounidenses (se resolvió comparando el
       **carácter Unicode**, no el scancode: es un requisito, no un detalle).
-- [ ] **T1.4** — Tabla 4: **ratón** (`ptcmouse`), incluyendo la emulación por
+      — `2e6b853`
+- [x] **T1.4** — Tabla 4: **ratón** (`ptcmouse`), incluyendo la emulación por
       software de `StickyMouseRange` en `UNIT/MOUSE.PAS` (`ptcmouse` no expone
-      limitación de rango).
-- [ ] **T1.5** — Tabla 5: **ventana y foco** (`xfocus`), con las 19 llamadas de
+      limitación de rango). — `2e6b853`
+      Precisión: el rango lo emula `SetMouseRange`/`PollMouse` por recorte;
+      `StickyMouseRange` es lógica de VPA en `SCREEN`/`VPA2` que solo pide al
+      backend el *warp* del puntero.
+- [x] **T1.5** — Tabla 5: **ventana y foco** (`xfocus`), con las 19 llamadas de
       la sección 2.1 y, para cada una, qué necesita realmente del servidor
       gráfico. Es la tabla que define la mitad menos obvia de la ABI.
-- [ ] **T1.6** — Documentar el **contrato de formato de imagen**: diseño exacto
+      — `2e6b853`
+      De once funciones, cuatro peticiones reales (ver D-08).
+- [x] **T1.6** — Documentar el **contrato de formato de imagen**: diseño exacto
       del buffer de `GetImage`/`PutImage` en `D8bit` (cabecera de 12 bytes con
       tres `longint`, un `word` por píxel), con referencia a los sitios de
       `VPA/TCOMBAT.PAS` y `VPA/EXTFEAT.PAS` que lo construyen a mano.
-- [ ] **T1.7** — Documentar el **contrato de paleta**: cómo entra la paleta VGA
+      — `2e6b853`
+- [x] **T1.7** — Documentar el **contrato de paleta**: cómo entra la paleta VGA
       de VPA (valores de 6 bits 0..63 en orden R,B,G en los ficheros originales,
       convertidos a 0..255 RGB para `ptcgraph`, ver `VPA/TCOMBAT.PAS:1438`).
-- [ ] **T1.8** — Lista de símbolos **declarados pero no usados** por VPA, con la
-      decisión explícita de dejarlos fuera de la ABI v1.
-- [ ] **T1.9** — Revisión cruzada: `grep` sobre `VPA/`, `UNIT/`, `CC/`, `VHLP/`
+      — `2e6b853`
+- [x] **T1.8** — Lista de símbolos **declarados pero no usados** por VPA, con la
+      decisión explícita de dejarlos fuera de la ABI v1. — `2e6b853`
+- [x] **T1.9** — Revisión cruzada: `grep` sobre `VPA/`, `UNIT/`, `CC/`, `VHLP/`
       buscando cualquier identificador de `ptcgraph`, `ptccrt`, `ptcmouse`, `ptc`
-      o `xlib` que no aparezca en el inventario.
+      o `xlib` que no aparezca en el inventario. — `2e6b853`
+      Nada nuevo: solo `UNIT/xfocus.pas` habla Xlib (49 llamadas, todas en la
+      tabla 5); fuera de los símbolos quedan anotados `cthreads` y las
+      variables de entorno `VPA_SCALE`, `VPA_GRAPH_DUMP`, `VPA_FULLSCREEN`.
 
 **Criterio de aceptación:** el inventario cubre el 100 % de los símbolos que
 cruzan la frontera; T1.9 no encuentra nada nuevo.
+
+**Estado: cumplido** (2026-09-13). `TESTS/inventory.py` recorre los 396
+símbolos exportados por las cuatro unidades de la frontera y todos los que
+tienen uso están en las tablas; el `grep` de `ptc*`/`X*` no encuentra nada
+fuera de `xfocus`. El documento cierra con la lista de lo que cambia respecto a
+la sección 2 de aquí, que es la entrada de la Fase 2.
 
 ---
 
@@ -1370,6 +1402,9 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-04 | 2026-09-12 | La ABI cubre **también** ventana, foco, escala, teclado y ratón, no solo dibujo | `UNIT/xfocus.pas` usa Xlib directamente; sin esto el binario seguiría enlazando `libX11` |
 | D-05 | 2026-09-12 | Etapas de `Arc`, `PieSlice`, `FillPoly`, `FloodFill`, `DrawPoly`, `Sector`, `Bar3D`, `FillEllipse`, `SetActivePage`, `SetVisualPage` **fuera de la ABI v1** | El inventario demuestra que VPA no las usa |
 | D-06 | 2026-09-12 | Motor de dibujo del plugin Wayland: **pendiente** (Fase 7), con recomendación de la vía B (consola PTC sobre SDL3) | Se decide con prototipos medidos, no por intuición |
+| D-07 | 2026-09-13 | La ABI v1 se define sobre el código que el ejecutable **enlaza**; lo que solo usan `CC/`, `TASKS`, `DETAILS` o las utilidades `VHLP*` queda en `v2` (`TextWidth`, `RegisterBGIDriver`, `GraphErrorMsg`, `Detect`) | `SWITCHES.INC` no define `TASKS`/`VPACC`/`VPAMM` desde hace años; diseñar para código muerto es trabajo de escaparate |
+| D-08 | 2026-09-13 | La frontera de ventana de la ABI son **cuatro** peticiones —tamaño de pantalla, pantalla completa, bit «puntero dentro» y modificadores actuales— y una pareja `Suspend`/`Resume` que sustituye a `RestoreCrtMode`+`SetGraphMode(GetGraphMode)` y a la terna de `xfocus` que siempre la sigue. `GrabInputFocus`, `ApplyWindowScale` y los dos `Map*` desaparecen | Con la ventana dentro del plugin no hay nada que buscar por título ni escala que adivinar; el ratón cruza la ABI en coordenadas de superficie 640×480 |
+| D-09 | 2026-09-13 | El evento de teclado de la ABI lleva el **carácter Unicode** además del código de tecla | El arreglo de 3.67.5 para Ctrl-+/- en distribuciones no estadounidenses depende de él; sin carácter se pierde |
 
 ---
 
