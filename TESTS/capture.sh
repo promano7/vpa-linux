@@ -26,7 +26,7 @@
 # Requisitos: Xvfb, xdotool, y un binario compilado con el volcado de T0.4.
 #
 # Las condiciones de captura (VPA_SCALE=1, sin gestor de ventanas, puntero
-# aparcado en (600,300), copia limpia por escena, directorio de ejecucion
+# aparcado en (240,240), copia limpia por escena, directorio de ejecucion
 # propio, salvapantallas apagado) estan justificadas en
 # docs/reference-scenes.md, seccion 1. No las cambies aqui sin cambiarlas alli.
 #
@@ -54,7 +54,10 @@
 set -u
 
 RACE=9                      # The Robots, turno 90 (partida de TESTS/fixture)
-PARK_X=600; PARK_Y=300      # puntero aparcado: dentro del mapa, fuera del panel
+PARK_X=240; PARK_Y=240      # puntero aparcado: centro del mapa, lejos del borde
+                            # (ver docs/reference-scenes.md, seccion 1: fuera de
+                            #  8..471 x 8..477 VPA entra en auto-scroll y deja de
+                            #  leer el teclado)
 PAL_BYTES=768               # tamano final del .pal: 256 tripletes RGB
 ADDIR_MAX=65                # addir es string[67] y aun guarda el separador final
 
@@ -68,7 +71,7 @@ VPA_KEYMODE="${VPA_KEYMODE:-xtest}"
 VPA_RESOURCE="${VPA_RESOURCE:-}"
 
 # Catalogo: id|teclas (notacion xdotool, separadas por espacios)|puntero final
-# El puntero final es "park" (vuelve a (600,300)) o "X,Y" (se queda ahi).
+# El puntero final es "park" (vuelve a (240,240)) o "X,Y" (se queda ahi).
 # Debe coincidir con la tabla de docs/reference-scenes.md, seccion 3.
 SCENES='
 E01||park
@@ -312,11 +315,21 @@ capture_scene() {
   return $rc
 }
 
+# Un arranque de VPA de cada veinte muere en TX11Console.CreateDisplay con
+# 'Cannot open X display': XOpenDisplay falla al encadenar arranques y muertes
+# de proceso contra el mismo servidor. No es de la escena ni del dibujo, asi que
+# se le da un respiro al servidor entre escenas y se reintenta una vez, con
+# aviso: si una escena necesita el reintento siempre, eso ya no es esto.
 failed=0
 while IFS='|' read -r id keys pointer; do
   [ -z "$id" ] && continue
   if [ -n "$WANTED" ] && ! [[ " $WANTED " == *" $id "* ]]; then continue; fi
-  capture_scene "$id" "$keys" "$pointer" || failed=$((failed+1))
+  if ! capture_scene "$id" "$keys" "$pointer"; then
+    echo "$id: reintentando" >&2
+    sleep 2
+    capture_scene "$id" "$keys" "$pointer" || failed=$((failed+1))
+  fi
+  sleep 0.5
 done <<< "$SCENES"
 
 if [ $failed -eq 0 ]; then

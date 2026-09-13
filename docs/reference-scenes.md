@@ -20,7 +20,7 @@ condiciones. Estas son las que ha fijado la inspección del código en 3.67.6:
 |-----------|-------|--------|
 | Escala | `VPA_SCALE=1` | La ventana mide 640×480 y coincide 1:1 con la superficie; así las coordenadas de `xdotool` son coordenadas de superficie sin conversión |
 | Servidor | `Xvfb`, sin gestor de ventanas | Sin gestor, la ventana aparece en (0,0) y nadie la mueve, la redimensiona ni le roba el foco |
-| Puntero | Aparcado en **(600,300)** de la ventana antes de cada captura | La primera línea del panel derecho muestra las coordenadas de mapa bajo el puntero (`1701,2637`) o `2047M free` si el puntero está fuera del mapa. Sin fijar el puntero, dos capturas de la misma escena difieren en esa línea. (600,300) cae dentro del mapa pero fuera del panel |
+| Puntero | Aparcado en **(240,240)** de la ventana antes de cada captura | Dos motivos. Uno: la primera línea del panel derecho muestra las coordenadas de mapa bajo el puntero, así que sin fijarlo dos capturas de la misma escena difieren en esa línea. Y dos, el importante: el puntero tiene que quedar **dentro de la zona 8..471 × 8..477**. Fuera de ella, `VPA/VPA2.PAS` entra en auto-scroll (`MouseX>471` y compañía), y su bucle interno `while mEvent<>0` se rearma solo mientras el puntero siga ahí, de modo que VPA **no vuelve a leer el teclado nunca**. El primer intento de captura aparcaba en (600,300), que en una ventana de 640 px está en el panel derecho, pasado el umbral: fallaron las 19 escenas cuya captura terminaba con el puntero aparcado |
 | Partida | **Copia limpia** de la partida de referencia para cada escena | `VPAx.DB` guarda la posición del mapa, el zoom, las capas visibles (`Shift-S`) y el reloj (`showC`); cualquier ejecución anterior que haya guardado cambia el arranque siguiente |
 | Reloj | Desactivado en la partida de referencia (`showC = 0`) | Un reloj en el mapa invalida todas las escenas de mapa |
 | Salvapantallas | `ScreenSaverTime = 0` en el `VPA.INI` del directorio de ejecución (y en el de la partida, si lo tuviera) | Que no se dispare en mitad de una espera del guion. Con `= 1`, que es lo que trae `VPA/VPA.INI`, una escena de varias teclas a un segundo por tecla lo alcanza, y `SCRSAVER` repinta encima del volcado |
@@ -29,6 +29,25 @@ condiciones. Estas son las que ha fijado la inspección del código en 3.67.6:
 | Teclas aleatorias | Nunca `R`, `Ctrl-R`, `Alt-R` en una secuencia | Códigos amistosos aleatorios: `Randomize` en `VPA/VPADATA.PAS` |
 | Salida | Matar el proceso tras la captura | No hace falta guardar: la copia se descarta. Evita el diálogo de `Ctrl-Alt-X` y cualquier escritura en disco |
 | Cursor del ratón | Sin efecto | Lo dibuja el servidor X (`ptcmouse` → `PTCWrapperObject.Option('show cursor')`), no VPA; nunca aparece en el volcado |
+
+### 1.3 Lo que no se puede fijar: el indicador parpadeante
+
+`VPA/SCREEN.PAS` tiene `ArrowBlink`, que alterna `←` y `→` en amarillo cada 7
+ticks del reloj, y varias pantallas se quedan esperando dentro de un
+`repeat ArrowBlink(x,y) until KeyPressed` (`VPA/BUILDING.PAS:567`,
+`VPA/EXTFEAT.PAS:3098` y siguientes). El volcado pilla la fase que haya en ese
+momento, y no hay forma de fijarla desde fuera: `Ctrl-F12` es justamente la
+tecla que rompe el bucle.
+
+Medido: la escena E06 difiere entre dos pasadas en **30 píxeles de 307 200**
+(0,0098 %), los dos glifos del indicador, en una caja de 15×5 en el borde
+derecho. Todo lo demás de la pantalla es idéntico.
+
+Consecuencia para T0.6 y para la comparación entre backends: una escena que
+caiga en uno de esos bucles no puede ser exacta píxel a píxel. Hay que decidir
+—cuando se doren— entre darle una tolerancia propia a esas escenas o
+enmascarar la caja del indicador; `TESTS/compare.py` admite hoy
+`--tolerancia=N`, pero global, no por escena.
 
 `MemAvail` (el `2047M free`) es constante en Free Pascal sobre Linux dentro de
 una misma máquina, pero no está garantizado entre máquinas. Si una dorada
@@ -137,7 +156,7 @@ sección 1).
 
 Convenciones de la columna de teclas: notación de `xdotool key`
 (`ctrl+F10`, `Tab`, `Return`, `space`, `Escape`). El puntero se aparca en
-(600,300) justo antes de la captura, y la captura es siempre `ctrl+F12`, que
+(240,240) justo antes de la captura, y la captura es siempre `ctrl+F12`, que
 no se repite en cada fila. Todas las secuencias parten del **mapa estelar
 recién arrancado**, con la partida limpia.
 
@@ -232,7 +251,7 @@ Para cada escena:
    exacta del binario (`WindowTitle := ParamStr(0)` en `VENDOR/ptcgraph.pp`);
    si el proceso muere antes, es que ha abortado, y el log lo dice
 4. dar el foco a la ventana (`xdotool windowfocus`) y `xdotool mousemove
-   --window $WIN 600 300`
+   --window $WIN 240 240`
 5. inyectar la secuencia de la tabla con `xdotool key`, con una pausa tras cada
    tecla
 6. volver a aparcar el puntero (salvo E17)
@@ -266,7 +285,7 @@ produce lo que dice la tabla, se marca aquí:
 | E03 | | |
 | E04 | | |
 | E05 | | |
-| E06 | | |
+| E06 | | indicador parpadeante: ~30 px de diferencia entre pasadas (ver 1.3) |
 | E07 | | |
 | E08 | | |
 | E09 | | |
