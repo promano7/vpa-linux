@@ -500,14 +500,24 @@ actual**, porque después ya no habrá «actual» con el que comparar.
   - Las secuencias salen de las pantallas de ayuda y del código; se validan
     una a una al capturar (T0.6), y el documento lleva una tabla para
     anotarlo.
-- [ ] **T0.5b** — Añadir la **partida de referencia** al repositorio en
-      `TESTS/fixture/`. `EXAMPLES/` no contiene ninguna partida (solo
-      `VPA.INI` y un guion de lanzamiento), y sin una partida versionada las
-      doradas no son reproducibles por nadie. Requisitos en
-      `docs/reference-scenes.md`, sección 2: un turno, con naves, planetas y
-      al menos una base propia; `VPA.INI` propio; reloj apagado y nombres de
-      planeta encendidos ya guardados en el `.DB`; sin contraseña. Fijar el
-      número de raza en `TESTS/capture.sh` (`RACE=`).
+- [x] **T0.5b** — Preparar la **partida de referencia** en `TESTS/fixture/`,
+      **fuera del control de versiones**. La hoja de ruta daba por hecho que
+      `EXAMPLES/` traía una partida, y no la trae: solo `VPA.INI` y un guion de
+      lanzamiento. Requisitos en `docs/reference-scenes.md`, sección 2.3.
+      Partida usada: The Robots, turno 90, raza 9, fijada en
+      `TESTS/capture.sh` (`RACE=9`). — `c0dcf96`
+      Decisión: `TESTS/fixture/` y `TESTS/golden/` van a `.gitignore`. Los
+      datos del juego son de Tim Wisseman, los mensajes los han escrito otros
+      jugadores de una partida real, `FIZZ.BIN` lleva la clave de registro, y
+      las doradas son decenas de MB de binarios. Nada de eso debe entrar en un
+      repositorio público, y lo que entra en el historial ya no sale: la
+      decisión había que tomarla antes del primer commit, no limpiarla
+      después. Se reincluyen `TESTS/golden/README.md` y `SHA256SUMS`, que
+      dejan constancia de qué se capturó y con qué hashes.
+      Coste aceptado: las doradas no son verificables por terceros. Son la red
+      de regresión de quien hace la migración, no un artefacto publicable.
+      Contrapartida práctica: la copia local es la única que hay, y un
+      `git clean -xfd` se la lleva; conviene guardarla fuera del árbol.
 - [ ] **T0.6** — Capturar las escenas de T0.5 con el binario 3.67.6 y guardarlas
       como **imágenes doradas** en `TESTS/golden/` junto con sus hashes.
       Documentar la versión de FPC y la máquina usada.
