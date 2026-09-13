@@ -23,7 +23,9 @@ condiciones. Estas son las que ha fijado la inspección del código en 3.67.6:
 | Puntero | Aparcado en **(600,300)** de la ventana antes de cada captura | La primera línea del panel derecho muestra las coordenadas de mapa bajo el puntero (`1701,2637`) o `2047M free` si el puntero está fuera del mapa. Sin fijar el puntero, dos capturas de la misma escena difieren en esa línea. (600,300) cae dentro del mapa pero fuera del panel |
 | Partida | **Copia limpia** de la partida de referencia para cada escena | `VPAx.DB` guarda la posición del mapa, el zoom, las capas visibles (`Shift-S`) y el reloj (`showC`); cualquier ejecución anterior que haya guardado cambia el arranque siguiente |
 | Reloj | Desactivado en la partida de referencia (`showC = 0`) | Un reloj en el mapa invalida todas las escenas de mapa |
-| Salvapantallas | `ScreenSaverTime` alto en el `VPA.INI` de la partida | Que no se dispare en mitad de una espera del guion |
+| Salvapantallas | `ScreenSaverTime = 0` en el `VPA.INI` del directorio de ejecución (y en el de la partida, si lo tuviera) | Que no se dispare en mitad de una espera del guion. Con `= 1`, que es lo que trae `VPA/VPA.INI`, una escena de varias teclas a un segundo por tecla lo alcanza, y `SCRSAVER` repinta encima del volcado |
+| Directorio de ejecución | Directorio propio montado por el guion, con `VPA.HLP`, `RESOURCE.PLN`, `DISTTABL.DAT`, `VPA.MSG` y `LITT_VPA.CHR` | VPA abre esos ficheros por el nombre pelado, o sea relativos al directorio actual, no a `addir` (`OpenFile`/`OpenData` en `VPA/VPADATA.PAS`). Los tres primeros son obligatorios y VPA aborta antes de abrir la ventana si faltan. Con un directorio propio la captura no depende de desde dónde se lance el guion |
+| Configuración | `VPA.INI` del repositorio (`VPA/VPA.INI`) en el directorio de ejecución | La configuración con la que se toman las doradas queda fijada por el repositorio, no por el `~/PLANETS` de quien capture |
 | Teclas aleatorias | Nunca `R`, `Ctrl-R`, `Alt-R` en una secuencia | Códigos amistosos aleatorios: `Randomize` en `VPA/VPADATA.PAS` |
 | Salida | Matar el proceso tras la captura | No hace falta guardar: la copia se descarta. Evita el diálogo de `Ctrl-Alt-X` y cualquier escritura en disco |
 | Cursor del ratón | Sin efecto | Lo dibuja el servidor X (`ptcmouse` → `PTCWrapperObject.Option('show cursor')`), no VPA; nunca aparece en el volcado |
@@ -102,8 +104,11 @@ tengan algo que dibujar:
 - Un turno desempaquetado, con naves, planetas y al menos una base propia con
   campos de minas, y mensajes en el buzón.
 - Sin contraseña de jugador: el arranque no debe pedir nada.
-- `VPA.INI` propio dentro del directorio, con `ScreenSaverTime` alto y
-  `BadVideoOrMouse = No`.
+- No hace falta `VPA.INI` propio: la configuración sale del directorio de
+  ejecución que monta `TESTS/capture.sh` a partir de `VPA/VPA.INI`. Si la
+  partida trae uno, el guion le pone `ScreenSaverTime = 0`, porque el de la
+  partida se lee después del del directorio actual y lo pisa
+  (`ReadConfig1` en `VPA/CONFIG.PAS`).
 - Reloj apagado y nombres de planeta encendidos (`Shift-S C` / `Shift-S P`),
   guardado ya así en `VPA9.DB`, porque de ahí sale la vista inicial de E01.
 - `FIZZ.BIN` no hace falta: VPA lo recrea al arrancar
@@ -122,6 +127,11 @@ y descarta la copia; cualquier prueba manual debe hacer lo mismo:
 ```bash
 cp -r TESTS/fixture /tmp/game && VPA_SCALE=1 ./build/VPA 9 /tmp/game
 ```
+
+Esa prueba manual hay que lanzarla desde un directorio donde estén `VPA.HLP`,
+`RESOURCE.PLN` y `DISTTABL.DAT`, o VPA aborta antes de abrir la ventana. El
+guion no tiene ese problema: se monta su propio directorio de ejecución (ver
+sección 1).
 
 ## 3. Escenas
 
@@ -208,17 +218,28 @@ escena, para que al fallar una comparación se sepa por dónde empezar a mirar.
 
 ## 4. Cómo se capturan (resumen; el detalle está en `TESTS/capture.sh`)
 
+Una vez, antes de nada: montar el directorio de ejecución (enlaces a
+`VPA.HLP`, `RESOURCE.PLN`, `DISTTABL.DAT`, `VPA.MSG`, `LITT_VPA.CHR` y el
+`VPA.INI` del repositorio con el salvapantallas apagado), comprobar que los
+obligatorios están, arrancar `Xvfb -s 0` y esperar a que **acepte conexiones**,
+no un `sleep` a ojo.
+
 Para cada escena:
 
 1. `rm -rf $TMP/game && cp -r TESTS/fixture $TMP/game`
-2. `VPA_SCALE=1 VPA_GRAPH_DUMP=$OUT/E06- ./build/VPA N $TMP/game &`
-3. esperar a que exista la ventana (`xdotool search`)
-4. `xdotool mousemove --window $WIN 600 300`
-5. inyectar la secuencia de la tabla con `xdotool key --window $WIN`, con una
-   pausa tras cada tecla
+2. `cd $RUN && VPA_SCALE=1 VPA_GRAPH_DUMP=$OUT/E06- $VPA_BIN N $TMP/game &`
+3. esperar a que exista la ventana, buscándola por su título, que es la ruta
+   exacta del binario (`WindowTitle := ParamStr(0)` en `VENDOR/ptcgraph.pp`);
+   si el proceso muere antes, es que ha abortado, y el log lo dice
+4. dar el foco a la ventana (`xdotool windowfocus`) y `xdotool mousemove
+   --window $WIN 600 300`
+5. inyectar la secuencia de la tabla con `xdotool key`, con una pausa tras cada
+   tecla
 6. volver a aparcar el puntero (salvo E17)
-7. `xdotool key --window $WIN ctrl+F12`
-8. esperar a que aparezca `$OUT/E06-0001.ppm`, matar el proceso
+7. `xdotool key ctrl+F12`
+8. esperar a que `$OUT/E06-0001.pal` tenga sus 768 bytes —el `.pal` se escribe
+   después del `.ppm`, así que es la señal de que el volcado ha terminado— y
+   matar el proceso
 
 Las doradas se guardan como `TESTS/golden/Enn-0001.ppm` y `.pal` (fuera del
 control de versiones, ver 2.1), con sus hashes en `TESTS/golden/SHA256SUMS` y
