@@ -594,7 +594,7 @@ actual**, porque después ya no habrá «actual» con el que comparar.
   completo. En uso interactivo se disimula porque uno aparta el raton, pero el
   bucle se come los eventos de tecla mientras tanto.
 
-- [ ] **T0.6** — Capturar las escenas de T0.5 con el binario 3.67.6 y guardarlas
+- [x] **T0.6** — Capturar las escenas de T0.5 con el binario 3.67.6 y guardarlas
       como **imágenes doradas** en `TESTS/golden/` junto con sus hashes.
       Documentar la versión de FPC y la máquina usada.
       Procedimiento: `TESTS/capture.sh TESTS/golden` sobre la partida de
@@ -606,9 +606,10 @@ actual**, porque después ya no habrá «actual» con el que comparar.
       5, y `TESTS/golden/README.md` con partida, raza, turno, versión de FPC,
       distribución y máquina.
 
-  Estado (2026-09-13): **hecho salvo la confirmación en la máquina de
-  desarrollo**. Se marca cuando `python3 TESTS/compare.py TESTS/golden /tmp/cap`
-  dé 20 de 20 allí con las doradas de `SHA256SUMS`.
+  Confirmado en la máquina de desarrollo (2026-09-13):
+  `TESTS/capture.sh` seguido de `TESTS/compare.py TESTS/golden /tmp/cap3` da
+  **20 de 20 idénticas, 0 fallos**, contra unas doradas generadas en otra
+  máquina. Con esto la Fase 0 queda cerrada.
 
   Cómo quedó. Al validar las 20 capturas de la máquina de desarrollo una a
   una contra la tabla del catálogo, **siete no mostraban lo que decía la
@@ -642,11 +643,17 @@ actual**, porque después ya no habrá «actual» con el que comparar.
 
   Doradas: generadas en el contenedor de desarrollo con el `RESOURCE.PLN` real
   (Ubuntu 24.04, FPC 3.2.2, mismo binario de la rama), dos pasadas idénticas,
-  `SHA256SUMS` y `README.md` en `TESTS/golden/`. Las 14 escenas cuya secuencia
-  no cambió son **idénticas píxel a píxel a las capturadas en la máquina de
-  desarrollo** (Arch, FPC 3.2.2): con el `RESOURCE.PLN` real el volcado no
-  depende de la máquina. Las seis corregidas se han validado mirándolas en el
-  contenedor y están pendientes solo de la pasada de confirmación de arriba.
+  `SHA256SUMS` y `README.md` en `TESTS/golden/`.
+
+  **Y las veinte se reproducen exactamente en la máquina de desarrollo**
+  (Arch, FPC 3.2.2, `RESOURCE.PLN` real): 307 200 píxeles idénticos en las
+  veinte, imágenes de casco incluidas. Eso es más de lo que pedía el criterio,
+  que solo exigía dos pasadas iguales en la misma máquina, y tiene una
+  consecuencia práctica para las fases siguientes: **una diferencia frente a
+  las doradas es una diferencia del backend, no del entorno**, así que la
+  comparación se puede correr donde sea. Lo que sí depende de la máquina está
+  acotado y documentado en `TESTS/golden/README.md`: el `RESOURCE.PLN` (E14 y
+  E16) y el editor instalado (E10, ya fijado por el guion).
 - [x] **T0.7** — Escribir `TESTS/compare.py`: compara dos volcados `.ppm`,
       informa del número de píxeles distintos, su localización y genera una
       imagen de diferencias. Sin dependencias externas más allá de la
@@ -671,14 +678,13 @@ y nada más (`docs/reference-scenes.md`, sección 1.3). El criterio original ped
 cero píxeles en todas; con el parpadeo eso es inalcanzable, y fingir que se
 cumple seria peor que anotarlo.
 
-**Estado: cumplido** (2026-09-13). Dos pasadas completas en la máquina de
-desarrollo (Arch, FPC 3.2.2, `RESOURCE.PLN` real) capturan las 20 escenas y dan
-19 de 20 idénticas píxel a píxel; la vigésima es E06, con 30 píxeles de 307 200
-en la caja (624,257)-(638,261), que son las dos fases del indicador. El mismo
-resultado sale en el contenedor de desarrollo con un `RESOURCE.PLN` ficticio:
-misma escena, misma caja, mismos 30 píxeles, con las fases al revés. Es decir,
-el parpadeo es reproducible como fenómeno y no como imagen, que es justo lo que
-dice la sección 1.3.
+**Estado: cumplido** (2026-09-13), y sin necesitar la excepción. Tras corregir
+las secuencias en T0.6, dos pasadas completas dan **20 de 20 idénticas píxel a
+píxel**, y la comparación de una pasada nueva contra las doradas hechas en otra
+máquina también. El parpadeo que motivó la excepción estaba en la E06 antigua,
+cuya secuencia no abría la ficha de nave sino el diálogo *sell supplies*; la
+cláusula se queda escrita por si una escena futura cae en un bucle de
+`ArrowBlink`, con `TESTS/excepciones.txt` como mecanismo, hoy vacío.
 
 Resuelto en T0.6: la E06 que parpadeaba no era la ficha de nave, y con la
 secuencia corregida ninguna escena cae en `ArrowBlink`; dos pasadas dan 20 de

@@ -50,8 +50,10 @@ de la misma rama:
 - Con el `RESOURCE.PLN` real, **las 14 escenas cuya secuencia no cambió en
   T0.6 son idénticas píxel a píxel entre las dos máquinas**, incluido el
   `2047M free` del panel (`MemAvail` es constante en Free Pascal sobre Linux).
-  Las otras seis (E06, E07, E13, E18, E19 y E20) solo se han capturado en el
-  contenedor con la secuencia nueva; dos pasadas allí dan 20 de 20 idénticas.
+  Las otras seis (E06, E07, E13, E18, E19 y E20) también: una pasada completa
+  en la máquina de desarrollo contra estas doradas da **20 de 20 idénticas, 0
+  fallos**. Es decir, una diferencia frente a las doradas es del backend, no
+  del entorno, y la comparación se puede correr en cualquiera de las dos.
 - Con un `RESOURCE.PLN` ficticio (basta para que VPA arranque), **E14 y E16**
   difieren solo en las imágenes de casco: cajas (28,54)-(74,401) y
   (38,22)-(64,69). Es esperable, no un fallo del backend.
