@@ -20,7 +20,18 @@ PKGDIR    = build/vpa-linux_package
 PKGFILES  = DISTTABL.DAT HOWTO.en.md HOWTO.es.md LICENSE.md LITT_VPA.CHR \
             MPL-2.0.txt VPA.MSG
 
-.PHONY: all build clean run help hlp data ptc debug heaptrc
+# VPAGraph ABI test bench (WAYLAND.md, Phases 2 and 3): the five test plugins of
+# TESTS/abi/ and the dynamic loader harness, all built into build/abi/. Plugins
+# are plain FPC libraries (objfpc, PIC), so they do NOT use @vpa.cfg; the two
+# *_tp.pas units are compiled exactly as VPA is (-Mtp, checks off) to prove that
+# the -Mtp side can consume the ABI and the loader.
+ABIDIR    = build/abi
+ABIPLUGS  = stub_backend bad_nosymbol bad_abiversion bad_structsize bad_nullprocs \
+            bad_unresolved
+FPCPLUG   = $(FPC) -MOBJFPC -Cg -FiGRAPH -FU$(ABIDIR)
+FPCTP     = $(FPC) -Mtp -Ci- -Cr- -Co- -Ct- -FiGRAPH -FuGRAPH -FU$(ABIDIR)
+
+.PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -71,8 +82,36 @@ run: build
 ## clean : remove build artifacts
 clean:
 	rm -f build/*.ppu build/*.o build/*.rsj build/*.a $(BIN)
-	rm -rf $(PKGDIR)
+	rm -rf $(PKGDIR) $(ABIDIR)
 	@echo ">> Cleaned."
+
+## abi-plugins : build the six ABI test plugins (stub + five faulty ones) into
+##               build/abi/, and check that vpagraph_abi.inc compiles both from
+##               -Mtp and from objfpc with identical record sizes.
+abi-plugins:
+	@mkdir -p $(ABIDIR)
+	@for p in $(ABIPLUGS); do \
+	  echo "$(FPCPLUG) -o$(ABIDIR)/$$p.so TESTS/abi/$$p.lpr"; \
+	  $(FPCPLUG) -o$(ABIDIR)/$$p.so TESTS/abi/$$p.lpr || exit 1; \
+	done
+	$(FPCTP) TESTS/abi/abi_tp.pas
+	$(FPC) -MOBJFPC -FiGRAPH -FU$(ABIDIR) TESTS/abi/abi_objfpc.pas
+	@echo ">> ABI test plugins built in $(ABIDIR)/"
+
+## loader-test : build and run the dynamic loader harness (WAYLAND.md, Phase 3)
+##               against the test plugins: loads the stub, rejects the five
+##               faulty ones, and runs 100 load/unload cycles under heaptrc.
+##               Exit status 0 means every check passed and nothing leaked.
+loader-test: abi-plugins
+	$(FPC) -MOBJFPC -gh -gl -Cg -FiGRAPH -FuGRAPH -FU$(ABIDIR) -FE$(ABIDIR) TESTS/abi/loader_test.lpr
+	$(FPCTP) TESTS/abi/loader_tp.pas
+	@cp -f $(ABIDIR)/stub_backend.so $(ABIDIR)/libvpagraph-stub.so
+	@echo "esto no es una biblioteca" > $(ABIDIR)/no_es_un_so.txt
+	@rm -f $(ABIDIR)/loader_test.heaptrc
+	HEAPTRC=log=$(ABIDIR)/loader_test.heaptrc ./$(ABIDIR)/loader_test $(abspath $(ABIDIR))
+	@grep -q '^0 unfreed memory blocks' $(ABIDIR)/loader_test.heaptrc \
+	  || { echo ">> heaptrc reports leaks, see $(ABIDIR)/loader_test.heaptrc"; exit 1; }
+	@echo ">> loader-test passed, no leaks ($(ABIDIR)/loader_test.heaptrc)"
 
 ## hlp  : generate both help files from their VHLP sources:
 ##          VHLP/VPA.HHH      -> build/VPA.HLP      (English, the one VPA loads)
