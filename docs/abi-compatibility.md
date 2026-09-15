@@ -107,8 +107,9 @@ devolver `VPAG_ERR_UNSUPPORTED`; las dos cosas valen y significan lo mismo.
 
 ## 6. Plugins de prueba
 
-En `TESTS/abi/` hay cinco bibliotecas que existen justo para ejercitar todo lo
-anterior sin un servidor gráfico delante. Se construyen así:
+En `TESTS/abi/` hay seis bibliotecas que existen justo para ejercitar todo lo
+anterior sin un servidor gráfico delante. Se construyen con `make abi-plugins`
+(o a mano, una a una, así):
 
 ```
 fpc -MOBJFPC -Cg -FiGRAPH -o<destino>/<nombre>.so TESTS/abi/<nombre>.lpr
@@ -121,6 +122,7 @@ fpc -MOBJFPC -Cg -FiGRAPH -o<destino>/<nombre>.so TESTS/abi/<nombre>.lpr
 | `bad_abiversion.lpr` | Se anuncia como ABI 99 |
 | `bad_structsize.lpr` | `StructSize` incoherente |
 | `bad_nullprocs.lpr` | Cabecera correcta, funciones obligatorias a nil |
+| `bad_unresolved.lpr` | Depende de un símbolo que no existe: `dlopen` lo rechaza porque el cargador abre con `RTLD_NOW` (añadido en la Fase 3) |
 
 Y dos unidades que comprueban el propio `.inc`:
 
@@ -128,6 +130,13 @@ Y dos unidades que comprueban el propio `.inc`:
 |---|---|
 | `abi_tp.pas` | Que el `.inc` se puede consumir desde modo Turbo Pascal (como todo VPA) |
 | `abi_objfpc.pas` | Que también desde `objfpc` (como los plugins), y los tamaños de los tipos |
+
+Y el arnés del cargador, `loader_test.lpr`, que `make loader-test` construye
+con `heaptrc` y ejecuta contra las seis bibliotecas: carga el stub, rechaza las
+cinco defectuosas con códigos y mensajes distintos, y comprueba que cien ciclos
+de carga y descarga no dejan memoria ni descriptores colgando. `loader_tp.pas`
+hace para `vpagraph_loader` y `vpagraph_errors` lo que `abi_tp.pas` para el
+`.inc`: demostrar que se consumen desde `-Mtp`.
 
 Las dos llevan las **mismas** aserciones de tamaño de `TVPAGraphEvent` (72),
 `TVPAGraphInitParams` (32) y `TVPAGraphInterface` (440). No es redundancia: los
