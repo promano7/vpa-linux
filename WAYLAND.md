@@ -63,7 +63,7 @@ más fácil es saltárselas:
 | 1 | Inventario de la frontera gráfica | ☑ cerrada (2026-09-13) |
 | 2 | Definición de la ABI v1 | ☑ cerrada (2026-09-13) |
 | 3 | Cargador dinámico | ☑ cerrada (2026-09-15) |
-| 4 | Detección y selección de backend | ☐ |
+| 4 | Detección y selección de backend | ☑ cerrada (2026-09-15) |
 | 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ☐ |
 | 6 | Migración de VPA-Linux a `VPAGraph` | ☐ |
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☐ |
@@ -976,29 +976,89 @@ ahí.
 
 ### Fase 4 — Detección y selección de backend 🔒
 
-- [ ] **T4.1** — `GRAPH/vpagraph_detect.pas`, con soporte de
+- [x] **T4.1** — `GRAPH/vpagraph_detect.pas`, con soporte de
       `VPA_GRAPH_BACKEND` con valores `auto` (por defecto), `x11` y `wayland`.
-- [ ] **T4.2** — Algoritmo de detección automática:
+      — `18bc868`
+      El valor se normaliza (minúsculas, sin espacios; vacío = `auto`) y
+      cualquier otro se rechaza con `VPAGD_ERR_BAD_REQUEST` y la lista de
+      valores válidos. Solo por variable de entorno: no hay opción `/X` ni
+      `--graph-backend` en la línea de comandos (D-14).
+- [x] **T4.2** — Algoritmo de detección automática:
       1. si `WAYLAND_DISPLAY` está definida → intentar Wayland;
       2. si no, o si falla, y `DISPLAY` está definida → intentar X11;
       3. si `XDG_SESSION_TYPE` está definida, usarla como desempate;
       4. si fallan todos, error con **la lista acumulada de motivos**, no un
          genérico «no se pudo iniciar el modo gráfico».
-- [ ] **T4.3** — **Regla de no-degradación silenciosa.** Con
+      — `18bc868`
+      El resultado es un **plan** (`TVPAGraphPlan`): lista ordenada de
+      backends con el motivo de cada puesto. Con las dos variables definidas
+      el orden es `[wayland, x11]` salvo que `XDG_SESSION_TYPE=x11`, que lo
+      invierte; con una sola, solo ese backend (sin `DISPLAY` no hay servidor
+      X al que caer, y al revés); sin ninguna, `[wayland]` si
+      `XDG_SESSION_TYPE=wayland` (libwayland usa el socket por defecto) y si
+      no `VPAGD_ERR_NO_SESSION`. Los motivos se acumulan uno por candidato
+      del cargador y por backend del plan.
+- [x] **T4.3** — **Regla de no-degradación silenciosa.** Con
       `VPA_GRAPH_BACKEND=wayland`, si el plugin Wayland falla, `VPA` termina con
       error. No cae a X11. Igual en sentido contrario. El respaldo solo existe
-      en modo `auto`.
-- [ ] **T4.4** — Implementar `--graph-info`: imprime backend solicitado, backend
+      en modo `auto`. — `18bc868`
+      Garantizada por construcción: un backend forzado da un plan de una sola
+      entrada, sin mirar el entorno, y no hay a dónde caer. El núcleo de la
+      Fase 6 debe recorrer el plan él mismo con `VPAGraph_LoadPlanEntry`
+      (carga → `Init` → siguiente solo si `not Forced`), porque un `Init`
+      fallido también cuenta como fallo para el respaldo; `VPAGraph_SelectBackend`
+      (solo carga) es para `--graph-info`.
+- [x] **T4.4** — Implementar `--graph-info`: imprime backend solicitado, backend
       elegido, ruta del plugin, versión de ABI, versión del backend y
       controlador de vídeo subyacente, y sale sin abrir ventana. Herramienta de
-      diagnóstico número uno para los informes de Alexander.
-- [ ] **T4.5** — Ampliar `--help` para documentar las variables de entorno
+      diagnóstico número uno para los informes de Alexander. — `ad0ba5c`
+      `GRAPH/vpagraph_info.pas`. Se intercepta en `VPA.PAS`, **antes de
+      instalar `Terminate`** y por tanto antes de `Parameters`: `Terminate`
+      pone `ExitCode` a 0 en cualquier `Halt` (y escribía «Error 1 has
+      occurred»), y `Parameters` rechaza con «Race = 1..11» cualquier
+      `ParamStr(1)` de más de dos caracteres. Sale con 0 si eligió backend y
+      1 si no. El «controlador de vídeo subyacente» no tiene campo en la ABI
+      v1 y no se puede preguntar sin `Init`: cada plugin lo declara en
+      `BackendVersion` y el informe imprime además el entorno de sesión
+      completo (D-15). Adelanta T6.4 (`-FuGRAPH`, `-FiGRAPH` en `vpa.cfg`).
+      Hasta la Fase 5 informa, correctamente, de que `libvpagraph-x11.so` no
+      existe en ningún candidato. Dos limitaciones heredadas que desaparecen
+      en la Fase 6 al sacar `ptcgraph`/`ptccrt` del ejecutable: como `/?`,
+      necesita una sesión gráfica para arrancar (`ptcgraph` abre la conexión
+      en su `initialization`), y la salida pasa por la consola de `ptccrt`,
+      que la parte a 80 columnas.
+- [x] **T4.5** — Ampliar `--help` para documentar las variables de entorno
       nuevas junto a las existentes (`VPA_SCALE`, `VPA_FULLSCREEN`, `VPA_VIDEO`).
-- [ ] **T4.6** — Pruebas: los seis casos de la matriz
-      (`auto`/`x11`/`wayland`) × (sesión X11 / sesión Wayland).
+      — `71ba70f`, `d4e4839`
+      `--help`/`-h` en `Parameters`, antes de la comprobación de longitud:
+      todo lo que dice `/?` más `VPA_SCALE`, `VPA_GRAPH_BACKEND`,
+      `VPA_GRAPH_PLUGIN_DIR`, `VPA_GRAPH_DEBUG` y `VPA_GRAPH_DUMP`. `/?` se
+      conserva intacto (es lo que el usuario conoce) y solo remite a
+      `--help`. **`VPA_FULLSCREEN` y `VPA_VIDEO` quedan fuera**: hoy no las
+      lee nadie (`xfocus.FullscreenRequested` no tiene llamadores) y
+      documentarlas sería prometer algo que no ocurre hasta T10.4 (D-16).
+      Documentado en `HOWTO.es.md` y `HOWTO.en.md` (§2).
+- [x] **T4.6** — Pruebas: los seis casos de la matriz
+      (`auto`/`x11`/`wayland`) × (sesión X11 / sesión Wayland). — `af7bad7`
+      `TESTS/abi/detect_test.lpr` y `make detect-test`: sesiones simuladas
+      con `WAYLAND_DISPLAY`/`DISPLAY`/`XDG_SESSION_TYPE` y dos copias del
+      stub renombradas como `libvpagraph-x11.so` y `libvpagraph-wayland.so`.
+      Además de la matriz: T4.3 en los dos sentidos, el respaldo de `auto`,
+      el desempate, los casos sin sesión y los valores inválidos. No necesita
+      pantalla ni backend real. Wayland de verdad se prueba en la VM de
+      Slackware/KDE a partir de la Fase 8.
 
 **Criterio de aceptación:** la selección forzada nunca cambia de backend en
 silencio; `--graph-info` da una salida correcta en ambos entornos.
+
+**Estado: cumplido** (2026-09-15), con FPC 3.2.2. `make detect-test`: 67
+comprobaciones correctas, incluidas las seis de la matriz y las dos de
+no-degradación (backend forzado sin plugin: error, y el otro backend ni se
+menciona). `make loader-test` sigue en 70/70 sin fugas; `make build` limpio
+(los mismos 19 avisos de siempre) y `readelf -d build/VPA` no gana ninguna
+biblioteca (`dlopen` vive en `libc` desde glibc 2.34). Los textos que ven los
+usuarios (detalles del cargador, motivos, `--help`, `--graph-info`) están en
+inglés (D-13).
 
 ---
 
@@ -1076,7 +1136,8 @@ Aquí está el truco que hace viable toda la operación.
       compilando una unidad de prueba mínima antes de tocar nada real.
 - [ ] **T6.3** — Inicialización: `InitGraph` de `VPAGraph` detecta, carga y
       valida el backend antes de delegar. `CloseGraph` descarga el plugin.
-- [ ] **T6.4** — Añadir `-FuGRAPH` y `-FiGRAPH` a `vpa.cfg`.
+- [x] **T6.4** — Añadir `-FuGRAPH` y `-FiGRAPH` a `vpa.cfg`. — `ad0ba5c`
+      Adelantado a la Fase 4: `VPA.PAS` ya consume `vpagraph_info`.
 - [ ] **T6.5** — Sustituir `ptcgraph` por `VPAGraph` en las 24 unidades, **una
       por commit o en grupos pequeños y coherentes**, verificando compilación
       tras cada grupo:
@@ -1506,6 +1567,11 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-11 | 2026-09-13 | Nada que VPA no use hoy entra en la ABI v1, ni siquiera siendo trivial (`ClearViewPort`, `SetBkColor`, `TextWidth`, `TextHeight`) | La estructura solo crece por el final, así que añadir el día que haga falta no cuesta nada; adelantarlo sí cuesta, porque hay que implementarlo en cada backend |
 | D-09 | 2026-09-13 | El evento de teclado de la ABI lleva el **carácter Unicode** además del código de tecla | El arreglo de 3.67.5 para Ctrl-+/- en distribuciones no estadounidenses depende de él; sin carácter se pierde |
 | D-12 | 2026-09-15 | El cargador abre los plugins con `dlopen(RTLD_NOW)` vía la unidad `dl`, no con `Dynlibs.LoadLibrary` (`RTLD_LAZY`) | Con enlace perezoso, un plugin al que le falte un símbolo de su biblioteca gráfica carga y cae en mitad de la partida; con `RTLD_NOW` falla en la carga, con mensaje, y `auto` cae a X11. Probado con `bad_unresolved.lpr` |
+| D-13 | 2026-09-15 | Todo texto que ve el usuario (detalles del cargador, motivos de la selección, `--help`, `--graph-info`) está en **inglés**; los comentarios del código siguen en español | Toda la consola de VPA está en inglés, y el destinatario de `--graph-info` es Alexander, que no lee español. Mezclar idiomas en un mismo diagnóstico es peor que cualquiera de los dos |
+| D-14 | 2026-09-15 | El backend se elige **solo** con `VPA_GRAPH_BACKEND`; no hay opción de línea de comandos | Las opciones `/X` de VPA son de un carácter y `Parameters` es código original; una opción larga nueva abriría un segundo analizador. Si algún día hace falta, se añade en `VPA.PAS` junto a `--graph-info` |
+| D-15 | 2026-09-15 | El «controlador de vídeo subyacente» de `--graph-info` no entra en la ABI: cada plugin lo declara en `BackendVersion` (p. ej. `1.0 (ptcgraph/PTCPas)`) y el informe imprime el entorno de sesión completo | No se puede consultar sin `Init`, y `--graph-info` no abre ventana; un campo nuevo en la v1 sería trabajo para todos los backends por un dato informativo |
+| D-16 | 2026-09-15 | `VPA_FULLSCREEN` y `VPA_VIDEO` no se documentan en `--help` hasta T10.4 | Hoy nadie las lee (`xfocus.FullscreenRequested` no tiene llamadores); documentarlas sería mentir |
+| D-17 | 2026-09-15 | `--graph-info` se intercepta en `VPA.PAS`, antes de instalar `Terminate`; `--help` en `Parameters`, junto a `/?` | `Terminate` fuerza `ExitCode := 0` en todo `Halt`, y `--graph-info` tiene que salir con 1 cuando no hay backend. La ayuda no necesita código de salida y va con la de siempre |
 
 ---
 
