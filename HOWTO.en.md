@@ -87,7 +87,32 @@ Use: VPA race [dir] ...
 ```
 
 `./VPA /?` lists all command-line options (`/B`, `/K`, `/M`, `/O`, `/P`, `/PW:pwd`,
-`/R`, `/S`, `/REP:frm,rep`).
+`/R`, `/S`, `/REP:frm,rep`), exactly as the original VPA did.
+
+### VPA-Linux help: `--help` and `--graph-info`
+
+`./VPA --help` (or `-h`) shows the same help as `/?` **plus the VPA-Linux
+environment variables**, which appear in no other help of the program:
+
+| Variable | What it does |
+|---|---|
+| `VPA_SCALE` | Window size or fullscreen (section 3). |
+| `VPA_GRAPH_BACKEND` | Graphics backend: `auto` (default), `x11` or `wayland`. With `auto`, VPA detects the session (`WAYLAND_DISPLAY`, `DISPLAY`, `XDG_SESSION_TYPE`) and, if the first backend fails, tries the other one. With `x11` or `wayland` that backend is **forced** and VPA never switches to another: if it fails, VPA stops and says why. |
+| `VPA_GRAPH_PLUGIN_DIR` | **Absolute** directory searched first for the graphics plugins (`libvpagraph-x11.so`, `libvpagraph-wayland.so`), before `plugins/` next to the executable and the install directory. |
+| `VPA_GRAPH_DEBUG` | With `1`, traces the session detection and the plugin search on `stderr`. |
+| `VPA_GRAPH_DUMP` | Testing aid: given a path prefix, **Ctrl-F12** dumps the 640×480 screen to `<prefix>NNNN.ppm` and its palette to `<prefix>NNNN.pal`. |
+
+`./VPA --graph-info` is the diagnostic tool for bug reports: it prints the
+session environment, which backend was requested, in which order they would be
+tried and why, which one was selected (plugin path, ABI and backend version)
+or, if none works, **every reason**, one per place searched. It opens no
+window. If the window does not open or looks wrong, attach its output to the
+report. Exit status is 0 when a backend was selected and 1 otherwise.
+
+> While the X11 backend is still built into the executable (until the
+> migration described in `WAYLAND.md` is complete), `--graph-info` will report
+> that it cannot find `libvpagraph-x11.so`: that is the correct answer, no
+> plugin exists yet. And, like `/?`, it needs a graphical session to start.
 
 ### Support files
 Keep these files where you run VPA — in your game directory or next to the binary:

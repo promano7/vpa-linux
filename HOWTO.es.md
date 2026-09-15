@@ -88,7 +88,33 @@ Use: VPA race [dir] ...
 ```
 
 `./VPA /?` lista todas las opciones de línea de comandos (`/B`, `/K`, `/M`, `/O`,
-`/P`, `/PW:pwd`, `/R`, `/S`, `/REP:frm,rep`).
+`/P`, `/PW:pwd`, `/R`, `/S`, `/REP:frm,rep`), tal como lo hacía el VPA original.
+
+### Ayuda de VPA-Linux: `--help` y `--graph-info`
+
+`./VPA --help` (o `-h`) muestra la misma ayuda que `/?` **más las variables de
+entorno propias de VPA-Linux**, que no aparecen en ninguna otra ayuda del
+programa:
+
+| Variable | Para qué sirve |
+|---|---|
+| `VPA_SCALE` | Tamaño de la ventana o pantalla completa (sección 3). |
+| `VPA_GRAPH_BACKEND` | Backend gráfico: `auto` (por defecto), `x11` o `wayland`. Con `auto`, VPA detecta la sesión (`WAYLAND_DISPLAY`, `DISPLAY`, `XDG_SESSION_TYPE`) y, si el primer backend falla, prueba el otro. Con `x11` o `wayland` **se fuerza** ese backend y VPA nunca cambia a otro: si falla, se detiene y dice por qué. |
+| `VPA_GRAPH_PLUGIN_DIR` | Directorio **absoluto** donde buscar primero los plugins gráficos (`libvpagraph-x11.so`, `libvpagraph-wayland.so`), antes que `plugins/` junto al ejecutable y que el directorio de instalación. |
+| `VPA_GRAPH_DEBUG` | Con `1`, traza en `stderr` la detección de la sesión y la búsqueda de plugins. |
+| `VPA_GRAPH_DUMP` | Ayuda para pruebas: con un prefijo de ruta, **Ctrl-F12** vuelca la pantalla de 640×480 a `<prefijo>NNNN.ppm` y su paleta a `<prefijo>NNNN.pal`. |
+
+`./VPA --graph-info` es la herramienta de diagnóstico para los informes de
+error: imprime el entorno de la sesión, qué backend se ha pedido, en qué orden
+se probarían y por qué, cuál se ha elegido (ruta del plugin, versión de ABI y
+del backend) o, si ninguno vale, **todos los motivos**, uno por cada sitio
+donde se buscó. No abre ninguna ventana. Si la ventana no se abre o se ve mal,
+adjunta su salida al informe. Sale con código 0 si ha elegido backend y 1 si no.
+
+> Mientras el backend X11 siga integrado en el ejecutable (hasta que termine
+> la migración descrita en `WAYLAND.md`), `--graph-info` informará de que no
+> encuentra `libvpagraph-x11.so`: es la respuesta correcta, todavía no existe
+> ningún plugin. Y, como `/?`, necesita una sesión gráfica para arrancar.
 
 ### Ficheros de apoyo
 Mantén estos ficheros donde ejecutes VPA — en tu directorio de partida o junto al
