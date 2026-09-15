@@ -31,7 +31,7 @@ ABIPLUGS  = stub_backend bad_nosymbol bad_abiversion bad_structsize bad_nullproc
 FPCPLUG   = $(FPC) -MOBJFPC -Cg -FiGRAPH -FU$(ABIDIR)
 FPCTP     = $(FPC) -Mtp -Ci- -Cr- -Co- -Ct- -FiGRAPH -FuGRAPH -FU$(ABIDIR)
 
-.PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test
+.PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -112,6 +112,23 @@ loader-test: abi-plugins
 	@grep -q '^0 unfreed memory blocks' $(ABIDIR)/loader_test.heaptrc \
 	  || { echo ">> heaptrc reports leaks, see $(ABIDIR)/loader_test.heaptrc"; exit 1; }
 	@echo ">> loader-test passed, no leaks ($(ABIDIR)/loader_test.heaptrc)"
+
+## detect-test : build and run the backend detection harness (WAYLAND.md,
+##               Phase 4, T4.6): the six-case matrix (auto/x11/wayland) x
+##               (X11 session/Wayland session), the no-silent-degradation rule,
+##               the auto fallback and the error cases. The sessions are
+##               simulated with WAYLAND_DISPLAY/DISPLAY/XDG_SESSION_TYPE and the
+##               plugins are copies of the stub, so it needs no display and no
+##               real backend. Exit status 0 means every check passed.
+detect-test: abi-plugins
+	$(FPC) -MOBJFPC -gl -Cg -FiGRAPH -FuGRAPH -FU$(ABIDIR) -FE$(ABIDIR) TESTS/abi/detect_test.lpr
+	$(FPCTP) TESTS/abi/loader_tp.pas
+	@mkdir -p $(ABIDIR)/detect
+	@cp -f $(ABIDIR)/stub_backend.so $(ABIDIR)/detect/stub_backend.so
+	@cp -f $(ABIDIR)/stub_backend.so $(ABIDIR)/detect/libvpagraph-x11.so
+	@cp -f $(ABIDIR)/stub_backend.so $(ABIDIR)/detect/libvpagraph-wayland.so
+	./$(ABIDIR)/detect_test $(abspath $(ABIDIR)/detect)
+	@echo ">> detect-test passed"
 
 ## hlp  : generate both help files from their VHLP sources:
 ##          VHLP/VPA.HHH      -> build/VPA.HLP      (English, the one VPA loads)
