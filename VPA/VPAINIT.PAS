@@ -126,7 +126,61 @@ procedure Parameters;
     feat := true;
   end;
 
+  { Ayuda propia de VPA-Linux (T4.5 de WAYLAND.md): todo lo que dice /? mas las
+    variables de entorno, que hasta ahora no estaban documentadas en ningun
+    sitio del programa. /? se conserva tal cual porque es lo que el usuario
+    conoce, y solo remite aqui. VPA_FULLSCREEN y VPA_VIDEO no se listan: hoy no
+    las lee nadie (entran con T10.4). }
+  procedure WriteLinuxHelp;
   begin
+    Writeln('Use: VPA race [dir] [/B] [/K] [/M] [/O] [/P] [/PW:pwd] [/R] [/S] [/REP:frm,rep]');
+    Writeln(' or  VPA --help        for this help (VPA /? shows the classic DOS help)');
+    Writeln(' or  VPA --graph-info  to show which graphics backend VPA would use, and why');
+    Writeln;
+    Writeln('Where    race          is  a number in 1..11');
+    Writeln('         dir           is  current game directory');
+    Writeln('Use      /B            to  run VPA in batch mode');
+    Writeln('         /K            for keyboard-only mode (no mouse)');
+    Writeln('         /M            to  enforce incoming message processing');
+    Writeln('         /O            to  read the specified race data only');
+    Writeln('         /P            for pause before switching to graphics');
+    Writeln('         /PW:pwd       to  specify player password');
+    Writeln('         /R            to  run VPA in read-only mode');
+    Writeln('         /REP:frm,rep  to  generate report file');
+    Writeln('         /S            to  run VPA in SVGA mode');
+    Writeln('         /BGI:drv,dir,mode  to  load and use another BGI driver');
+    Writeln('Read the complete description in VPA.FAQ');
+    Writeln;
+    Writeln('Environment variables (VPA-Linux only, set them before the command):');
+    Writeln('  VPA_SCALE=N             window size: 1 = native 640x480, 2..20 = N times');
+    Writeln('                          (default: 2), 21..800 = percentage (220 = 2.2x).');
+    Writeln('                          Always clipped to what fits on the screen.');
+    Writeln('  VPA_SCALE=fullscreen    fullscreen: the largest 4:3 fit, above the desktop');
+    Writeln('                          panel. Aliases: full, max.');
+    Writeln('  VPA_GRAPH_BACKEND=x     graphics backend: auto (default), x11 or wayland.');
+    Writeln('                          auto detects the session (WAYLAND_DISPLAY, DISPLAY,');
+    Writeln('                          XDG_SESSION_TYPE) and falls back to the other backend');
+    Writeln('                          if the first one fails; x11 or wayland is forced and');
+    Writeln('                          NEVER falls back: if it fails VPA stops and says why.');
+    Writeln('  VPA_GRAPH_PLUGIN_DIR=d  absolute directory searched first for the backend');
+    Writeln('                          plugins (libvpagraph-x11.so, libvpagraph-wayland.so),');
+    Writeln('                          before <VPA directory>/plugins/ and the install dir.');
+    Writeln('  VPA_GRAPH_DEBUG=1       trace backend detection and plugin search on stderr.');
+    Writeln('  VPA_GRAPH_DUMP=prefix   testing aid: Ctrl-F12 dumps the 640x480 framebuffer');
+    Writeln('                          to <prefix>NNNN.ppm, palette to <prefix>NNNN.pal.');
+    Writeln;
+    Writeln('If the window does not open or looks wrong, attach the output of');
+    Writeln('VPA --graph-info to the bug report.');
+  end;
+
+  begin
+    { VPA-Linux: --help se atiende ANTES de la comprobacion de longitud de
+      abajo, que de otro modo lo rechazaria con "Race = 1..11" (plstr es
+      string[2]). --graph-info se atiende aun antes, en VPA.PAS, porque
+      necesita salir con codigo distinto de cero y el ExitProc de VPA
+      (Terminate) pone ExitCode a 0 en cualquier Halt. }
+    if (ParamStr(1)='--help') or (ParamStr(1)='-h') then
+      begin WriteLinuxHelp; Halt end;
     if (length(ParamStr(1))>2) then { jump out here as plstr is only string[2] }
       begin Writeln('Race = 1..11'); Halt end;
     plstr:=ParamStr(1);
@@ -136,7 +190,7 @@ procedure Parameters;
     if hlp or (ParamCount=0) then
     begin
     Writeln('Use: VPA race [dir] [/B] [/K] [/M] [/O] [/P] [/PW:pwd] [/R] [/S] [/REP:frm,rep]');
-      if not hlp then Writeln(' or  VPA /?   for help')
+      if not hlp then Writeln(' or  VPA /?   for help  (VPA --help for the VPA-Linux help)')
       else begin
   Write(#13#10'Where    race          is  a number in 1..11'+
         #13#10'         dir           is  current game directory'+
@@ -152,6 +206,7 @@ procedure Parameters;
         #13#10'         /BGI:drv,dir,mode  to  load and use another BGI driver'+
 {       #13#10'         /V            to  ignore VCL command file'+}
         #13#10'Read the complete description in VPA.FAQ'+
+        #13#10'Run VPA --help for the VPA-Linux options (window size, graphics backend)'+
         #13#10);
         {$IFDEF VPACC} WriteFeature('command messages (VPACC)'); {$ENDIF}
         {$IFDEF VPAMM} WriteFeature('mixed mode (VPAMM)'); {$ENDIF}
