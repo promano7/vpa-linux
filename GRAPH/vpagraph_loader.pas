@@ -282,7 +282,7 @@ begin
     else
     begin
       Candidates.Ignored := VPAGL_ENV_PLUGIN_DIR + '=' + EnvDir +
-        ' no es una ruta absoluta: se ignora';
+        ' is not an absolute path: ignored';
       VPAGraph_Log(Candidates.Ignored);
     end;
   end;
@@ -292,7 +292,7 @@ begin
   if ExeDir <> '' then
     Add(JoinPath(ExeDir, VPAGL_EXE_SUBDIR))
   else
-    VPAGraph_Log('no se pudo leer /proc/self/exe: se omite el candidato junto al ejecutable');
+    VPAGraph_Log('cannot read /proc/self/exe: skipping the candidate next to the executable');
 
   { 3. Directorio de instalacion }
   Add(VPAGRAPH_INSTALL_DIR);
@@ -310,17 +310,17 @@ begin
     directorio se ve como lo que apunta, que es lo que hay que rechazar. }
   if fpStat(PAnsiChar(Path), St) <> 0 then
   begin
-    Detail := Path + ': no existe';
+    Detail := Path + ': does not exist';
     Exit(VPAGL_ERR_NOT_FOUND);
   end;
   if not fpS_ISREG(St.st_mode) then
   begin
-    Detail := Path + ': no es un fichero regular';
+    Detail := Path + ': not a regular file';
     Exit(VPAGL_ERR_NOT_REGULAR);
   end;
   if fpAccess(PAnsiChar(Path), R_OK) <> 0 then
   begin
-    Detail := Path + ': sin permiso de lectura';
+    Detail := Path + ': permission denied (not readable)';
     Exit(VPAGL_ERR_NOT_READABLE);
   end;
   Result := VPAGL_OK;
@@ -409,26 +409,26 @@ begin
     tiene el tamano y la version que creemos. }
   if I.StructSize <> SizeOf(TVPAGraphInterface) then
   begin
-    Detail := 'StructSize incoherente: el plugin anuncia ' +
-      IntToStr(I.StructSize) + ' bytes y el ejecutable espera ' +
+    Detail := 'inconsistent StructSize: the plugin reports ' +
+      IntToStr(I.StructSize) + ' bytes and the executable expects ' +
       IntToStr(SizeOf(TVPAGraphInterface));
     Exit(VPAGL_ERR_STRUCT_SIZE);
   end;
   if I.ABIVersion <> VPAGRAPH_ABI_VERSION then
   begin
-    Detail := 'version de ABI incompatible: el plugin habla la ' +
-      IntToStr(I.ABIVersion) + ' y el ejecutable la ' +
+    Detail := 'incompatible ABI version: the plugin speaks version ' +
+      IntToStr(I.ABIVersion) + ' and the executable speaks version ' +
       IntToStr(VPAGRAPH_ABI_VERSION);
     Exit(VPAGL_ERR_ABI_MISMATCH);
   end;
   if (I.BackendName = nil) or (I.BackendName^ = #0) then
   begin
-    Detail := 'BackendName nulo o vacio';
+    Detail := 'BackendName is null or empty';
     Exit(VPAGL_ERR_NO_NAME);
   end;
   if (I.BackendVersion = nil) or (I.BackendVersion^ = #0) then
   begin
-    Detail := 'BackendVersion nulo o vacio (backend ' +
+    Detail := 'BackendVersion is null or empty (backend ' +
       PCharToStr(I.BackendName) + ')';
     Exit(VPAGL_ERR_NO_NAME);
   end;
@@ -436,7 +436,7 @@ begin
   if N > 0 then
   begin
     Detail := 'backend ' + PCharToStr(I.BackendName) + ': ' + IntToStr(N) +
-      ' funcion(es) obligatoria(s) sin implementar: ' + Missing;
+      ' mandatory function(s) not implemented: ' + Missing;
     Exit(VPAGL_ERR_NULL_PROC);
   end;
   Result := VPAGL_OK;
@@ -457,7 +457,7 @@ begin
   Detail := '';
   if Plugin.Loaded then
   begin
-    Detail := 'ya hay un plugin cargado (' + Plugin.Path + ')';
+    Detail := 'a plugin is already loaded (' + Plugin.Path + ')';
     Exit(VPAGL_ERR_ALREADY);
   end;
   { No se hace FillChar del registro entero: Path es un AnsiString y
@@ -469,16 +469,16 @@ begin
   if not IsAbsolute(Path) then
   begin
     { Nunca el directorio de trabajo actual. }
-    Detail := Path + ': el cargador solo acepta rutas absolutas';
+    Detail := Path + ': the loader only accepts absolute paths';
     Exit(VPAGL_ERR_NOT_FOUND);
   end;
 
-  VPAGraph_Log('probando ' + Path);
+  VPAGraph_Log('trying ' + Path);
 
   Result := CheckFile(Path, Detail);
   if Result <> VPAGL_OK then
   begin
-    VPAGraph_Log('  rechazado: ' + Detail);
+    VPAGraph_Log('  rejected: ' + Detail);
     Exit;
   end;
 
@@ -490,19 +490,19 @@ begin
   if H = nil then
   begin
     Msg := dlerror;
-    Detail := Path + ': no se pudo cargar';
+    Detail := Path + ': cannot be loaded';
     if Msg <> nil then Detail := Detail + ' (' + AnsiString(Msg) + ')';
-    VPAGraph_Log('  rechazado: ' + Detail);
+    VPAGraph_Log('  rejected: ' + Detail);
     Exit(VPAGL_ERR_LOAD_FAILED);
   end;
 
   Entry := TVPAGraphGetInterfaceProc(dlsym(H, VPAGRAPH_ENTRY_POINT));
   if Entry = nil then
   begin
-    Detail := Path + ': no exporta ' + VPAGRAPH_ENTRY_POINT +
-      ' (no es un plugin de VPAGraph)';
+    Detail := Path + ': does not export ' + VPAGRAPH_ENTRY_POINT +
+      ' (not a VPAGraph plugin)';
     dlclose(H);
-    VPAGraph_Log('  rechazado: ' + Detail);
+    VPAGraph_Log('  rejected: ' + Detail);
     Exit(VPAGL_ERR_NO_SYMBOL);
   end;
 
@@ -511,16 +511,16 @@ begin
   Rc := Entry(VPAGRAPH_ABI_VERSION, SizeOf(TVPAGraphInterface), @Plugin.Iface);
   if Rc <> VPAG_OK then
   begin
-    Detail := Path + ': ' + VPAGRAPH_ENTRY_POINT + ' devolvio ' + IntToStr(Rc);
+    Detail := Path + ': ' + VPAGRAPH_ENTRY_POINT + ' returned ' + IntToStr(Rc);
     case Rc of
-      VPAG_ERR_ABI_MISMATCH: Detail := Detail + ' (no habla la ABI ' +
+      VPAG_ERR_ABI_MISMATCH: Detail := Detail + ' (does not speak ABI version ' +
         IntToStr(VPAGRAPH_ABI_VERSION) + ')';
-      VPAG_ERR_STRUCT_SIZE:  Detail := Detail + ' (necesita una tabla mayor que ' +
+      VPAG_ERR_STRUCT_SIZE:  Detail := Detail + ' (needs an interface table larger than ' +
         IntToStr(SizeOf(TVPAGraphInterface)) + ' bytes)';
     end;
     FillChar(Plugin.Iface, SizeOf(Plugin.Iface), 0);
     dlclose(H);
-    VPAGraph_Log('  rechazado: ' + Detail);
+    VPAGraph_Log('  rejected: ' + Detail);
     Exit(VPAGL_ERR_ENTRY_FAILED);
   end;
 
@@ -530,14 +530,14 @@ begin
     Detail := Path + ': ' + Detail;
     FillChar(Plugin.Iface, SizeOf(Plugin.Iface), 0);
     dlclose(H);
-    VPAGraph_Log('  rechazado: ' + Detail);
+    VPAGraph_Log('  rejected: ' + Detail);
     Exit;
   end;
 
   Plugin.Handle := PtrUInt(H);
   Plugin.Path   := Path;
   Plugin.Loaded := True;
-  VPAGraph_Log('  cargado: backend ' + PCharToStr(Plugin.Iface.BackendName) +
+  VPAGraph_Log('  loaded: backend ' + PCharToStr(Plugin.Iface.BackendName) +
     ' ' + PCharToStr(Plugin.Iface.BackendVersion) + ', ABI ' +
     IntToStr(Plugin.Iface.ABIVersion));
   Result := VPAGL_OK;
@@ -565,7 +565,7 @@ begin
     AppendLine(Detail, One);
   end;
   if C.Count = 0 then
-    Detail := 'no hay ningun directorio donde buscar ' +
+    Detail := 'no directory to search for ' +
       VPAGraph_PluginFileName(Backend);
 end;
 
@@ -574,7 +574,7 @@ var
   H: Pointer;
 begin
   if not Plugin.Loaded then Exit;
-  VPAGraph_Log('descargando ' + Plugin.Path);
+  VPAGraph_Log('unloading ' + Plugin.Path);
   H := Pointer(Plugin.Handle);
   { Primero la tabla, luego la biblioteca (T3.6). Entre las dos lineas no
     hay ninguna llamada que pueda usar la tabla, y despues de la primera

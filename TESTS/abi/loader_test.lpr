@@ -284,7 +284,7 @@ begin
   WriteLn('[6] ruta relativa (T3.2)');
   Rc := VPAGraph_LoadPlugin('stub_backend.so', P, Detail);
   Check(Rc = VPAGL_ERR_NOT_FOUND, 'relativa: ' + VPAGraph_FormatError(Rc, Detail, vglSpanish));
-  Check(Pos('absolutas', Detail) > 0, 'el motivo es la ruta relativa, no el disco');
+  Check(Pos('absolute', Detail) > 0, 'el motivo es la ruta relativa, no el disco');
 end;
 
 { ---------------------------------------------------------------------------
