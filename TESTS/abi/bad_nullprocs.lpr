@@ -8,7 +8,8 @@ library bad_nullprocs;
 {$MODE OBJFPC}{$H+}
 {$I vpagraph_abi.inc}
 const
-  BadName: PAnsiChar = 'bad-nullprocs';
+  BadName    : PAnsiChar = 'bad-nullprocs';
+  BadVersion : PAnsiChar = '0.0';
 function BadInit(Params: PVPAGraphInitParams): TVPAGraphInt32; cdecl;
 begin
   BadInit := VPAG_OK;
@@ -31,6 +32,7 @@ begin
   InterfaceOut^.StructSize := SizeOf(TVPAGraphInterface);
   InterfaceOut^.ABIVersion := VPAGRAPH_ABI_VERSION;
   InterfaceOut^.BackendName := BadName;
+  InterfaceOut^.BackendVersion := BadVersion;   { la cabecera ha de ser correcta }
   InterfaceOut^.Init := @BadInit;
   { Shutdown, OutTextXY, Line, PutImage... se quedan a nil a proposito }
   VPAGraph_GetInterface := VPAG_OK;
