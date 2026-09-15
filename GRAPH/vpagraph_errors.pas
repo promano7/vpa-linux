@@ -3,12 +3,14 @@
   y en ingles, y recogida del mensaje del plugin. Fase 3 de WAYLAND.md
   (T3.8).
 
-  Hay dos familias de codigos y las dos se traducen aqui:
+  Hay tres familias de codigos y las tres se traducen aqui:
 
     - los de la ABI (VPAG_ERR_*, de -1 a -100), que devuelven las funciones
       del plugin y el punto de entrada;
     - los del cargador (VPAGL_ERR_*, de -1001 en adelante), que produce
-      vpagraph_loader.pas antes de que exista ningun plugin.
+      vpagraph_loader.pas antes de que exista ningun plugin;
+    - los de la seleccion (VPAGD_ERR_*, de -1101 en adelante), que produce
+      vpagraph_detect.pas al decidir que backend intentar (Fase 4).
 
   El texto de esta unidad es la parte GENERICA del mensaje ("no se pudo
   cargar el plugin"). La parte concreta (que ruta, que funcion falta) viene
@@ -29,7 +31,7 @@ unit vpagraph_errors;
 interface
 
 uses
-  vpagraph_loader;
+  vpagraph_loader, vpagraph_detect;
 
 {$I vpagraph_abi.inc}
 
@@ -87,6 +89,9 @@ begin
       VPAGL_ERR_NO_NAME      : Result := 'el plugin no se identifica';
       VPAGL_ERR_NULL_PROC    : Result := 'el plugin esta incompleto';
       VPAGL_ERR_ALREADY      : Result := 'ya hay un plugin cargado';
+      VPAGD_ERR_BAD_REQUEST  : Result := 'valor de VPA_GRAPH_BACKEND desconocido';
+      VPAGD_ERR_NO_SESSION   : Result := 'no se ha detectado ninguna sesion grafica';
+      VPAGD_ERR_ALL_FAILED   : Result := 'no se pudo cargar ningun backend grafico';
     else
       Result := 'error ' + IntToStr(Code);
     end
@@ -112,6 +117,9 @@ begin
       VPAGL_ERR_NO_NAME      : Result := 'plugin does not identify itself';
       VPAGL_ERR_NULL_PROC    : Result := 'plugin is incomplete';
       VPAGL_ERR_ALREADY      : Result := 'a plugin is already loaded';
+      VPAGD_ERR_BAD_REQUEST  : Result := 'unknown VPA_GRAPH_BACKEND value';
+      VPAGD_ERR_NO_SESSION   : Result := 'no graphical session detected';
+      VPAGD_ERR_ALL_FAILED   : Result := 'no graphics backend could be loaded';
     else
       Result := 'error ' + IntToStr(Code);
     end;
