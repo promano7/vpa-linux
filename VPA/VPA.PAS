@@ -6,7 +6,7 @@ Program	VPA;		(* VGA Planets Assistant *)
 uses
 {$IFDEF UNIX}
 	cthreads,	{ Linux: ptcgraph usa hilos para el bucle de eventos X11; cthreads debe ir primero }
-	{$IFDEF UNIX}xfocus,{$ENDIF}
+	{$IFDEF UNIX}xfocus,vpagraph_info,{$ENDIF}
 {$ENDIF}
 	AuxF,Screen,VPA2,VPAInit,VPAExit,Building,Messages,Report,VCS,
 {$IFDEF TASKS}
@@ -60,6 +60,13 @@ procedure Terminate; far;
   end;
 
 Begin
+{$IFDEF UNIX}
+  { --graph-info (T4.4 de WAYLAND.md): informe del backend grafico, sin abrir
+    ventana. Va aqui, antes de instalar Terminate, por dos motivos: Terminate
+    pone ExitCode a 0 en cualquier Halt (y --graph-info tiene que salir con 1
+    si no hay backend), y asi el informe no depende de nada de StartVPA. }
+  if ParamStr(1)='--graph-info' then Halt(VPAGraph_PrintGraphInfo);
+{$ENDIF}
   ExitPr0:=ExitProc;
   ExitProc:=@Terminate;
   if StartVPA then
