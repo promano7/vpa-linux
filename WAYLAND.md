@@ -62,7 +62,7 @@ más fácil es saltárselas:
 | 0 | Preparación y red de seguridad | ☑ cerrada (2026-09-13) |
 | 1 | Inventario de la frontera gráfica | ☑ cerrada (2026-09-13) |
 | 2 | Definición de la ABI v1 | ☑ cerrada (2026-09-13) |
-| 3 | Cargador dinámico | ☐ |
+| 3 | Cargador dinámico | ☑ cerrada (2026-09-15) |
 | 4 | Detección y selección de backend | ☐ |
 | 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ☐ |
 | 6 | Migración de VPA-Linux a `VPAGraph` | ☐ |
@@ -891,40 +891,86 @@ como aserciones de compilación en los dos ficheros de prueba.
 
 ### Fase 3 — Cargador dinámico 🔒
 
-- [ ] **T3.1** — `GRAPH/vpagraph_loader.pas`. **Única unidad de todo el
+- [x] **T3.1** — `GRAPH/vpagraph_loader.pas`. **Única unidad de todo el
       proyecto que puede usar `Dynlibs`.** Anotarlo en su cabecera.
-- [ ] **T3.2** — Resolución de la ruta del plugin, en este orden:
+      — `1bb0ee7`
+      Única unidad que carga bibliotecas, sí, pero con `dl` en vez de
+      `Dynlibs`, y la cabecera explica por qué: `Dynlibs.LoadLibrary` abre
+      con `RTLD_LAZY`, y con enlace perezoso un plugin al que le falte **un**
+      símbolo de su biblioteca gráfica (un `libSDL3` más viejo que el usado
+      al compilar: Astra, Kubuntu LTS) cargaría bien y caería en mitad de la
+      partida. Con `RTLD_NOW` el fallo se ve en `dlopen`, con su mensaje, y
+      `auto` cae a X11 como debe (D-12).
+- [x] **T3.2** — Resolución de la ruta del plugin, en este orden:
       1. `$VPA_GRAPH_PLUGIN_DIR` si está definida;
       2. `<directorio del ejecutable>/plugins/` (para ejecutar sin instalar);
       3. el directorio de instalación (`/usr/lib/vpa-linux/`, ajustable en
          tiempo de compilación).
       Siempre rutas absolutas; **nunca el directorio de trabajo actual**.
-- [ ] **T3.3** — Validaciones de seguridad antes de `LoadLibrary`: el fichero
+      — `1bb0ee7`
+      El directorio del ejecutable sale de `/proc/self/exe`, no de
+      `ParamStr(0)`. Una `$VPA_GRAPH_PLUGIN_DIR` relativa se ignora y queda
+      dicho en el motivo acumulado. El directorio de instalación es una
+      constante en `GRAPH/vpagraph_installdir.inc`, para que el empaquetador
+      o el `Makefile` (Fase 12) lo cambien sin tocar la unidad. El fichero
+      del backend `x` se llama `libvpagraph-x.so`.
+- [x] **T3.3** — Validaciones de seguridad antes de `LoadLibrary`: el fichero
       existe, es un fichero regular (no enlace a dispositivo ni directorio), y
-      es legible.
-- [ ] **T3.4** — Carga, resolución de `VPAGraph_GetInterface` y llamada con la
-      versión y el tamaño de estructura que espera el ejecutable.
-- [ ] **T3.5** — Validación de la tabla devuelta: `StructSize` coherente,
+      es legible. — `1bb0ee7`
+- [x] **T3.4** — Carga, resolución de `VPAGraph_GetInterface` y llamada con la
+      versión y el tamaño de estructura que espera el ejecutable. — `1bb0ee7`
+- [x] **T3.5** — Validación de la tabla devuelta: `StructSize` coherente,
       `ABIVersion` compatible, `BackendName`/`BackendVersion` no nulos, y
       **todos** los punteros obligatorios asignados. Un plugin a medio rellenar
-      se rechaza entero: no se acepta «funciona a medias».
-- [ ] **T3.6** — Descarga ordenada: anular la tabla de funciones *antes* de
+      se rechaza entero: no se acepta «funciona a medias». — `1bb0ee7`
+      El mensaje de rechazo nombra las funciones que faltan, no solo cuántas.
+      Al escribir esta comprobación se vio que `bad_nullprocs.lpr` no fijaba
+      `BackendVersion` y caía una comprobación antes de la que quería probar;
+      corregido en `a0c275e`.
+- [x] **T3.6** — Descarga ordenada: anular la tabla de funciones *antes* de
       `UnloadLibrary`, para que un fallo posterior dé un puntero nulo detectable
-      y no un salto a memoria liberada.
-- [ ] **T3.7** — Registro de diagnóstico: qué plugin se intentó, desde qué ruta,
+      y no un salto a memoria liberada. — `1bb0ee7`
+- [x] **T3.7** — Registro de diagnóstico: qué plugin se intentó, desde qué ruta,
       con qué resultado. Silencioso por defecto, detallado con
-      `VPA_GRAPH_DEBUG=1`.
-- [ ] **T3.8** — `GRAPH/vpagraph_errors.pas`: traducción de códigos numéricos a
+      `VPA_GRAPH_DEBUG=1`. — `1bb0ee7`
+      Además, `VPAGraph_LoadBackend` acumula **un motivo por candidato** en
+      el detalle que devuelve, que es la lista que T4.2 tiene que enseñar.
+- [x] **T3.8** — `GRAPH/vpagraph_errors.pas`: traducción de códigos numéricos a
       texto en español y en inglés, y recogida del mensaje del plugin vía
-      `GetLastError` con buffer del llamante.
-- [ ] **T3.9** — `TESTS/abi/loader_test.lpr`: carga el stub, lo descarga, lo
+      `GetLastError` con buffer del llamante. — `11a55d1`
+      Traduce las dos familias: los `VPAG_ERR_*` de la ABI y los
+      `VPAGL_ERR_*` del cargador, que viven en el cargador y no en el `.inc`
+      porque nunca cruzan la frontera.
+- [x] **T3.9** — `TESTS/abi/loader_test.lpr`: carga el stub, lo descarga, lo
       vuelve a cargar 100 veces y comprueba que no hay fugas (`-gh`).
-- [ ] **T3.10** — Probar el cargador contra los cuatro plugins defectuosos de
+      — `f43995c`
+      Compara además heap del RTL y número de entradas de `/proc/self/fd`
+      antes y después de los cien ciclos. `loader_tp.pas` hace para las dos
+      unidades nuevas lo que `abi_tp.pas` para el `.inc`: compilar desde
+      `-Mtp`.
+- [x] **T3.10** — Probar el cargador contra los cuatro plugins defectuosos de
       T2.16: los cuatro deben ser rechazados con un mensaje distinto y útil.
+      — `f43995c`
+      Y contra un quinto, `bad_unresolved.lpr` (`5a30c4d`), que depende de un
+      símbolo inexistente: es la prueba de que `RTLD_NOW` hace lo que T3.1
+      promete. Los objetivos `make abi-plugins` y `make loader-test`
+      (`7a2e6b3`) construyen y ejecutan todo esto.
 
 **Criterio de aceptación:** el ejecutable de prueba carga el stub, rechaza los
 cuatro plugins malos con mensajes diferenciados, y 100 ciclos de carga/descarga
 no dejan memoria ni descriptores colgando.
+
+**Estado: cumplido** (2026-09-15), con FPC 3.2.2. `make loader-test`: 70
+comprobaciones correctas, cinco plugins defectuosos rechazados con cinco
+códigos y cinco mensajes distintos, y `heaptrc` cierra con
+`0 unfreed memory blocks` tras los cien ciclos (5 descriptores antes y
+después; 1536 bytes de heap antes y después). `make build` sigue limpio: el
+camino X11 no se ha tocado.
+
+Detalle de `heaptrc` que conviene saber: en 3.2.2 no escribe nada en `stderr`
+cuando no hay nada que decir, así que el objetivo `loader-test` manda su
+resumen a `build/abi/loader_test.heaptrc` con `HEAPTRC=log=...` y lo comprueba
+ahí.
 
 ---
 
@@ -1459,6 +1505,7 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-10 | 2026-09-13 | La traducción de teclas a los scancodes del Turbo Pascal y el búfer de teclado viven en el **núcleo**, no en cada plugin; la ABI transporta código de tecla físico + carácter Unicode + modificadores, y los códigos reutilizan los valores de los `PTCKEY_*` de PTCPas | Si cada backend tradujera por su cuenta, X11 y Wayland divergirían en teclas raras y lo notaría antes el usuario que nosotros |
 | D-11 | 2026-09-13 | Nada que VPA no use hoy entra en la ABI v1, ni siquiera siendo trivial (`ClearViewPort`, `SetBkColor`, `TextWidth`, `TextHeight`) | La estructura solo crece por el final, así que añadir el día que haga falta no cuesta nada; adelantarlo sí cuesta, porque hay que implementarlo en cada backend |
 | D-09 | 2026-09-13 | El evento de teclado de la ABI lleva el **carácter Unicode** además del código de tecla | El arreglo de 3.67.5 para Ctrl-+/- en distribuciones no estadounidenses depende de él; sin carácter se pierde |
+| D-12 | 2026-09-15 | El cargador abre los plugins con `dlopen(RTLD_NOW)` vía la unidad `dl`, no con `Dynlibs.LoadLibrary` (`RTLD_LAZY`) | Con enlace perezoso, un plugin al que le falte un símbolo de su biblioteca gráfica carga y cae en mitad de la partida; con `RTLD_NOW` falla en la carga, con mensaje, y `auto` cae a X11. Probado con `bad_unresolved.lpr` |
 
 ---
 
