@@ -44,7 +44,7 @@ X11PLUGIN = $(PLUGDIR)/libvpagraph-x11.so
 X11TESTS  = build/x11
 
 .PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
-        plugin-units x11-plugin plugins threads-test
+        plugin-units x11-plugin plugins threads-test nodisplay-test
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -139,6 +139,19 @@ threads-test: x11-plugin
 	    || { echo ">> heaptrc reports leaks, see $(X11TESTS)/$$t.heaptrc"; exit 1; }; \
 	done
 	@echo ">> threads-test passed, no leaks"
+
+## nodisplay-test : T5.5b: Init of the X11 plugin WITHOUT a DISPLAY must return
+##                  VPAG_ERR_VIDEO (not abort the process), Shutdown must still
+##                  be idempotent and dlclose must not deadlock. No Xvfb needed.
+nodisplay-test: x11-plugin
+	@mkdir -p $(X11TESTS)
+	$(FPC) -MOBJFPC -gl -gh -FiGRAPH -FU$(X11TESTS) -o$(X11TESTS)/nodisplay_test TESTS/x11/nodisplay_test.lpr
+	rm -f $(X11TESTS)/nodisplay_test.heaptrc
+	env -u DISPLAY HEAPTRC=log=$(X11TESTS)/nodisplay_test.heaptrc \
+	  ./$(X11TESTS)/nodisplay_test $(abspath $(X11PLUGIN))
+	@grep -q '^0 unfreed memory blocks' $(X11TESTS)/nodisplay_test.heaptrc \
+	  || { echo ">> heaptrc reports leaks, see $(X11TESTS)/nodisplay_test.heaptrc"; exit 1; }
+	@echo ">> nodisplay-test passed, no leaks"
 
 ## abi-plugins : build the six ABI test plugins (stub + five faulty ones) into
 ##               build/abi/, and check that vpagraph_abi.inc compiles both from

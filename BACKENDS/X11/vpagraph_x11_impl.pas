@@ -151,7 +151,14 @@ begin
     R := ptcgraph.GraphResult;
     if R <> grOk then
     begin
-      SetError(VPAG_ERR_VIDEO, 'InitGraph failed: ' + GraphErrorMsg(R));
+      { T5.5b: sin servidor X, ptcgraph devuelve grError y deja el motivo
+        de ptc ('Cannot open X display') en VPALastOpenError. ptc encadena
+        los errores anidados con #10: aqui se deja en una sola linea. }
+      if VPALastOpenError <> '' then
+        SetError(VPAG_ERR_VIDEO, 'InitGraph failed: ' +
+          StringReplace(TrimRight(VPALastOpenError), #10, '; ', [rfReplaceAll]))
+      else
+        SetError(VPAG_ERR_VIDEO, 'InitGraph failed: ' + GraphErrorMsg(R));
       Exit(VPAG_ERR_VIDEO);
     end;
 

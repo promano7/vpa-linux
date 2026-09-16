@@ -41,6 +41,14 @@
        dlopen y espera ese mismo cerrojo: interbloqueo seguro, medido en
        T5.9 (docs/threads-and-rtl.md). En un ejecutable (IsLibrary = False)
        el comportamiento es el original, sin cambios.
+    7. ptc_InternalOpen captura el TPTCError que el ptcwrapper vendorizado
+       (su cambio 2) relanza cuando la consola no se puede abrir -sin DISPLAY,
+       'Cannot open X display'- y lo traduce a _graphresult := grError, con el
+       texto en VPALastOpenError; los ptc_InternalInitMode* salen sin tocar
+       nada mas y InitGraph devuelve grError en vez de abortar el proceso
+       con un error 217. En una biblioteca el hilo de ptc, creado en ese
+       mismo ptc_InternalOpen, se destruye ahi mismo si Open falla, para que
+       no llegue vivo a dlclose (cambio 6). Tarea T5.5b de WAYLAND.md.
   El resto del fichero es el original de FPC. Sigue bajo la LGPL modificada
   con excepcion de enlazado estatico de Free Pascal; se conservan intactos los
   avisos de copyright de arriba. Este aviso cumple el requisito de la LGPL de
@@ -75,6 +83,11 @@ type
   0 = usar VPA_SCALE del entorno. }
 var
   VPAForceScale: LongInt = 0;
+
+{ VPA (cambio 7): texto del ultimo fallo de apertura de la consola de ptc
+  ('' si el ultimo InitGraph abrio bien). Acompana al grError que devuelve
+  GraphResult, que no tiene sitio para el motivo. }
+  VPALastOpenError: string = '';
 
 { VPA (tarea T0.4 de WAYLAND.md): volcado del framebuffer a disco.
 
@@ -851,7 +864,9 @@ begin
   CurrentCGABkColor := 0;
 end;
 
-procedure ptc_InternalOpen(const ATitle: string; AWidth, AHeight: Integer; AFormat: IPTCFormat; AVirtualPages: Integer);
+{ VPA (cambio 7): ahora es una funcion. Devuelve False, con _graphresult en
+  grError y el motivo en VPALastOpenError, si la consola no se pudo abrir. }
+function ptc_InternalOpen(const ATitle: string; AWidth, AHeight: Integer; AFormat: IPTCFormat; AVirtualPages: Integer): Boolean;
 var
   ConsoleWidth, ConsoleHeight: Integer;
   vpaScaleStr: string;
@@ -912,7 +927,33 @@ begin
   else
     PTCWrapperObject.Option('windowed output');
 
-  PTCWrapperObject.Open(ATitle, AWidth, AHeight, ConsoleWidth, ConsoleHeight, AFormat, AVirtualPages, 0);
+  { VPA (cambio 7): el fallo de Open llega aqui como TPTCError, relanzado en
+    este hilo por el wrapper vendorizado. Se traduce a GraphResult. }
+  VPALastOpenError := '';
+  Result := True;
+  try
+    PTCWrapperObject.Open(ATitle, AWidth, AHeight, ConsoleWidth, ConsoleHeight, AFormat, AVirtualPages, 0);
+  except
+    on E: TPTCError do
+      begin
+        VPALastOpenError := E.Message;
+        Result := False;
+      end;
+  end;
+  if not Result then
+    begin
+      _graphresult := grError;
+      { En una biblioteca el hilo lo creo esta misma funcion (cambio 6) y
+        nadie va a llamar a CloseGraph: se destruye aqui o sobrevive hasta
+        dlclose y provoca el interbloqueo de T5.9. }
+      if IsLibrary then
+        begin
+          PTCWrapperObject.Terminate;
+          PTCWrapperObject.WaitFor;
+          PTCWrapperObject.Free;
+          PTCWrapperObject := nil;
+        end;
+    end;
 end;
 
 procedure ptc_InternalInitMode16(XResolution, YResolution, Pages: LongInt; UseCGAEmuPalette: Boolean);
@@ -921,7 +962,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 16 colours');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -946,7 +988,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 256 colours');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -961,7 +1004,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 4 colours, palette ' + strf(CGAPalette));
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, 1);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, 1) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -976,7 +1020,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 2 colours');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -991,7 +1036,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 2 colours');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -1006,7 +1052,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 32768 colours');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat15, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat15, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -1019,7 +1066,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 65536 colours');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat16, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat16, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -1033,7 +1081,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 16777216 colours (32bpp)');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat32, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat32, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;

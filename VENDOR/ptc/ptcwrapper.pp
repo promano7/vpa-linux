@@ -37,6 +37,12 @@
        ventana de la consola (0 si no la hay). Lo usa el plugin grafico X11
        (BACKENDS/X11/) para pedir foco, cursor y pantalla completa desde su
        propia conexion X sin buscar la ventana por titulo (WAYLAND.md, D-18).
+    2. Un fallo de Open en el hilo de ptc (TPTCError, por ejemplo 'Cannot
+       open X display' sin DISPLAY) ya no mata el proceso: ProcessRequests lo
+       captura, deja la consola cerrada, marca la peticion como fallida con
+       su mensaje, y el Open publico lo vuelve a lanzar EN EL HILO LLAMANTE,
+       donde ptcgraph si puede capturarlo (WAYLAND.md, T5.5b). El original
+       tenia el campo Success pero nunca lo ponia a False.
   Se vendoriza junto con ptceventqueue.pp (sin cambios) porque el ptc de
   VENDOR/ tiene una interfaz distinta a la del sistema y el ptcwrapper.ppu
   precompilado ya no le vale. El resto del fichero es el original de FPC y
@@ -83,6 +89,7 @@ type
 
     Processed: Boolean;
     Success: Boolean;
+    ErrorMessage: string;  { VPA (cambio 2): motivo si Success = False }
   end;
 
   TPTCWrapperCloseRequest = record
@@ -224,45 +231,73 @@ procedure TPTCWrapperThread.Execute;
     begin
       for I := Low(FSurface) to High(FSurface) do
         FSurface[I] := nil;
-      with FOpenRequest do
-      begin
-        SetLength(FSurface, VirtualPages);
-        case OpenType of
-          pwotDefault:
-            begin
-              FConsole.Open(Title, Pages);
-              for I := Low(FSurface) to High(FSurface) do
-                FSurface[I] := TPTCSurfaceFactory.CreateNew(FConsole.Width, FConsole.Height, FConsole.Format);
-            end;
-          pwotFormat:
-            begin
-              FConsole.Open(Title, Format, Pages);
-              for I := Low(FSurface) to High(FSurface) do
-                FSurface[I] := TPTCSurfaceFactory.CreateNew(FConsole.Width, FConsole.Height, Format);
-            end;
-          pwotWidthHeightFormat:
-            begin
-              FConsole.Open(Title, Width, Height, Format, Pages);
-              for I := Low(FSurface) to High(FSurface) do
-                FSurface[I] := TPTCSurfaceFactory.CreateNew(SurfaceWidth, SurfaceHeight, Format);
-            end;
-          pwotMode:
-            begin
-              FConsole.Open(Title, Mode, Pages);
-              for I := Low(FSurface) to High(FSurface) do
-                FSurface[I] := TPTCSurfaceFactory.CreateNew(SurfaceWidth, SurfaceHeight, Mode.Format);
-            end;
+      { VPA (cambio 2): un TPTCError de FConsole.Open no puede escapar de
+        Execute (no desciende de Exception y nadie lo capturaria: el proceso
+        moriria con error 217). Se captura aqui y se comunica al llamante. }
+      try
+        with FOpenRequest do
+        begin
+          SetLength(FSurface, VirtualPages);
+          case OpenType of
+            pwotDefault:
+              begin
+                FConsole.Open(Title, Pages);
+                for I := Low(FSurface) to High(FSurface) do
+                  FSurface[I] := TPTCSurfaceFactory.CreateNew(FConsole.Width, FConsole.Height, FConsole.Format);
+              end;
+            pwotFormat:
+              begin
+                FConsole.Open(Title, Format, Pages);
+                for I := Low(FSurface) to High(FSurface) do
+                  FSurface[I] := TPTCSurfaceFactory.CreateNew(FConsole.Width, FConsole.Height, Format);
+              end;
+            pwotWidthHeightFormat:
+              begin
+                FConsole.Open(Title, Width, Height, Format, Pages);
+                for I := Low(FSurface) to High(FSurface) do
+                  FSurface[I] := TPTCSurfaceFactory.CreateNew(SurfaceWidth, SurfaceHeight, Format);
+              end;
+            pwotMode:
+              begin
+                FConsole.Open(Title, Mode, Pages);
+                for I := Low(FSurface) to High(FSurface) do
+                  FSurface[I] := TPTCSurfaceFactory.CreateNew(SurfaceWidth, SurfaceHeight, Mode.Format);
+              end;
+          end;
+        end;
+
+        SetLength(FPixels, Length(FSurface));
+        for I := Low(FSurface) to High(FSurface) do
+        begin
+          FPixels[I] := FSurface[I].Lock;
+          FSurface[I].Unlock;
+        end;
+        FOpen := True;
+        FOpenRequest.Success := True;
+        FOpenRequest.ErrorMessage := '';
+      except
+        on E: TPTCError do
+        begin
+          FOpenRequest.Success := False;
+          FOpenRequest.ErrorMessage := E.Message;
+        end;
+        on E: Exception do
+        begin
+          FOpenRequest.Success := False;
+          FOpenRequest.ErrorMessage := E.Message;
         end;
       end;
-
-      SetLength(FPixels, Length(FSurface));
-      for I := Low(FSurface) to High(FSurface) do
+      if not FOpenRequest.Success then
       begin
-        FPixels[I] := FSurface[I].Lock;
-        FSurface[I].Unlock;
+        { La consola se queda cerrada y sin superficies, lista para otro
+          intento de Open (por ejemplo cuando aparezca un DISPLAY). }
+        FConsole.Close;
+        for I := Low(FSurface) to High(FSurface) do
+          FSurface[I] := nil;
+        SetLength(FSurface, 0);
+        SetLength(FPixels, 0);
+        FOpen := False;
       end;
-      FOpen := True;
-      FOpenRequest.Success := True;
       FOpenRequest.Processed := True;
     end;
 
@@ -370,6 +405,9 @@ begin
   repeat
     ThreadSwitch;
   until FOpenRequest.Processed;
+  { VPA (cambio 2): el fallo se relanza en el hilo del llamante }
+  if not FOpenRequest.Success then
+    raise TPTCError.Create(FOpenRequest.ErrorMessage);
 end;
 
 procedure TPTCWrapperThread.Open(const ATitle: string; AFormat: IPTCFormat; AVirtualPages: Integer; APages: Integer = 0);
@@ -392,6 +430,9 @@ begin
   repeat
     ThreadSwitch;
   until FOpenRequest.Processed;
+  { VPA (cambio 2): el fallo se relanza en el hilo del llamante }
+  if not FOpenRequest.Success then
+    raise TPTCError.Create(FOpenRequest.ErrorMessage);
 end;
 
 procedure TPTCWrapperThread.Open(const ATitle: string; ASurfaceWidth, ASurfaceHeight, AWidth, AHeight: Integer; AFormat: IPTCFormat; AVirtualPages: Integer; APages: Integer = 0);
@@ -418,6 +459,9 @@ begin
   repeat
     ThreadSwitch;
   until FOpenRequest.Processed;
+  { VPA (cambio 2): el fallo se relanza en el hilo del llamante }
+  if not FOpenRequest.Success then
+    raise TPTCError.Create(FOpenRequest.ErrorMessage);
 end;
 
 procedure TPTCWrapperThread.Open(const ATitle: string; ASurfaceWidth, ASurfaceHeight: Integer; AMode: IPTCMode; AVirtualPages: Integer; APages: Integer = 0);
@@ -442,6 +486,9 @@ begin
   repeat
     ThreadSwitch;
   until FOpenRequest.Processed;
+  { VPA (cambio 2): el fallo se relanza en el hilo del llamante }
+  if not FOpenRequest.Success then
+    raise TPTCError.Create(FOpenRequest.ErrorMessage);
 end;
 
 procedure TPTCWrapperThread.Close;
