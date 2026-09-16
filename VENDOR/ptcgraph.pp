@@ -28,6 +28,10 @@
        y de su paleta a ficheros PPM/PAL, para poder comparar pixel a pixel el
        resultado de este backend con el de otros backends futuros (tarea T0.4
        de WAYLAND.md). Es codigo anadido, no modifica ninguna rutina original.
+    5. Anadida VPADumpFrameTo(prefijo): igual que VPADumpFrame pero con el
+       prefijo dado en vez del de VPA_GRAPH_DUMP. La usa el plugin X11
+       (BACKENDS/X11/) para implementar DumpFrame de la ABI, que recibe el
+       prefijo del llamante (T5.4 de WAYLAND.md).
   El resto del fichero es el original de FPC. Sigue bajo la LGPL modificada
   con excepcion de enlazado estatico de Free Pascal; se conservan intactos los
   avisos de copyright de arriba. Este aviso cumple el requisito de la LGPL de
@@ -82,6 +86,7 @@ var
   Solo opera en el modo indexado de 8 bits, que es el unico que usa VPA. }
 function VPADumpEnabled: Boolean;
 function VPADumpFrame: LongInt;   { >0 numero de fotograma escrito; <0 error }
+function VPADumpFrameTo(const APrefix: AnsiString): LongInt;  { idem, con prefijo explicito }
 
 {Driver number for PTC.}
 const
@@ -592,6 +597,16 @@ begin
     Flush(StdErr);
     VPADumpFrame := VPADumpCounter;
   end;
+end;
+
+{ Volcado con prefijo explicito: fija el prefijo (y lo deja fijado, como si
+  viniera de VPA_GRAPH_DUMP) y delega en VPADumpFrame. Mismo contador, mismo
+  formato de fichero. }
+function VPADumpFrameTo(const APrefix: AnsiString): LongInt;
+begin
+  VPADumpPrefix := APrefix;
+  VPADumpChecked := True;
+  VPADumpFrameTo := VPADumpFrame;
 end;
 
 procedure ptc_update;
