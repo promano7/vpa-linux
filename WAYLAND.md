@@ -64,7 +64,7 @@ más fácil es saltárselas:
 | 2 | Definición de la ABI v1 | ☑ cerrada (2026-09-13) |
 | 3 | Cargador dinámico | ☑ cerrada (2026-09-15) |
 | 4 | Detección y selección de backend | ☑ cerrada (2026-09-15) |
-| 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ☐ |
+| 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ◐ en curso (desde 2026-09-16) |
 | 6 | Migración de VPA-Linux a `VPAGraph` | ☐ |
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☐ |
 | 8 | Motor de dibujo Wayland (vía B o vía A) | ☐ |
@@ -1080,7 +1080,7 @@ bit**, con `ptcgraph` accedido a través del `.so`.
 > Fase 6. Con la misma lectura se han corregido T5.1 (los `.ppu` de `build/`
 > no son PIC), T5.6, T5.7 y T5.8 (posterior a D-10) y se ha añadido T5.3b.
 
-- [ ] **T5.1** — Crear `plugins.cfg` para compilar los `.so`: `{$mode objfpc}`,
+- [x] **T5.1** — Crear `plugins.cfg` para compilar los `.so`: `{$mode objfpc}`,
       código independiente de posición, salida a `build/plugins/`. **No**
       hereda `-Mtp` ni las comprobaciones desactivadas de `vpa.cfg`: durante
       el desarrollo el código propio de `BACKENDS/` se compila con las
@@ -1091,26 +1091,35 @@ bit**, con `ptcgraph` accedido a través del `.so`.
       con `-Cg`**, en `build/plugins/units/`, hecha por un objetivo de
       `Makefile` aparte con las mismas opciones que hoy (`-O2`, comprobaciones
       desactivadas) para que el resultado sea píxel-idéntico. `plugins.cfg`
-      con comprobaciones activadas se aplica solo a `BACKENDS/`.
-- [ ] **T5.2** — Añadir al `Makefile` los objetivos `plugins`, `x11-plugin` y
+      con comprobaciones activadas se aplica solo a `BACKENDS/`. — `19e1b78`
+- [x] **T5.2** — Añadir al `Makefile` los objetivos `plugins`, `x11-plugin` y
       (más adelante) `wayland-plugin`, respetando `.NOTPARALLEL` y la
-      dependencia con el objetivo `ptc` existente.
-- [ ] **T5.3** — `BACKENDS/X11/vpagraph_x11.lpr`: biblioteca que exporta
-      únicamente `VPAGraph_GetInterface`.
-- [ ] **T5.3b** — Vendorizar `ptcwrapper.pp` (de fpcsrc 3.2.2, misma LGPL y
+      dependencia con el objetivo `ptc` existente. — `19e1b78`
+- [x] **T5.3** — `BACKENDS/X11/vpagraph_x11.lpr`: biblioteca que exporta
+      únicamente `VPAGraph_GetInterface`. — `e3ebc70`
+- [x] **T5.3b** — Vendorizar `ptcwrapper.pp` (de fpcsrc 3.2.2, misma LGPL y
       mismo aviso de modificación que `ptcgraph.pp`) y añadir un método
       `X11WindowID` a `TX11Console` de `VENDOR/ptc/` con su paso a través en
       el wrapper (decisión D-18). Hoy se enlaza el `ptcwrapper.ppu` **del
       sistema** contra nuestro `ptc` vendorizado; vendorizarlo también cierra
-      esa dependencia implícita.
-- [ ] **T5.4** — `BACKENDS/X11/vpagraph_x11_impl.pas`: adaptadores `cdecl` que
+      esa dependencia implícita. — `a26ea33`
+- [x] **T5.4** — `BACKENDS/X11/vpagraph_x11_impl.pas`: adaptadores `cdecl` que
       envuelven `ptcgraph`. Cada uno con su `try..except` propio, porque
       **ninguna excepción puede cruzar** (regla 3.4). Traducción de shortstring:
-      el adaptador recibe `PAnsiChar` y llama a `ptcgraph` con `string`.
-- [ ] **T5.5** — Adaptar el ciclo de vida: `Init` traduce
+      el adaptador recibe `PAnsiChar` y llama a `ptcgraph` con `string`. — `e3ebc70`
+      (bloques T2.5 a T2.9 y `DumpFrame`; ventana y entrada, en T5.7 y T5.8)
+- [x] **T5.5** — Adaptar el ciclo de vida: `Init` traduce
       `TVPAGraphInitParams` a `VPAForceScale` + `InitGraph(D8bit, m640x480, '')`;
       `Shutdown` llama a `CloseGraph`. Conservar la protección de 3.67.5 contra
-      `SetGraphMode` destruyendo la ventana.
+      `SetGraphMode` destruyendo la ventana. — `e3ebc70`
+- [ ] **T5.5b** — **`Init` sin servidor X debe fallar limpio.** Hoy `dlopen` del
+      plugin funciona sin `DISPLAY` (T5.9, 3.2), pero `Init` aborta el proceso:
+      `TX11Console.Open` lanza `TPTCError` dentro del hilo de ptc, el `Execute`
+      del wrapper solo tiene `try..finally` y `TPTCError` no desciende de
+      `Exception`. Capturar el error de `Open` en `ProcessRequests`, devolverlo
+      al llamante y traducirlo a `_graphresult` en `ptc_InternalOpen`, para que
+      el plugin devuelva `VPAG_ERR_VIDEO`. Sin esto la selección `auto` de la
+      Fase 6 no puede caer de un backend a otro.
 - [ ] **T5.6** — **Reescribir en el plugin lo que sobrevive de
       `UNIT/xfocus.pas`** (`BACKENDS/X11/vpagraph_x11_window.pas`): conexión X
       persistente propia (ptc no llama a `XInitThreads` y su hilo es dueño de
@@ -1132,7 +1141,7 @@ bit**, con `ptcgraph` accedido a través del `.so`.
       `TVPAGraphEvent`, con `KeyCode` = código ptc tal cual. `PTCLastKbdFlags`,
       `PTCQuitNoSave` y la emulación por software del rango del ratón son
       semántica del núcleo y se reescriben en T6.6 y T6.7.
-- [ ] **T5.9** — **Resolver la cuestión de los hilos.** `ptcgraph` levanta un
+- [x] **T5.9** — **Resolver la cuestión de los hilos.** `ptcgraph` levanta un
       hilo para el bucle de eventos X11 y por eso `cthreads` va el primero en
       `VPA/VPA.PAS`. Al mudarse `ptcgraph` al `.so`, hay que determinar
       experimentalmente: (a) si el `.so` necesita su propio `cthreads`;
@@ -1140,6 +1149,13 @@ bit**, con `ptcgraph` accedido a través del `.so`.
       gestor de hilos con dos RTL en el mismo proceso. **Documentar el
       resultado en `docs/threads-and-rtl.md` antes de seguir**: si esto se
       entiende mal, aparecerán cuelgues intermitentes imposibles de depurar.
+      — `67d3d4d`. Resultado en `docs/threads-and-rtl.md`: interbloqueo
+      determinista en `dlclose` (el hilo de ptc moría dentro de la
+      `finalization` del `.so`), resuelto haciendo que el hilo viva entre
+      `Init` y `Shutdown` (cambio 6 de `ptcgraph.pp`, solo con `IsLibrary`);
+      `dlopen` ya no necesita sesión gráfica; el RTL del `.so` no instala
+      manejadores de señales, así que los `try..except` de los adaptadores
+      solo cubren excepciones software. Objetivo `threads-test` del `Makefile`.
 - [ ] **T5.10** — Verificar aislamiento de dependencias:
       `ldd build/plugins/libvpagraph-x11.so` muestra `libX11`;
       `readelf -d build/VPA` no.
