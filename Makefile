@@ -31,7 +31,19 @@ ABIPLUGS  = stub_backend bad_nosymbol bad_abiversion bad_structsize bad_nullproc
 FPCPLUG   = $(FPC) -MOBJFPC -Cg -FiGRAPH -FU$(ABIDIR)
 FPCTP     = $(FPC) -Mtp -Ci- -Cr- -Co- -Ct- -FiGRAPH -FuGRAPH -FU$(ABIDIR)
 
-.PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test
+# Graphics backend plugins (WAYLAND.md, Phase 5): every subdirectory of
+# BACKENDS/ is one .so, built with @plugins.cfg (objfpc, PIC, checks ON) against
+# a separate PIC build of the vendored ptc/ptcwrapper/ptcgraph in
+# build/plugins/units/ (same options as the executable's copy, so the plugin
+# draws exactly what the executable draws). build/ptcunits/*.ppu are NOT PIC
+# and cannot be linked into a shared object.
+PLUGDIR   = build/plugins
+PLUGUNITS = $(PLUGDIR)/units
+PLUGCFG   = plugins.cfg
+X11PLUGIN = $(PLUGDIR)/libvpagraph-x11.so
+
+.PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
+        plugin-units x11-plugin plugins
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -87,8 +99,28 @@ run: build
 ## clean : remove build artifacts
 clean:
 	rm -f build/*.ppu build/*.o build/*.rsj build/*.a $(BIN)
-	rm -rf $(PKGDIR) $(ABIDIR)
+	rm -rf $(PKGDIR) $(ABIDIR) $(PLUGDIR)
 	@echo ">> Cleaned."
+
+## plugin-units : PIC build of the vendored ptc, ptcwrapper and ptcgraph for the
+##                backend plugins, into build/plugins/units/. Same options as
+##                the 'ptc' target plus -Cg; rebuilt only when VENDOR/ changes.
+plugin-units: $(PLUGUNITS)/ptcgraph.ppu
+$(PLUGUNITS)/ptcgraph.ppu: VENDOR/ptcgraph.pp $(wildcard VENDOR/*.inc) $(PTCSRC)/ptc.pp $(wildcard $(PTCSRC)/*.pp) $(wildcard $(PTCSRC)/x11/*.inc) $(wildcard $(PTCSRC)/core/*.inc)
+	@mkdir -p $(PLUGUNITS)
+	$(FPC) $(PTCFLAGS) -Cg -FU$(PLUGUNITS) $(PTCSRC)/ptc.pp
+	$(FPC) $(PTCFLAGS) -Cg -FU$(PLUGUNITS) $(PTCSRC)/ptcwrapper.pp
+	$(FPC) -O2 -Cg -FiVENDOR -Fu$(PLUGUNITS) -FU$(PLUGUNITS) VENDOR/ptcgraph.pp
+	@echo ">> PIC units for the plugins in $(PLUGUNITS)/"
+
+## x11-plugin : build the X11 backend plugin, build/plugins/libvpagraph-x11.so
+x11-plugin: plugin-units
+	@mkdir -p $(PLUGDIR)
+	$(FPC) @$(PLUGCFG) -o$(X11PLUGIN) BACKENDS/X11/vpagraph_x11.lpr
+	@echo ">> Done: $(X11PLUGIN)"
+
+## plugins : build every backend plugin (today: x11)
+plugins: x11-plugin
 
 ## abi-plugins : build the six ABI test plugins (stub + five faulty ones) into
 ##               build/abi/, and check that vpagraph_abi.inc compiles both from
