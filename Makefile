@@ -44,7 +44,7 @@ X11PLUGIN = $(PLUGDIR)/libvpagraph-x11.so
 X11TESTS  = build/x11
 
 .PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
-        plugin-units x11-plugin plugins threads-test nodisplay-test window-test input-test
+        plugin-units x11-plugin plugins threads-test nodisplay-test window-test input-test scene-test deps-test
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -179,6 +179,40 @@ input-test: x11-plugin
 	@grep -q '^0 unfreed memory blocks' $(X11TESTS)/input_test.heaptrc \
 	  || { echo ">> heaptrc reports leaks, see $(X11TESTS)/input_test.heaptrc"; exit 1; }
 	@echo ">> input-test passed, no leaks"
+
+## deps-test : T5.10: the plugin links libX11 and the harness that loads it
+##             (scene_test_plugin, built by scene-test) does not.
+deps-test: x11-plugin $(X11TESTS)/scene_test_plugin
+	ldd $(X11PLUGIN) | grep -q libX11 || { echo ">> $(X11PLUGIN) does not link libX11"; exit 1; }
+	@if readelf -d $(X11TESTS)/scene_test_plugin | grep -q libX11; then \
+	  echo ">> $(X11TESTS)/scene_test_plugin links libX11"; exit 1; fi
+	@echo ">> deps-test passed: the .so needs libX11, the harness that loads it does not"
+
+## scene-test : T5.11, the acceptance criterion of Phase 5: the same scenes drawn
+##              through the plugin (loaded with the real GRAPH/vpagraph_loader) and
+##              directly against the executable's ptcgraph (build/ptcgraph.ppu)
+##              must dump byte-identical frames and palettes.
+$(X11TESTS)/scene_test_plugin: TESTS/x11/scene_test.lpr $(wildcard GRAPH/*)
+	@mkdir -p $(X11TESTS)
+	$(FPC) -MOBJFPC -gl -FiGRAPH -FuGRAPH -FU$(X11TESTS) -o$@ TESTS/x11/scene_test.lpr
+scene-test: x11-plugin build $(X11TESTS)/scene_test_plugin
+	$(FPC) -MOBJFPC -gl -dDIRECT -FiGRAPH -Fubuild -Fu$(PTCUNITS) -FU$(X11TESTS) -o$(X11TESTS)/scene_test_direct TESTS/x11/scene_test.lpr
+	rm -rf $(X11TESTS)/scenes && mkdir -p $(X11TESTS)/scenes/plugin $(X11TESTS)/scenes/direct
+	xvfb-run -a -s "-screen 0 1024x768x24" ./$(X11TESTS)/scene_test_plugin $(abspath $(X11PLUGIN)) \
+	  $(X11TESTS)/scenes/plugin/scene > $(X11TESTS)/scenes/plugin/log.txt 2>&1; \
+	  grep -v '^VPA: volcado' $(X11TESTS)/scenes/plugin/log.txt; grep -q '^scene_test: PASS' $(X11TESTS)/scenes/plugin/log.txt
+	xvfb-run -a -s "-screen 0 1024x768x24" ./$(X11TESTS)/scene_test_direct - \
+	  $(X11TESTS)/scenes/direct/scene > $(X11TESTS)/scenes/direct/log.txt 2>&1; \
+	  grep -v '^VPA: volcado' $(X11TESTS)/scenes/direct/log.txt; grep -q '^scene_test: PASS' $(X11TESTS)/scenes/direct/log.txt
+	@n=0; for f in $(X11TESTS)/scenes/plugin/scene*; do \
+	  cmp "$$f" "$(X11TESTS)/scenes/direct/$$(basename $$f)" || exit 1; n=$$((n+1)); done; \
+	  test $$n -eq 10 || { echo ">> expected 10 dump files, got $$n"; exit 1; }; \
+	  echo ">> $$n dump files identical"
+	@grep -E 'pixels|viewport|palette\[' $(X11TESTS)/scenes/plugin/log.txt > $(X11TESTS)/scenes/plugin/values.txt; \
+	  grep -E 'pixels|viewport|palette\[' $(X11TESTS)/scenes/direct/log.txt > $(X11TESTS)/scenes/direct/values.txt; \
+	  diff $(X11TESTS)/scenes/plugin/values.txt $(X11TESTS)/scenes/direct/values.txt \
+	  || { echo ">> GetPixel/GetViewSettings/GetRGBPalette differ between variants"; exit 1; }
+	@echo ">> scene-test passed: plugin and direct ptcgraph are pixel-identical"
 
 ## abi-plugins : build the six ABI test plugins (stub + five faulty ones) into
 ##               build/abi/, and check that vpagraph_abi.inc compiles both from
