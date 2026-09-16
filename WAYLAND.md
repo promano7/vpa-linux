@@ -64,7 +64,7 @@ más fácil es saltárselas:
 | 2 | Definición de la ABI v1 | ☑ cerrada (2026-09-13) |
 | 3 | Cargador dinámico | ☑ cerrada (2026-09-15) |
 | 4 | Detección y selección de backend | ☑ cerrada (2026-09-15) |
-| 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ◐ en curso (desde 2026-09-16) |
+| 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ☑ cerrada (2026-09-16) |
 | 6 | Migración de VPA-Linux a `VPAGraph` | ☐ |
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☐ |
 | 8 | Motor de dibujo Wayland (vía B o vía A) | ☐ |
@@ -1112,28 +1112,43 @@ bit**, con `ptcgraph` accedido a través del `.so`.
       `TVPAGraphInitParams` a `VPAForceScale` + `InitGraph(D8bit, m640x480, '')`;
       `Shutdown` llama a `CloseGraph`. Conservar la protección de 3.67.5 contra
       `SetGraphMode` destruyendo la ventana. — `e3ebc70`
-- [ ] **T5.5b** — **`Init` sin servidor X debe fallar limpio.** Hoy `dlopen` del
+- [x] **T5.5b** — **`Init` sin servidor X debe fallar limpio.** Hoy `dlopen` del
       plugin funciona sin `DISPLAY` (T5.9, 3.2), pero `Init` aborta el proceso:
       `TX11Console.Open` lanza `TPTCError` dentro del hilo de ptc, el `Execute`
       del wrapper solo tiene `try..finally` y `TPTCError` no desciende de
       `Exception`. Capturar el error de `Open` en `ProcessRequests`, devolverlo
       al llamante y traducirlo a `_graphresult` en `ptc_InternalOpen`, para que
       el plugin devuelva `VPAG_ERR_VIDEO`. Sin esto la selección `auto` de la
-      Fase 6 no puede caer de un backend a otro.
-- [ ] **T5.6** — **Reescribir en el plugin lo que sobrevive de
+      Fase 6 no puede caer de un backend a otro. — `ba141c2`. Cambio 2 de
+      `VENDOR/ptc/ptcwrapper.pp` (captura en `ProcessRequests`, relanzado en
+      el hilo llamante) y cambio 7 de `VENDOR/ptcgraph.pp`
+      (`ptc_InternalOpen` pasa a función, `grError` + `VPALastOpenError`, y en
+      biblioteca destruye el hilo recién creado para que no llegue a
+      `dlclose`). Objetivo `nodisplay-test` (`TESTS/x11/nodisplay_test.lpr`).
+- [x] **T5.6** — **Reescribir en el plugin lo que sobrevive de
       `UNIT/xfocus.pas`** (`BACKENDS/X11/vpagraph_x11_window.pas`): conexión X
       persistente propia (ptc no llama a `XInitThreads` y su hilo es dueño de
       su `Display`; el XID de la ventana es global al servidor y basta con él),
       cursor en blanco, foco de teclado, pantalla completa por
       `_NET_WM_STATE`, «puntero dentro» y modificadores. Sin `FindWin` por
       título: la ventana la da T5.3b. `UNIT/xfocus.pas` **no se toca**; lo
-      elimina T6.8.
-- [ ] **T5.7** — Implementar el bloque de ventana/foco/escala de la ABI (T2.10)
+      elimina T6.8. — `921bb9f`. `GrabFocus` espera a que la ventana sea
+      visible: `XSetInputFocus` sobre una no mapeada es `BadMatch` y el
+      manejador por defecto de Xlib mata el proceso; el plugin no instala
+      `XSetErrorHandler` (global al proceso, pisaría el de XShm de ptc).
+- [x] **T5.7** — Implementar el bloque de ventana/foco/escala de la ABI (T2.10)
       sobre ese código. La interpretación de `VPA_SCALE` (incluida la heredada
       de 1..20 como multiplicador) **se queda en el núcleo** (T2.10 y T6.x): al
       plugin le llega `ScalePercent`, que traduce a `VPAForceScale`, y
       `Fullscreen`, que traduce al estado `_NET_WM_STATE_FULLSCREEN`.
-- [ ] **T5.8** — Implementar el bloque de teclado y ratón (T2.11).
+      — `921bb9f`. Cambio 3 de `ptcwrapper.pp`: `ConsoleWidth`/`ConsoleHeight`
+      para el mapeo consola ↔ superficie. `Resume` rehace foco y pantalla
+      completa. Objetivo `window-test` (`TESTS/x11/window_test.lpr`).
+- [x] **T5.8** — Implementar el bloque de teclado y ratón (T2.11). — `738f76b`.
+      Objetivo `input-test` (`TESTS/x11/input_test.lpr`, con `xdotool`). Ojo
+      para T6.7: ptc no emite evento por el **primer** movimiento del ratón,
+      solo fija la posición previa. Desde este commit la interfaz rellena
+      todas las casillas de la ABI v1 y el cargador del núcleo la acepta.
       *Aclaración (2026-09-16), a la luz de D-10, posterior a esta tarea:* el
       plugin **no usa `ptccrt` ni `ptcmouse`**; bombea
       `PTCWrapperObject.NextEvent` él mismo y convierte `IPTCKeyEvent` (código,
@@ -1156,16 +1171,30 @@ bit**, con `ptcgraph` accedido a través del `.so`.
       `dlopen` ya no necesita sesión gráfica; el RTL del `.so` no instala
       manejadores de señales, así que los `try..except` de los adaptadores
       solo cubren excepciones software. Objetivo `threads-test` del `Makefile`.
-- [ ] **T5.10** — Verificar aislamiento de dependencias:
+- [x] **T5.10** — Verificar aislamiento de dependencias:
       `ldd build/plugins/libvpagraph-x11.so` muestra `libX11`;
-      `readelf -d build/VPA` no.
-- [ ] **T5.11** — Arnés de prueba `TESTS/x11/scene_test.lpr`: dibuja las escenas
+      `readelf -d build/VPA` no. — `d7c6fc0`. Objetivo `deps-test`; hasta la
+      Fase 6 el ejecutable sigue enlazando X11, así que el `readelf` se hace
+      sobre `scene_test_plugin`, el arnés que carga el `.so` con el cargador
+      real.
+- [x] **T5.11** — Arnés de prueba `TESTS/x11/scene_test.lpr`: dibuja las escenas
       geométricas básicas a través del plugin y vuelca el framebuffer. Comparar
       con el mismo programa llamando directamente a `ptcgraph`. **Debe dar cero
-      píxeles de diferencia.**
+      píxeles de diferencia.** — `d7c6fc0`. Objetivo `scene-test`: cinco
+      escenas (líneas, formas, texto con `LITT_VPA.CHR`, imágenes, paleta),
+      10 ficheros de volcado idénticos byte a byte entre `scene_test_plugin`
+      (cargador real) y `scene_test_direct` (`-dDIRECT`, `ptcgraph` del
+      ejecutable con adaptadores propios).
 
 **Criterio de aceptación:** `scene_test` a través del plugin es idéntico a
 `scene_test` directo; el `.so` enlaza X11 y el arnés que lo carga, no.
+
+> **Fase cerrada el 2026-09-16.** Verificado: `scene-test` 10/10 idénticos,
+> `deps-test`, `threads-test`, `nodisplay-test`, `window-test` e `input-test`
+> en PASS sin fugas; `make build` con los mismos 24 avisos y las 20 escenas
+> doradas recapturadas coinciden con `TESTS/golden/SHA256SUMS` (el cambio 7
+> de `ptcgraph.pp` también lo enlaza el ejecutable). El ejecutable no se ha
+> tocado: `VPA/`, `UNIT/` y `vpa.cfg` siguen como en `fd384ad`.
 
 ---
 
