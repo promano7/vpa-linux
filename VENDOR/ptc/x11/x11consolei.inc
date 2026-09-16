@@ -551,6 +551,17 @@ begin
   Result := FTitle;
 end;
 
+{ VPA-Linux: XID de la ventana (0 si no esta abierta o es DGA). El valor lo
+  fija el hilo de ptc al abrir y no cambia despues, asi que leerlo desde otro
+  hilo es seguro una vez que Open ha vuelto. }
+function TX11Console.GetX11WindowID: PtrUInt;
+begin
+  if FX11Display = nil then
+    Result := 0
+  else
+    Result := PtrUInt(FX11Display.GetX11Window);
+end;
+
 function TX11Console.GetInformation: string;
 begin
   if FX11Display = nil then

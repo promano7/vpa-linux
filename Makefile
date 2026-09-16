@@ -48,12 +48,17 @@ build: ptc
 	@echo ">> Done: $(BIN)"
 
 ## ptc  : rebuild the ptc backend WITHOUT the DGA extension (avoids depending on
-##        libXxf86dga). Rebuilt only when the vendored source changes.
+##        libXxf86dga), plus the vendored ptcwrapper/ptceventqueue (WAYLAND.md,
+##        T5.3b: ptc's console interface gained GetX11WindowID, so the system
+##        ptcwrapper.ppu no longer matches). Rebuilt only when the vendored
+##        source changes.
 ##        Note: ptc is plain FPC code (not -Mtp), so it does NOT use @vpa.cfg.
-ptc: $(PTCUNITS)/ptc.ppu
-$(PTCUNITS)/ptc.ppu: $(PTCSRC)/ptc.pp $(wildcard $(PTCSRC)/*.pp) $(wildcard $(PTCSRC)/x11/*.inc) $(wildcard $(PTCSRC)/x11/*.pp) $(wildcard $(PTCSRC)/core/*.inc) $(wildcard $(PTCSRC)/core/*.pp)
+PTCFLAGS = -O2 -Fi$(PTCSRC) -Fi$(PTCSRC)/x11 -Fi$(PTCSRC)/core -Fu$(PTCSRC)
+ptc: $(PTCUNITS)/ptcwrapper.ppu
+$(PTCUNITS)/ptcwrapper.ppu: $(PTCSRC)/ptc.pp $(wildcard $(PTCSRC)/*.pp) $(wildcard $(PTCSRC)/x11/*.inc) $(wildcard $(PTCSRC)/x11/*.pp) $(wildcard $(PTCSRC)/core/*.inc) $(wildcard $(PTCSRC)/core/*.pp)
 	@mkdir -p $(PTCUNITS)
-	$(FPC) -O2 -Fi$(PTCSRC) -Fi$(PTCSRC)/x11 -Fi$(PTCSRC)/core -FU$(PTCUNITS) $(PTCSRC)/ptc.pp
+	$(FPC) $(PTCFLAGS) -FU$(PTCUNITS) $(PTCSRC)/ptc.pp
+	$(FPC) $(PTCFLAGS) -FU$(PTCUNITS) $(PTCSRC)/ptcwrapper.pp
 	@echo ">> ptc rebuilt without DGA in $(PTCUNITS)/"
 
 ## debug : build with line info (-gl) for debugging with gdb (backtraces)

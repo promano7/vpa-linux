@@ -48,6 +48,7 @@ type
     function GetName: string; virtual; abstract;
     function GetTitle: string; virtual; abstract;
     function GetInformation: string; virtual; abstract;
+    function GetX11WindowID: PtrUInt; virtual; { VPA-Linux: 0 salvo en X11 }
 
     function GetOpenGL_Enabled: Boolean; virtual; abstract;
     procedure SetOpenGL_Enabled(AValue: Boolean); virtual; abstract;
@@ -151,6 +152,12 @@ constructor TPTCBaseConsole.Create;
 begin
   FReleaseEnabled := False;
   FOpenGLAttributes := TPTCOpenGLAttributes.Create;
+end;
+
+{ VPA-Linux: las consolas sin ventana X devuelven 0. }
+function TPTCBaseConsole.GetX11WindowID: PtrUInt;
+begin
+  Result := 0;
 end;
 
 procedure TPTCBaseConsole.InternalResize(AWidth, AHeight: Integer);
