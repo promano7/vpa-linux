@@ -1068,16 +1068,41 @@ La fase más delicada de todas, porque no aporta ninguna funcionalidad nueva y
 puede romper lo que ya funciona. La meta es **comportamiento idéntico, bit a
 bit**, con `ptcgraph` accedido a través del `.so`.
 
+> **Planificación (2026-09-16).** Cómo se concilia esta fase con la regla 5:
+> **la Fase 5 no toca el ejecutable.** Ni `VPA/`, ni `UNIT/`, ni `vpa.cfg`.
+> `build/VPA` sigue enlazando `ptcgraph` y `xfocus` estáticos, y el `.so` es un
+> artefacto nuevo que solo ejercita el arnés de T5.11. Por construcción, X11 no
+> puede empeorar. El código Xlib de `UNIT/xfocus.pas` **no se traslada, se
+> reescribe** en el plugin en su forma ABI (solo lo que sobrevive según D-08);
+> `xfocus.pas` sigue intacto en el ejecutable hasta que T6.8 lo borra. La
+> convivencia dura una fase y no es un segundo camino dentro de VPA (regla 2),
+> porque VPA no lo usa: es el destino, ya construido y probado, del cambio de la
+> Fase 6. Con la misma lectura se han corregido T5.1 (los `.ppu` de `build/`
+> no son PIC), T5.6, T5.7 y T5.8 (posterior a D-10) y se ha añadido T5.3b.
+
 - [ ] **T5.1** — Crear `plugins.cfg` para compilar los `.so`: `{$mode objfpc}`,
-      código independiente de posición, salida a `build/plugins/`, rutas de
-      unidades a `VENDOR/` y `build/ptcunits/`. **No** hereda `-Mtp` ni las
-      comprobaciones desactivadas de `vpa.cfg`: durante el desarrollo los
-      plugins se compilan con las comprobaciones **activadas**.
+      código independiente de posición, salida a `build/plugins/`. **No**
+      hereda `-Mtp` ni las comprobaciones desactivadas de `vpa.cfg`: durante
+      el desarrollo el código propio de `BACKENDS/` se compila con las
+      comprobaciones **activadas**.
+      *Corrección (2026-09-16):* el plan original decía «rutas de unidades a
+      `build/ptcunits/`», pero esos `.ppu` no son PIC y no pueden entrar en un
+      `.so`. El plugin necesita su **propia compilación de `ptc` y `ptcgraph`
+      con `-Cg`**, en `build/plugins/units/`, hecha por un objetivo de
+      `Makefile` aparte con las mismas opciones que hoy (`-O2`, comprobaciones
+      desactivadas) para que el resultado sea píxel-idéntico. `plugins.cfg`
+      con comprobaciones activadas se aplica solo a `BACKENDS/`.
 - [ ] **T5.2** — Añadir al `Makefile` los objetivos `plugins`, `x11-plugin` y
       (más adelante) `wayland-plugin`, respetando `.NOTPARALLEL` y la
       dependencia con el objetivo `ptc` existente.
 - [ ] **T5.3** — `BACKENDS/X11/vpagraph_x11.lpr`: biblioteca que exporta
       únicamente `VPAGraph_GetInterface`.
+- [ ] **T5.3b** — Vendorizar `ptcwrapper.pp` (de fpcsrc 3.2.2, misma LGPL y
+      mismo aviso de modificación que `ptcgraph.pp`) y añadir un método
+      `X11WindowID` a `TX11Console` de `VENDOR/ptc/` con su paso a través en
+      el wrapper (decisión D-18). Hoy se enlaza el `ptcwrapper.ppu` **del
+      sistema** contra nuestro `ptc` vendorizado; vendorizarlo también cierra
+      esa dependencia implícita.
 - [ ] **T5.4** — `BACKENDS/X11/vpagraph_x11_impl.pas`: adaptadores `cdecl` que
       envuelven `ptcgraph`. Cada uno con su `try..except` propio, porque
       **ninguna excepción puede cruzar** (regla 3.4). Traducción de shortstring:
@@ -1086,17 +1111,27 @@ bit**, con `ptcgraph` accedido a través del `.so`.
       `TVPAGraphInitParams` a `VPAForceScale` + `InitGraph(D8bit, m640x480, '')`;
       `Shutdown` llama a `CloseGraph`. Conservar la protección de 3.67.5 contra
       `SetGraphMode` destruyendo la ventana.
-- [ ] **T5.6** — **Trasladar `UNIT/xfocus.pas` al plugin.** Todo el código Xlib
-      pasa a `BACKENDS/X11/`; en el ejecutable no queda ni un `uses xlib`. La
-      conexión X persistente y el cursor en blanco viven ahora dentro del `.so`,
-      que es exactamente donde deben estar.
+- [ ] **T5.6** — **Reescribir en el plugin lo que sobrevive de
+      `UNIT/xfocus.pas`** (`BACKENDS/X11/vpagraph_x11_window.pas`): conexión X
+      persistente propia (ptc no llama a `XInitThreads` y su hilo es dueño de
+      su `Display`; el XID de la ventana es global al servidor y basta con él),
+      cursor en blanco, foco de teclado, pantalla completa por
+      `_NET_WM_STATE`, «puntero dentro» y modificadores. Sin `FindWin` por
+      título: la ventana la da T5.3b. `UNIT/xfocus.pas` **no se toca**; lo
+      elimina T6.8.
 - [ ] **T5.7** — Implementar el bloque de ventana/foco/escala de la ABI (T2.10)
-      sobre ese código trasladado, **conservando la semántica de `VPA_SCALE`
-      completa**, incluida la interpretación heredada de 1..20 como
-      multiplicador.
-- [ ] **T5.8** — Implementar el bloque de teclado y ratón (T2.11) sobre
-      `ptccrt` y `ptcmouse`, incluidos `PTCLastKbdFlags`, `PTCQuitNoSave` y la
-      emulación por software del rango del ratón.
+      sobre ese código. La interpretación de `VPA_SCALE` (incluida la heredada
+      de 1..20 como multiplicador) **se queda en el núcleo** (T2.10 y T6.x): al
+      plugin le llega `ScalePercent`, que traduce a `VPAForceScale`, y
+      `Fullscreen`, que traduce al estado `_NET_WM_STATE_FULLSCREEN`.
+- [ ] **T5.8** — Implementar el bloque de teclado y ratón (T2.11).
+      *Aclaración (2026-09-16), a la luz de D-10, posterior a esta tarea:* el
+      plugin **no usa `ptccrt` ni `ptcmouse`**; bombea
+      `PTCWrapperObject.NextEvent` él mismo y convierte `IPTCKeyEvent` (código,
+      `Unicode`, modificadores), `IPTCMouseEvent` y `IPTCCloseEvent` a
+      `TVPAGraphEvent`, con `KeyCode` = código ptc tal cual. `PTCLastKbdFlags`,
+      `PTCQuitNoSave` y la emulación por software del rango del ratón son
+      semántica del núcleo y se reescriben en T6.6 y T6.7.
 - [ ] **T5.9** — **Resolver la cuestión de los hilos.** `ptcgraph` levanta un
       hilo para el bucle de eventos X11 y por eso `cthreads` va el primero en
       `VPA/VPA.PAS`. Al mudarse `ptcgraph` al `.so`, hay que determinar
@@ -1571,6 +1606,8 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-14 | 2026-09-15 | El backend se elige **solo** con `VPA_GRAPH_BACKEND`; no hay opción de línea de comandos | Las opciones `/X` de VPA son de un carácter y `Parameters` es código original; una opción larga nueva abriría un segundo analizador. Si algún día hace falta, se añade en `VPA.PAS` junto a `--graph-info` |
 | D-15 | 2026-09-15 | El «controlador de vídeo subyacente» de `--graph-info` no entra en la ABI: cada plugin lo declara en `BackendVersion` (p. ej. `1.0 (ptcgraph/PTCPas)`) y el informe imprime el entorno de sesión completo | No se puede consultar sin `Init`, y `--graph-info` no abre ventana; un campo nuevo en la v1 sería trabajo para todos los backends por un dato informativo |
 | D-16 | 2026-09-15 | `VPA_FULLSCREEN` y `VPA_VIDEO` no se documentan en `--help` hasta T10.4 | Hoy nadie las lee (`xfocus.FullscreenRequested` no tiene llamadores); documentarlas sería mentir |
+| D-18 | 2026-09-16 | La ventana X del plugin se obtiene de ptc por un método `X11WindowID` añadido a `TX11Console` y expuesto por un `ptcwrapper.pp` vendorizado; no se busca por título | ptcgraph no expone la ventana (`FConsole` y `FX11Display` son privados) y `FindWin` por título era un sondeo de 20×50 ms con respaldo laxo, justo lo que D-08 quería eliminar. Tres líneas de parche, en la línea del que ya existe para DGA |
+| D-19 | 2026-09-16 | `BackendVersion` del plugin X11 es `1.0 (ptcgraph, PTCPas 0.99.15, FPC 3.2.2)`, compuesto en tiempo de compilación con `PTCPAS_VERSION` y `{$I %FPCVERSION%}` | Desarrolla D-15. Para el `--graph-info` que lee Alexander, saber con qué PTCPas y qué compilador se hizo el `.so` que le falla vale mucho y no se desactualiza solo |
 | D-17 | 2026-09-15 | `--graph-info` se intercepta en `VPA.PAS`, antes de instalar `Terminate`; `--help` en `Parameters`, junto a `/?` | `Terminate` fuerza `ExitCode := 0` en todo `Halt`, y `--graph-info` tiene que salir con 1 cuando no hay backend. La ayuda no necesita código de salida y va con la de siempre |
 
 ---
