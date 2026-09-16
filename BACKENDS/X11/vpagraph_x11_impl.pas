@@ -16,9 +16,8 @@
   Lo que NO esta en esta unidad: el bloque de ventana/foco/escala (T5.6,
   T5.7: vpagraph_x11_window.pas) y el de teclado y raton (T5.8:
   vpagraph_x11_input.pas). Esta unidad los engancha en el ciclo de vida y
-  los publica en VPAGraph_GetInterface. Hasta que exista el de entrada,
-  esas casillas quedan a nil y el cargador del nucleo rechaza el plugin, que
-  es lo correcto: un plugin sin entrada no es jugable. }
+  los publica en VPAGraph_GetInterface, que desde T5.8 rellena todas las
+  casillas de la ABI v1: el cargador del nucleo ya lo acepta. }
 unit vpagraph_x11_impl;
 
 {$MODE OBJFPC}{$H+}
@@ -48,7 +47,7 @@ function Initialized: Boolean;
 implementation
 
 uses
-  ptc, ptcgraph, vpagraph_x11_window;
+  ptc, ptcgraph, vpagraph_x11_window, vpagraph_x11_input;
 
 const
   BackendNameStr    : PAnsiChar = 'x11';
@@ -750,8 +749,11 @@ begin
     SetFullscreen      := @X11SetFullscreen;
     GetWindowSize      := @X11GetWindowSize;
 
-    { T2.11 (PollEvent, GetModifiers, GetMouseState, SetMousePos, ShowMouse)
-      queda a nil hasta T5.8. }
+    PollEvent          := @X11PollEvent;
+    GetModifiers       := @X11GetModifiers;
+    GetMouseState      := @X11GetMouseState;
+    SetMousePos        := @X11SetMousePos;
+    ShowMouse          := @X11ShowMouse;
 
     DumpFrame          := @X11DumpFrame;
   end;

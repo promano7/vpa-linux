@@ -36,10 +36,10 @@ unit vpagraph_x11_window;
 
 interface
 
+{ Los tipos de la ABI se toman de vpagraph_x11_impl y no de un segundo
+  $I vpagraph_abi.inc: dos inclusiones son dos tipos distintos para FPC. }
 uses
-  x, xlib;
-
-{$I vpagraph_abi.inc}
+  x, xlib, vpagraph_x11_impl;
 
 { --- ciclo de vida de la conexion y la ventana (los llama vpagraph_x11_impl) --- }
 
@@ -81,8 +81,7 @@ function X11GetWindowSize(Width, Height: PVPAGraphInt32): TVPAGraphInt32; cdecl;
 implementation
 
 uses
-  SysUtils, xutil, xatom, ctypes, baseunix, ptcwrapper, ptcgraph,
-  vpagraph_x11_impl;
+  SysUtils, xutil, xatom, ctypes, baseunix, ptcwrapper, ptcgraph;
 
 var
   gDpy: PDisplay = nil;          { conexion persistente del plugin }

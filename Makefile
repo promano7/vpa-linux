@@ -44,7 +44,7 @@ X11PLUGIN = $(PLUGDIR)/libvpagraph-x11.so
 X11TESTS  = build/x11
 
 .PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
-        plugin-units x11-plugin plugins threads-test nodisplay-test window-test
+        plugin-units x11-plugin plugins threads-test nodisplay-test window-test input-test
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -165,6 +165,20 @@ window-test: x11-plugin
 	@grep -q '^0 unfreed memory blocks' $(X11TESTS)/window_test.heaptrc \
 	  || { echo ">> heaptrc reports leaks, see $(X11TESTS)/window_test.heaptrc"; exit 1; }
 	@echo ">> window-test passed, no leaks"
+
+## input-test : T5.8: the T2.11 keyboard/mouse block of the X11 plugin under Xvfb,
+##              with xdotool injecting keys and mouse at 200% scale: events in
+##              surface coordinates, key codes and Unicode, modifiers, Inside bit,
+##              SetMousePos, ShowMouse and WM_DELETE_WINDOW -> CLOSE.
+input-test: x11-plugin
+	@mkdir -p $(X11TESTS)
+	$(FPC) -MOBJFPC -gl -gh -FiGRAPH -FU$(X11TESTS) -o$(X11TESTS)/input_test TESTS/x11/input_test.lpr
+	rm -f $(X11TESTS)/input_test.heaptrc
+	HEAPTRC=log=$(X11TESTS)/input_test.heaptrc xvfb-run -a -s "-screen 0 1600x1200x24" \
+	  ./$(X11TESTS)/input_test $(abspath $(X11PLUGIN))
+	@grep -q '^0 unfreed memory blocks' $(X11TESTS)/input_test.heaptrc \
+	  || { echo ">> heaptrc reports leaks, see $(X11TESTS)/input_test.heaptrc"; exit 1; }
+	@echo ">> input-test passed, no leaks"
 
 ## abi-plugins : build the six ABI test plugins (stub + five faulty ones) into
 ##               build/abi/, and check that vpagraph_abi.inc compiles both from
