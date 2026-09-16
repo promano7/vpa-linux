@@ -32,6 +32,15 @@
        prefijo dado en vez del de VPA_GRAPH_DUMP. La usa el plugin X11
        (BACKENDS/X11/) para implementar DumpFrame de la ABI, que recibe el
        prefijo del llamante (T5.4 de WAYLAND.md).
+    6. El hilo de ptc (PTCWrapperObject) NO se crea en la initialization ni
+       se destruye en la finalization cuando la unidad vive dentro de una
+       biblioteca (IsLibrary): se crea al primer InitGraph y se destruye en
+       CloseGraph. Motivo: la finalization de un .so corre dentro de dlclose,
+       que tiene cogido el cerrojo del cargador dinamico, y el hilo, al
+       terminar, hace pthread_exit, que en glibc carga libgcc_s.so.1 con
+       dlopen y espera ese mismo cerrojo: interbloqueo seguro, medido en
+       T5.9 (docs/threads-and-rtl.md). En un ejecutable (IsLibrary = False)
+       el comportamiento es el original, sin cambios.
   El resto del fichero es el original de FPC. Sigue bajo la LGPL modificada
   con excepcion de enlazado estatico de Free Pascal; se conservan intactos los
   avisos de copyright de arriba. Este aviso cumple el requisito de la LGPL de
@@ -892,6 +901,11 @@ begin
     ConsoleWidth := (AWidth * vpaScale) div 100;
     ConsoleHeight := (AHeight * vpaScale) div 100;
   end;
+
+  { VPA (cambio 6): dentro de una biblioteca el hilo se crea aqui, no al
+    cargar el .so. En un ejecutable ya existe desde la initialization. }
+  if PTCWrapperObject = nil then
+    PTCWrapperObject := TPTCWrapperThread.Create;
 
   if FullscreenGraph then
     PTCWrapperObject.Option('fullscreen output')
@@ -2708,6 +2722,15 @@ end;
       end;
     RestoreVideoState;
     isgraphmode := false;
+    { VPA (cambio 6): en una biblioteca el hilo de ptc muere con CloseGraph,
+      fuera de dlclose. En un ejecutable sigue vivo hasta la finalization. }
+    if IsLibrary and (PTCWrapperObject <> nil) then
+      begin
+        PTCWrapperObject.Terminate;
+        PTCWrapperObject.WaitFor;
+        PTCWrapperObject.Free;
+        PTCWrapperObject := nil;
+      end;
  end;
 
   procedure FillCommonVESA16(var mode: TModeInfo);
@@ -3053,8 +3076,19 @@ end;
      if assigned(ModeList) then
        exit;
 
-     PTCModeList := Copy(PTCWrapperObject.Modes);
-     SortModes(Low(PTCModeList), High(PTCModeList));
+     { VPA (cambio 6): dentro de una biblioteca no hay hilo de ptc hasta el
+       primer InitGraph, asi que no se enumeran los modos de pantalla
+       completa del servidor. Solo condicionan el doblado de 320x200 en
+       pantalla completa, Hercules y los modos de 800x600 en adelante; el
+       640x480 que usa VPA se registra siempre. Ventaja anadida: dlopen del
+       plugin ya no necesita una sesion grafica. }
+     if PTCWrapperObject <> nil then
+       begin
+         PTCModeList := Copy(PTCWrapperObject.Modes);
+         SortModes(Low(PTCModeList), High(PTCModeList));
+       end
+     else
+       PTCModeList := nil;
 
      Has320x200 := ContainsExactResolution(320, 200);
      Has320x240 := ContainsExactResolution(320, 240);
@@ -3794,10 +3828,16 @@ initialization
 {$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
   PTCFormat32 := TPTCFormatFactory.CreateNew(32, $00FF0000, $0000FF00, $000000FF);
 {$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
-  PTCWrapperObject := TPTCWrapperThread.Create;
+  { VPA (cambio 6): en una biblioteca el hilo lo crea InitGraph }
+  if not IsLibrary then
+    PTCWrapperObject := TPTCWrapperThread.Create;
   InitializeGraph;
 finalization
-  PTCWrapperObject.Terminate;
-  PTCWrapperObject.WaitFor;
-  PTCWrapperObject.Free;
+  if PTCWrapperObject <> nil then
+    begin
+      PTCWrapperObject.Terminate;
+      PTCWrapperObject.WaitFor;
+      PTCWrapperObject.Free;
+      PTCWrapperObject := nil;
+    end;
 end.

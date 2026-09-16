@@ -41,9 +41,10 @@ PLUGDIR   = build/plugins
 PLUGUNITS = $(PLUGDIR)/units
 PLUGCFG   = plugins.cfg
 X11PLUGIN = $(PLUGDIR)/libvpagraph-x11.so
+X11TESTS  = build/x11
 
 .PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
-        plugin-units x11-plugin plugins
+        plugin-units x11-plugin plugins threads-test
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -99,7 +100,7 @@ run: build
 ## clean : remove build artifacts
 clean:
 	rm -f build/*.ppu build/*.o build/*.rsj build/*.a $(BIN)
-	rm -rf $(PKGDIR) $(ABIDIR) $(PLUGDIR)
+	rm -rf $(PKGDIR) $(ABIDIR) $(PLUGDIR) $(X11TESTS)
 	@echo ">> Cleaned."
 
 ## plugin-units : PIC build of the vendored ptc, ptcwrapper and ptcgraph for the
@@ -121,6 +122,23 @@ x11-plugin: plugin-units
 
 ## plugins : build every backend plugin (today: x11)
 plugins: x11-plugin
+
+## threads-test : the T5.9 experiment (docs/threads-and-rtl.md): load the X11
+##                plugin from a harness built WITHOUT and WITH cthreads, cycle
+##                Init/Shutdown 20 times under Xvfb, dlclose, and check the
+##                harness heap. Both variants must print PASS and leak nothing.
+threads-test: x11-plugin
+	@mkdir -p $(X11TESTS)
+	$(FPC) -MOBJFPC -gl -gh -FiGRAPH -FU$(X11TESTS) -o$(X11TESTS)/threads_test TESTS/x11/threads_test.lpr
+	$(FPC) -MOBJFPC -gl -gh -FiGRAPH -FU$(X11TESTS) -o$(X11TESTS)/threads_test_ct -dUSE_CTHREADS TESTS/x11/threads_test.lpr
+	@for t in threads_test threads_test_ct; do \
+	  rm -f $(X11TESTS)/$$t.heaptrc; \
+	  HEAPTRC=log=$(X11TESTS)/$$t.heaptrc xvfb-run -a -s "-screen 0 1024x768x24" \
+	    ./$(X11TESTS)/$$t $(abspath $(X11PLUGIN)) 20 || exit 1; \
+	  grep -q '^0 unfreed memory blocks' $(X11TESTS)/$$t.heaptrc \
+	    || { echo ">> heaptrc reports leaks, see $(X11TESTS)/$$t.heaptrc"; exit 1; }; \
+	done
+	@echo ">> threads-test passed, no leaks"
 
 ## abi-plugins : build the six ABI test plugins (stub + five faulty ones) into
 ##               build/abi/, and check that vpagraph_abi.inc compiles both from
