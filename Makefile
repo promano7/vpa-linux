@@ -44,7 +44,7 @@ X11PLUGIN = $(PLUGDIR)/libvpagraph-x11.so
 X11TESTS  = build/x11
 
 .PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
-        plugin-units x11-plugin plugins threads-test nodisplay-test
+        plugin-units x11-plugin plugins threads-test nodisplay-test window-test
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -152,6 +152,19 @@ nodisplay-test: x11-plugin
 	@grep -q '^0 unfreed memory blocks' $(X11TESTS)/nodisplay_test.heaptrc \
 	  || { echo ">> heaptrc reports leaks, see $(X11TESTS)/nodisplay_test.heaptrc"; exit 1; }
 	@echo ">> nodisplay-test passed, no leaks"
+
+## window-test : T5.6/T5.7: the T2.10 window block of the X11 plugin under Xvfb:
+##               GetScreenSize before Init, window size per ScalePercent, keyboard
+##               focus, _NET_WM_STATE_FULLSCREEN set/cleared, Suspend/Resume.
+window-test: x11-plugin
+	@mkdir -p $(X11TESTS)
+	$(FPC) -MOBJFPC -gl -gh -FiGRAPH -FU$(X11TESTS) -o$(X11TESTS)/window_test TESTS/x11/window_test.lpr
+	rm -f $(X11TESTS)/window_test.heaptrc
+	HEAPTRC=log=$(X11TESTS)/window_test.heaptrc xvfb-run -a -s "-screen 0 1600x1200x24" \
+	  ./$(X11TESTS)/window_test $(abspath $(X11PLUGIN))
+	@grep -q '^0 unfreed memory blocks' $(X11TESTS)/window_test.heaptrc \
+	  || { echo ">> heaptrc reports leaks, see $(X11TESTS)/window_test.heaptrc"; exit 1; }
+	@echo ">> window-test passed, no leaks"
 
 ## abi-plugins : build the six ABI test plugins (stub + five faulty ones) into
 ##               build/abi/, and check that vpagraph_abi.inc compiles both from

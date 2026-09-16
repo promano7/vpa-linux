@@ -43,6 +43,11 @@
        su mensaje, y el Open publico lo vuelve a lanzar EN EL HILO LLAMANTE,
        donde ptcgraph si puede capturarlo (WAYLAND.md, T5.5b). El original
        tenia el campo Success pero nunca lo ponia a False.
+    3. Anadidos ConsoleWidth y ConsoleHeight: tamano de la consola (la
+       ventana que ptc pinta, 640x480 escalado), 0 si no esta abierta. El
+       plugin X11 los usa para pasar el raton de pixeles de consola a
+       coordenadas de superficie con la misma division que hacia
+       xfocus.MapMouseToSurface (WAYLAND.md, T5.7/T5.8).
   Se vendoriza junto con ptceventqueue.pp (sin cambios) porque el ptc de
   VENDOR/ tiene una interfaz distinta a la del sistema y el ptcwrapper.ppu
   precompilado ya no le vale. El resto del fichero es el original de FPC y
@@ -172,6 +177,11 @@ type
     { VPA-Linux: XID de la ventana X11 de la consola, 0 si no esta abierta.
       Valido solo despues de que Open haya vuelto; ver x11consolei.inc. }
     function X11WindowID: PtrUInt;
+
+    { VPA-Linux: tamano de la consola abierta (pixeles de ventana), 0 si no
+      lo esta. Es lo que ptc usa como origen de las coordenadas de raton. }
+    function ConsoleWidth: Integer;
+    function ConsoleHeight: Integer;
 
     property IsOpen: Boolean read FOpen;
   end;
@@ -632,6 +642,22 @@ function TPTCWrapperThread.X11WindowID: PtrUInt;
 begin
   if Assigned(FConsole) then
     Result := FConsole.GetX11WindowID
+  else
+    Result := 0;
+end;
+
+function TPTCWrapperThread.ConsoleWidth: Integer;
+begin
+  if FOpen and Assigned(FConsole) then
+    Result := FConsole.Width
+  else
+    Result := 0;
+end;
+
+function TPTCWrapperThread.ConsoleHeight: Integer;
+begin
+  if FOpen and Assigned(FConsole) then
+    Result := FConsole.Height
   else
     Result := 0;
 end;

@@ -15,14 +15,18 @@
 
   Lo que NO esta en esta unidad: el bloque de ventana/foco/escala (T5.6,
   T5.7: vpagraph_x11_window.pas) y el de teclado y raton (T5.8:
-  vpagraph_x11_input.pas). Hasta que existan, VPAGraph_GetInterface deja
-  esas casillas a nil y el cargador del nucleo rechaza el plugin, que es lo
-  correcto: un plugin sin entrada no es jugable. }
+  vpagraph_x11_input.pas). Esta unidad los engancha en el ciclo de vida y
+  los publica en VPAGraph_GetInterface. Hasta que exista el de entrada,
+  esas casillas quedan a nil y el cargador del nucleo rechaza el plugin, que
+  es lo correcto: un plugin sin entrada no es jugable. }
 unit vpagraph_x11_impl;
 
 {$MODE OBJFPC}{$H+}
 
 interface
+
+uses
+  SysUtils;
 
 {$I vpagraph_abi.inc}
 
@@ -34,13 +38,17 @@ function VPAGraph_GetInterface(RequestedABIVersion: TVPAGraphUInt32;
 { Ultimo error del plugin, para las otras unidades vpagraph_x11_*. }
 procedure SetError(Code: TVPAGraphInt32; const Msg: AnsiString);
 
+{ Guarda una excepcion capturada como error interno. Se llama SOLO desde un
+  bloque except: E.Message vive en el RTL de este .so y no sale de aqui. }
+procedure InternalError(const Where: AnsiString; E: Exception);
+
 { True entre un Init correcto y el Shutdown siguiente. }
 function Initialized: Boolean;
 
 implementation
 
 uses
-  SysUtils, ptc, ptcgraph;
+  ptc, ptcgraph, vpagraph_x11_window;
 
 const
   BackendNameStr    : PAnsiChar = 'x11';
@@ -83,8 +91,6 @@ begin
   Initialized := GInitialized;
 end;
 
-{ Guarda una excepcion capturada como error interno. Se llama SOLO desde un
-  bloque except: E.Message vive en el RTL de este .so y no sale de aqui. }
 procedure InternalError(const Where: AnsiString; E: Exception);
 begin
   SetError(VPAG_ERR_INTERNAL, Where + ': ' + E.ClassName + ': ' + E.Message);
@@ -162,7 +168,20 @@ begin
       Exit(VPAG_ERR_VIDEO);
     end;
 
+    { T5.6/T5.7: conexion X propia del plugin, foco de teclado y, si se
+      pidio, pantalla completa. Es la terna GrabInputFocus +
+      ApplyWindowScale + RequestFullscreen que VPA hacia tras InitGraph. }
+    if not WindowConnect then
+    begin
+      CloseGraph;
+      SetError(VPAG_ERR_VIDEO, 'Init: cannot open a second X connection');
+      Exit(VPAG_ERR_VIDEO);
+    end;
     GInitialized := True;
+    if Params^.Fullscreen <> VPAG_FALSE then
+      X11SetFullscreen(VPAG_TRUE);   { solo anota: la ventana la toma Attach }
+    WindowAttach;
+
     SetError(VPAG_OK, '');
     Result := VPAG_OK;
   except
@@ -180,7 +199,9 @@ begin
     if GInitialized then
     begin
       GInitialized := False;   { antes de cerrar: idempotente aunque falle }
+      WindowDetach;
       CloseGraph;
+      WindowDisconnect;
     end;
     Result := VPAG_OK;
   except
@@ -231,8 +252,10 @@ end;
   SetGraphMode(GetGraphMode) que VPA usa en ocho sitios (inventario, 1.1)
   para ejecutar algo externo y volver. RestoreCrtMode cierra la ventana de
   ptc y SetGraphMode(GetGraphMode) la vuelve a abrir; el contenido se pierde
-  y VPA redibuja. En T5.7 Resume rehace ademas foco, escala y pantalla
-  completa, que hoy hace la terna de xfocus que siempre sigue a esta pareja. }
+  y VPA redibuja. Resume rehace ademas el foco y la pantalla completa
+  (WindowAttach, T5.7), que hoy hace la terna de xfocus que siempre sigue a
+  esta pareja; la escala no hay que rehacerla, VPAForceScale sigue puesto y
+  ptc vuelve a abrir la consola con ella. }
 function X11Suspend: TVPAGraphInt32; cdecl;
 begin
   try
@@ -241,6 +264,7 @@ begin
       SetError(VPAG_ERR_INIT, 'Suspend before Init');
       Exit(VPAG_ERR_INIT);
     end;
+    WindowDetach;
     RestoreCrtMode;
     Result := VPAG_OK;
   except
@@ -261,6 +285,13 @@ begin
       Exit(VPAG_ERR_INIT);
     end;
     SetGraphMode(GetGraphMode);
+    if ptcgraph.GraphResult <> grOk then
+    begin
+      SetError(VPAG_ERR_VIDEO, 'Resume: SetGraphMode failed: ' +
+        GraphErrorMsg(ptcgraph.GraphResult));
+      Exit(VPAG_ERR_VIDEO);
+    end;
+    WindowAttach;
     Result := VPAG_OK;
   except
     on E: Exception do
@@ -715,9 +746,12 @@ begin
     SetTextJustify     := @X11SetTextJustify;
     InstallUserFont    := @X11InstallUserFont;
 
-    { T2.10 (GetScreenSize, SetFullscreen, GetWindowSize) y T2.11
-      (PollEvent, GetModifiers, GetMouseState, SetMousePos, ShowMouse) quedan
-      a nil hasta T5.7 y T5.8. }
+    GetScreenSize      := @X11GetScreenSize;
+    SetFullscreen      := @X11SetFullscreen;
+    GetWindowSize      := @X11GetWindowSize;
+
+    { T2.11 (PollEvent, GetModifiers, GetMouseState, SetMousePos, ShowMouse)
+      queda a nil hasta T5.8. }
 
     DumpFrame          := @X11DumpFrame;
   end;
