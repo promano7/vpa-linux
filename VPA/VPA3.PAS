@@ -80,7 +80,7 @@ procedure DrawPlanetYnfos;
 
 Implementation
 
-uses    Mouse,Keyboard,Screen,ptcgraph,StrF,VPA2,VPA4,Ini
+uses    Mouse,Keyboard,Screen,vpagraph,StrF,VPA2,VPA4,Ini
 
 {$IFDEF VPACC}
      ,Hullfunc

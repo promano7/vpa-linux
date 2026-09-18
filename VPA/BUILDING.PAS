@@ -39,7 +39,7 @@ PROCEDURE GetPillage(ShipNum : int);
 
 Implementation
 
-uses    ptcgraph,Screen,StrF,TCombat,Keyboard,Mouse,ExtFeat,vpa4
+uses    vpagraph,Screen,StrF,TCombat,Keyboard,Mouse,ExtFeat,vpa4
 {$IFDEF VPACC},
         Hullfunc
 {$ENDIF};

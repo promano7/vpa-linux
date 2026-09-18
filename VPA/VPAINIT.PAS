@@ -29,7 +29,7 @@ function  StartVPA : boolean;
 Implementation
 
 uses
-  StrF,ptcgraph,{$IFDEF UNIX}xfocus,{$ENDIF}Screen,Mouse,Keyboard,Config,MsgRead,Messages,Report,ExtFeat,Ini,
+  StrF,vpagraph,Screen,Mouse,Keyboard,Config,MsgRead,Messages,Report,ExtFeat,Ini,
 {$IFDEF VPACC}
         PHostM,Hullfunc,
 {$ENDIF}
@@ -1344,6 +1344,10 @@ procedure OpenGraph;
       err:=GraphResult;
       if err=grOk then Exit;
       Writeln('Graphics initialization failure'{,GraphErrorMsg(err)});
+      { El motivo de cada backend que se intento y fallo (no encontrado, ABI
+        incompatible, sin servidor grafico...): sin el, el mensaje de arriba no
+        dice nada que sirva para arreglarlo. }
+      if VPAGraphInitDetail<>'' then Writeln(VPAGraphInitDetail);
       Halt;
     end;
   begin
@@ -1387,12 +1391,9 @@ procedure OpenGraph;
           modo nativo directamente. 640x480, 256 colores. --- }
     gd := D8bit;
     gm := m640x480;
-    {$IFDEF UNIX}
-    { Resolver la escala de ventana (VPA_SCALE: defecto 2, 1=nativo, fullscreen,
-      o N) y pasarla a ptcgraph antes de abrir la ventana. ptcgraph agranda la
-      "consola" manteniendo la superficie en 640x480 (ptc la escala). }
-    ptcgraph.VPAForceScale := xfocus.ResolveScale;
-    {$ENDIF}
+    { La escala de ventana (VPA_SCALE: defecto 2, 1=nativo, fullscreen, o N) la
+      resuelve vpagraph dentro de InitGraph, que tambien elige y carga el
+      backend grafico (WAYLAND.md, Fase 6). }
     InitGraph(gd, gm, '');
     GrErr(-1);
     GrMode:=Yes;
@@ -1864,9 +1865,8 @@ function StartVPA : boolean;
       InitHelp;
       { (apagaba CapsLock via BIOS; no aplica en Linux) }
       OpenGraph;
-      {$IFDEF UNIX}GrabInputFocus;{$ENDIF}   { reclamar foco de teclado para la ventana ptcgraph }
-      {$IFDEF UNIX}ApplyWindowScale;{$ENDIF}  { detectar ventana grande y activar escalado del raton }
-      {$IFDEF UNIX}if xfocus.WantFullscreen then RequestFullscreen;{$ENDIF}  { VPA_SCALE=fullscreen: pantalla completa via gestor (tapa el panel) }
+      { foco de teclado, escalado del raton y pantalla completa: los pone el
+        backend al abrir la ventana (antes xfocus, aqui) }
       InitMouse;
       if NewTurn then CheckOutMap;
     end;

@@ -8,9 +8,11 @@ CFG   = vpa.cfg
 MAIN  = VPA/VPA.PAS
 BIN   = build/VPA
 
-# Vendored ptc backend, recompiled WITHOUT the X11 DGA extension (see VENDOR/ptc).
-# It is rebuilt into build/ptcunits and vpa.cfg puts it before the system ptc, so
-# that the binary doesn't depend on the obsolete libXxf86dga (dropped by Arch).
+# Vendored ptc backend, recompiled WITHOUT the X11 DGA extension (see VENDOR/ptc),
+# so that nothing depends on the obsolete libXxf86dga (dropped by Arch).
+# Since Phase 6 of WAYLAND.md the executable does NOT link ptc any more: the X11
+# plugin has its own PIC build (plugin-units). build/ptcunits is only used by the
+# 'direct' reference variants of the tests (direct-units).
 PTCSRC   = VENDOR/ptc
 PTCUNITS = build/ptcunits
 
@@ -42,6 +44,11 @@ PLUGUNITS = $(PLUGDIR)/units
 PLUGCFG   = plugins.cfg
 X11PLUGIN = $(PLUGDIR)/libvpagraph-x11.so
 X11TESTS  = build/x11
+# ptcgraph/ptccrt/ptcmouse built the way the executable linked them before
+# Phase 6 (-Mtp command line, checks off, non-PIC, against build/ptcunits). The
+# executable no longer uses them; they are the REFERENCE the 'direct' variants
+# of scene-test, graphapi-test and coreinput-test compare the plugin against.
+DIRECTUNITS = build/directunits
 # Pruebas del nucleo VPAGraph (Fase 6). Se compilan en -Mtp con las opciones
 # de vpa.cfg, porque lo que prueban es que el nucleo se consume desde ahi.
 CORETESTS = build/vpagraph
@@ -49,7 +56,7 @@ FPCCORE   = $(FPC) -Mtp -Ci- -Cr- -Co- -Ct- -vwn
 
 .PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
         plugin-units x11-plugin plugins threads-test nodisplay-test window-test input-test scene-test deps-test \
-        graphapi-test initgraph-test coreinput-test
+        graphapi-test initgraph-test coreinput-test direct-units
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -57,8 +64,11 @@ FPCCORE   = $(FPC) -Mtp -Ci- -Cr- -Co- -Ct- -vwn
 
 all: build
 
-## build : build the executable into build/VPA
-build: ptc
+## build : build the executable into build/VPA and the graphics backend plugins
+##         into build/plugins/. The executable links no graphics library: it
+##         loads <its own directory>/plugins/libvpagraph-<backend>.so at run
+##         time (WAYLAND.md), so the two always travel together.
+build: plugins
 	@mkdir -p build
 	$(FPC) @$(CFG) $(MAIN)
 	@cp -f LITT_VPA.CHR build/ 2>/dev/null || true
@@ -80,7 +90,7 @@ $(PTCUNITS)/ptcwrapper.ppu: $(PTCSRC)/ptc.pp $(wildcard $(PTCSRC)/*.pp) $(wildca
 	@echo ">> ptc rebuilt without DGA in $(PTCUNITS)/"
 
 ## debug : build with line info (-gl) for debugging with gdb (backtraces)
-debug: ptc
+debug: plugins
 	@mkdir -p build
 	$(FPC) @$(CFG) -gl -O- $(MAIN)
 	@echo ""
@@ -91,7 +101,7 @@ debug: ptc
 ##           together with the call trace of where it was allocated, and a leak
 ##           summary is printed on exit. Slower and noisier: use it to hunt
 ##           memory corruption, not for normal play.
-heaptrc: ptc
+heaptrc: plugins
 	@mkdir -p build
 	$(FPC) @$(CFG) -gl -gh -O- $(MAIN)
 	@echo ""
@@ -105,7 +115,7 @@ run: build
 ## clean : remove build artifacts
 clean:
 	rm -f build/*.ppu build/*.o build/*.rsj build/*.a $(BIN)
-	rm -rf $(PKGDIR) $(ABIDIR) $(PLUGDIR) $(X11TESTS)
+	rm -rf $(PKGDIR) $(ABIDIR) $(PLUGDIR) $(X11TESTS) $(CORETESTS) $(DIRECTUNITS)
 	@echo ">> Cleaned."
 
 ## plugin-units : PIC build of the vendored ptc, ptcwrapper and ptcgraph for the
@@ -118,6 +128,16 @@ $(PLUGUNITS)/ptcgraph.ppu: VENDOR/ptcgraph.pp $(wildcard VENDOR/*.inc) $(PTCSRC)
 	$(FPC) $(PTCFLAGS) -Cg -FU$(PLUGUNITS) $(PTCSRC)/ptcwrapper.pp
 	$(FPC) -O2 -Cg -FiVENDOR -Fu$(PLUGUNITS) -FU$(PLUGUNITS) VENDOR/ptcgraph.pp
 	@echo ">> PIC units for the plugins in $(PLUGUNITS)/"
+
+## direct-units : the pre-Phase-6 executable's ptcgraph, ptccrt and ptcmouse,
+##                into build/directunits/ (reference for the 'direct' tests).
+direct-units: $(DIRECTUNITS)/ptcmouse.ppu
+$(DIRECTUNITS)/ptcmouse.ppu: $(PTCUNITS)/ptcwrapper.ppu VENDOR/ptcgraph.pp VENDOR/ptccrt.pp VENDOR/ptcmouse.pp $(wildcard VENDOR/*.inc)
+	@mkdir -p $(DIRECTUNITS)
+	$(FPCCORE) -FiVENDOR -Fu$(PTCUNITS) -FU$(DIRECTUNITS) VENDOR/ptcgraph.pp
+	$(FPCCORE) -FiVENDOR -Fu$(PTCUNITS) -FU$(DIRECTUNITS) VENDOR/ptccrt.pp
+	$(FPCCORE) -FiVENDOR -Fu$(PTCUNITS) -FU$(DIRECTUNITS) VENDOR/ptcmouse.pp
+	@echo ">> reference units in $(DIRECTUNITS)/"
 
 ## x11-plugin : build the X11 backend plugin, build/plugins/libvpagraph-x11.so
 x11-plugin: plugin-units
@@ -195,13 +215,13 @@ deps-test: x11-plugin $(X11TESTS)/scene_test_plugin
 
 ## scene-test : T5.11, the acceptance criterion of Phase 5: the same scenes drawn
 ##              through the plugin (loaded with the real GRAPH/vpagraph_loader) and
-##              directly against the executable's ptcgraph (build/ptcgraph.ppu)
+##              directly against the reference ptcgraph (build/directunits)
 ##              must dump byte-identical frames and palettes.
 $(X11TESTS)/scene_test_plugin: TESTS/x11/scene_test.lpr $(wildcard GRAPH/*)
 	@mkdir -p $(X11TESTS)
 	$(FPC) -MOBJFPC -gl -FiGRAPH -FuGRAPH -FU$(X11TESTS) -o$@ TESTS/x11/scene_test.lpr
-scene-test: x11-plugin build $(X11TESTS)/scene_test_plugin
-	$(FPC) -MOBJFPC -gl -dDIRECT -FiGRAPH -Fubuild -Fu$(PTCUNITS) -FU$(X11TESTS) -o$(X11TESTS)/scene_test_direct TESTS/x11/scene_test.lpr
+scene-test: x11-plugin direct-units $(X11TESTS)/scene_test_plugin
+	$(FPC) -MOBJFPC -gl -dDIRECT -FiGRAPH -Fu$(DIRECTUNITS) -Fu$(PTCUNITS) -FU$(X11TESTS) -o$(X11TESTS)/scene_test_direct TESTS/x11/scene_test.lpr
 	rm -rf $(X11TESTS)/scenes && mkdir -p $(X11TESTS)/scenes/plugin $(X11TESTS)/scenes/direct
 	xvfb-run -a -s "-screen 0 1024x768x24" ./$(X11TESTS)/scene_test_plugin $(abspath $(X11PLUGIN)) \
 	  $(X11TESTS)/scenes/plugin/scene > $(X11TESTS)/scenes/plugin/log.txt 2>&1; \
@@ -223,10 +243,10 @@ scene-test: x11-plugin build $(X11TESTS)/scene_test_plugin
 ##                 draws the way VPA does, built twice: 'uses vpagraph' (core +
 ##                 plugin) and 'uses ptcgraph' (-dDIRECT). That one word is the
 ##                 only difference, and the dumps must be byte-identical.
-graphapi-test: x11-plugin build
+graphapi-test: x11-plugin direct-units
 	@mkdir -p $(CORETESTS)/core $(CORETESTS)/direct
 	$(FPCCORE) -FuGRAPH -FiGRAPH -FU$(CORETESTS)/core -o$(CORETESTS)/graphapi_test_core TESTS/vpagraph/graphapi_test.pas
-	$(FPCCORE) -dDIRECT -Fubuild -Fu$(PTCUNITS) -FU$(CORETESTS)/direct -o$(CORETESTS)/graphapi_test_direct TESTS/vpagraph/graphapi_test.pas
+	$(FPCCORE) -dDIRECT -Fu$(DIRECTUNITS) -Fu$(PTCUNITS) -FU$(CORETESTS)/direct -o$(CORETESTS)/graphapi_test_direct TESTS/vpagraph/graphapi_test.pas
 	rm -rf $(CORETESTS)/out && mkdir -p $(CORETESTS)/out/core $(CORETESTS)/out/direct
 	VPA_SCALE=1 VPA_GRAPH_BACKEND=x11 VPA_GRAPH_PLUGIN_DIR=$(abspath $(PLUGDIR)) VPA_GRAPH_DUMP=$(CORETESTS)/out/core/frame \
 	  xvfb-run -a -s "-screen 0 1024x768x24" ./$(CORETESTS)/graphapi_test_core > $(CORETESTS)/out/core/log.txt 2>&1; \
@@ -285,15 +305,15 @@ initgraph-test: x11-plugin
 
 ## coreinput-test : core half of T6.6/T6.7 (GRAPH/vpagraph_input.pas). One -Mtp
 ##                  source built twice: over the core + plugin, and over the
-##                  ptccrt + ptcmouse the executable uses today. Both get the
+##                  ptccrt + ptcmouse the executable used before Phase 6. Both get the
 ##                  same xdotool keystrokes and pointer moves under Xvfb; every
 ##                  key word, LastKbdFlags, QuitNoSave and mouse state must
 ##                  match. The core variant also runs the synthetic checks that
 ##                  need no display and must not link libX11 or libpthread.
-coreinput-test: x11-plugin build
+coreinput-test: x11-plugin direct-units
 	@mkdir -p $(CORETESTS)/core $(CORETESTS)/direct $(CORETESTS)/out
 	$(FPCCORE) -FuGRAPH -FiGRAPH -FU$(CORETESTS)/core -o$(CORETESTS)/input_test_core TESTS/vpagraph/input_test.pas
-	$(FPCCORE) -dDIRECT -Fubuild -Fu$(PTCUNITS) -FU$(CORETESTS)/direct -o$(CORETESTS)/input_test_direct TESTS/vpagraph/input_test.pas
+	$(FPCCORE) -dDIRECT -Fu$(DIRECTUNITS) -Fu$(PTCUNITS) -FU$(CORETESTS)/direct -o$(CORETESTS)/input_test_direct TESTS/vpagraph/input_test.pas
 	@echo ">> running both variants under Xvfb (about two minutes)"
 	@O=$(CORETESTS)/out; rm -f $$O/input_*.txt; \
 	( VPA_SCALE=1 VPA_GRAPH_BACKEND=x11 VPA_GRAPH_PLUGIN_DIR=$(abspath $(PLUGDIR)) \
@@ -361,8 +381,9 @@ detect-test: abi-plugins
 ## hlp  : generate both help files from their VHLP sources:
 ##          VHLP/VPA.HHH      -> build/VPA.HLP      (English, the one VPA loads)
 ##          VHLP/VPA_RUS.HHH  -> build/VPA_RUS.HLP  (Russian)
-##        (VHLPMAKE links the graphics unit, so it needs a display:
-##         xvfb-run is used for a virtual display). Copy them to your game
+##        (VHLPMAKE shares the VHLP unit with VPA, so it links the VPAGraph
+##         core, but it never opens a window: no display and no plugin
+##         needed.) Copy them to your game
 ##         folder (where you run VPA), just like the .DAT files. VPA always
 ##         reads VPA.HLP: to play with the Russian help, replace VPA.HLP with
 ##         VPA_RUS.HLP (see HOWTO).
@@ -370,8 +391,8 @@ hlp:
 	@mkdir -p build
 	$(FPC) @$(CFG) -obuild/vhlpmake VHLP/VHLPMAKE.PAS
 	@cp -f VHLP/VPA.HHH VHLP/VPA_RUS.HHH build/
-	@cd build && (xvfb-run -a ./vhlpmake VPA.HHH || ./vhlpmake VPA.HHH) && mv -f VPA.hlp VPA.HLP
-	@cd build && (xvfb-run -a ./vhlpmake VPA_RUS.HHH || ./vhlpmake VPA_RUS.HHH) && mv -f VPA_RUS.hlp VPA_RUS.HLP
+	@cd build && ./vhlpmake VPA.HHH && mv -f VPA.hlp VPA.HLP
+	@cd build && ./vhlpmake VPA_RUS.HHH && mv -f VPA_RUS.hlp VPA_RUS.HLP
 	@cd build && rm -f VPA.HHH VPA_RUS.HHH vhlpmake
 	@echo ""
 	@echo ">> Generated build/VPA.HLP and build/VPA_RUS.HLP — copy them to your game folder:"
@@ -379,7 +400,8 @@ hlp:
 
 ## data : build the VPA binary AND both help files, and assemble the
 ##        ready-to-ship package in build/vpa-linux_package/ : the freshly
-##        compiled VPA, VPA.HLP and VPA_RUS.HLP, the EXAMPLES/ folder, and
+##        compiled VPA, its plugins/ folder (the graphics backends: VPA does
+##        not start without it), VPA.HLP and VPA_RUS.HLP, the EXAMPLES/ folder, and
 ##        DISTTABL.DAT, HOWTO.en.md, HOWTO.es.md, LICENSE.md, LITT_VPA.CHR,
 ##        MPL-2.0.txt and VPA.MSG.
 data: build hlp
@@ -387,12 +409,14 @@ data: build hlp
 	@rm -rf $(PKGDIR)
 	@mkdir -p $(PKGDIR)
 	@cp -f $(BIN) $(PKGDIR)/
+	@mkdir -p $(PKGDIR)/plugins
+	@cp -f $(PLUGDIR)/libvpagraph-*.so $(PKGDIR)/plugins/
 	@cp -f build/VPA.HLP build/VPA_RUS.HLP $(PKGDIR)/
 	@cp -a EXAMPLES $(PKGDIR)/
 	@cp -f $(PKGFILES) $(PKGDIR)/
 	@echo ""
 	@echo ">> Package ready in $(PKGDIR)/ :"
-	@echo "   VPA  VPA.HLP  VPA_RUS.HLP  EXAMPLES/  $(PKGFILES)"
+	@echo "   VPA  plugins/  VPA.HLP  VPA_RUS.HLP  EXAMPLES/  $(PKGFILES)"
 	@echo ">> Copy its contents to your game folder, e.g.:  cp -a $(PKGDIR)/. ~/PLANETS/"
 
 ## help : list the targets

@@ -63,7 +63,7 @@ procedure Main;
 
 Implementation
 
-uses    ptcgraph,Screen,Mouse,StrF,Keyboard,VPA3,{$IFDEF UNIX}xfocus,{$ENDIF}
+uses    vpagraph,Screen,Mouse,StrF,Keyboard,VPA3,
 {$IFDEF TASKS}
         Tasks,
 {$ENDIF}
@@ -4075,7 +4075,7 @@ begin
       mEv0:=mEvent; mEvent:=0;
       if AutoScroll and
         ((MouseX<8) or (MouseX>471) or (MouseY<8) or (MouseY>477))
-        {$IFDEF UNIX} and xfocus.PointerInsideWindow {$ENDIF} then
+         and Mouse.PointerInsideWindow then
         begin
                 mEv0:=EvRtPress;
                 mEvent:=EvRtPress

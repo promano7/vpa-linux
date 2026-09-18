@@ -28,7 +28,7 @@ procedure TaskProgramming;
 
 Implementation
 
-uses	StrF,Mouse,Keyboard,Screen,ptcgraph,VPAData,VPA2,VPA3,VPA4;
+uses	StrF,Mouse,Keyboard,Screen,vpagraph,VPAData,VPA2,VPA3,VPA4;
 
 {
 	Task file structure:

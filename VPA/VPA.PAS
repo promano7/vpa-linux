@@ -4,10 +4,9 @@ Program	VPA;		(* VGA Planets Assistant *)
 {$A-,B-,D+,E+,F-,G+,I-,L+,N+,O-,P+,Q-,R-,S-,T-,V-,X+}
 
 uses
-{$IFDEF UNIX}
-	cthreads,	{ Linux: ptcgraph usa hilos para el bucle de eventos X11; cthreads debe ir primero }
-	{$IFDEF UNIX}xfocus,vpagraph_info,{$ENDIF}
-{$ENDIF}
+	{ Sin cthreads (WAYLAND.md, T5.9 y T6.9): el ejecutable ya no enlaza ptc. El
+	  hilo de eventos vive dentro del plugin grafico, entre Init y Shutdown. }
+	vpagraph_info,
 	AuxF,Screen,VPA2,VPAInit,VPAExit,Building,Messages,Report,VCS,
 {$IFDEF TASKS}
     Tasks,

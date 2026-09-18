@@ -61,7 +61,7 @@ procedure CloseMessageFile;
 
 Implementation
 
-uses	StrF,ptcgraph,Screen,Mouse,Keyboard,TCombat,DOS,ConfigIO
+uses	StrF,vpagraph,Screen,Mouse,Keyboard,TCombat,DOS,ConfigIO
 {$IFDEF VPACC},
         PHostM
 {$ENDIF}{,PVCR};

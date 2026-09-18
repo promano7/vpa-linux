@@ -58,7 +58,7 @@ const ModeLine:array[1..8] of integer = (
 
 Implementation
 
-uses    Screen,ptcgraph,VPAData,Messages,VPAInit,RST_TRN,ExtFeat,Dos
+uses    Screen,vpagraph,VPAData,Messages,VPAInit,RST_TRN,ExtFeat,Dos
 {$IFDEF VPACC},
         Hullfunc
 {$ENDIF};

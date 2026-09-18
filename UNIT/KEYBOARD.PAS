@@ -18,7 +18,10 @@ procedure CpuNap;   { cede CPU brevemente (port Linux: evita el busy-loop) }
 
 Implementation
 
-uses ptccrt, Mouse{$IFDEF UNIX}, ptcgraph, xfocus, baseunix, unixtype{$ENDIF};
+{ Fase 6 de WAYLAND.md (T6.6): el teclado sale del nucleo VPAGraph
+  (vpagraph_input: eventos del backend traducidos a los scancodes de Turbo
+  Pascal), no de ptccrt. crt es de la RTL y no enlaza X11. }
+uses crt, Mouse, vpagraph, vpagraph_input{$IFDEF UNIX}, baseunix, unixtype{$ENDIF};
 
 var
   bufKey  : word;      { buffer de retroceso de 1 tecla (para PreviewKey/peek) }
@@ -36,15 +39,31 @@ procedure CpuNap;
     {$ENDIF}
   end;
 
+{ Las dos lecturas crudas. Con backend activo las teclas vienen de la ventana
+  grafica. Sin el (antes de InitGraph, tras CloseGraph o entre RestoreCrtMode
+  y SetGraphMode) no hay ventana que las reciba y VPAReadKey devolveria #0 sin
+  esperar: se lee de la terminal con crt, que es lo que hacia ptccrt. }
+function BackendKeyPressed : boolean;
+  begin
+    if VPAInputReady then BackendKeyPressed := VPAKeyPressed
+    else BackendKeyPressed := crt.KeyPressed;
+  end;
+
+function BackendReadKey : char;
+  begin
+    if VPAInputReady then BackendReadKey := VPAReadKey
+    else BackendReadKey := crt.ReadKey;
+  end;
+
 { lee una tecla cruda y la convierte al 'word' de VPA:
   ascii normal -> byte bajo; tecla extendida (#0 + scancode) -> scancode en byte alto }
 function RawReadKey : word;
   var c : char;
       k : word;
   begin
-    c := ptccrt.ReadKey;
+    c := BackendReadKey;
     if c = #0 then
-      k := word(ord(ptccrt.ReadKey)) shl 8
+      k := word(ord(BackendReadKey)) shl 8
     else
       k := ord(c);
     {$IFDEF UNIX}
@@ -56,21 +75,21 @@ function RawReadKey : word;
       que ya ocurre hoy con cualquier tecla desconocida. Consumirla obligaria a
       devolver otra cosa o a esperar a la siguiente, y eso si cambiaria el
       comportamiento (PreviewKey se llama tras KeyPressed y no puede bloquear). }
-    if (k = $8A00) and ptcgraph.VPADumpEnabled then
-      ptcgraph.VPADumpFrame;
+    if (k = $8A00) and vpagraph.VPADumpEnabled then
+      vpagraph.VPADumpFrame;
     {$ENDIF}
     RawReadKey := k;
   end;
 
 function FastKeyPressed : boolean;
-  begin FastKeyPressed := bufFull or ptccrt.KeyPressed; end;
+  begin FastKeyPressed := bufFull or BackendKeyPressed; end;
 
 function KeyPressed : boolean;
   { Linux: sondea el raton aqui para generar eventos (mEvent) en cada espera de
     entrada. FastKeyPressed NO lo hace (bucles de animacion que solo abortan con tecla). }
   begin
     Mouse.PollMouse;
-    KeyPressed := bufFull or ptccrt.KeyPressed;
+    KeyPressed := bufFull or BackendKeyPressed;
   end;
 
 function ReadKey : word;
@@ -89,24 +108,17 @@ function PreviewKey : word;   { use only if KeyPressed }
 
 function KbdFlags : byte;
   begin
-    {$IFDEF UNIX}
-    { Estado ACTUAL de modificadores (Shift=3, Ctrl=4, Alt=8), consultado a X11 al
-      estilo de la BIOS DOS 0040:0017. Asi funciona tanto en atajos de teclado como
-      en raton+modificador (zoom del mapa con Shift/Ctrl). Sin conexion X se recurre
-      al ultimo evento de tecla que expone el ptccrt vendorizado. }
-    if xfocus.XReady then
-      KbdFlags := xfocus.KbdModifiers
-    else
-      KbdFlags := ptccrt.PTCLastKbdFlags;
-    {$ELSE}
-    KbdFlags := ptccrt.PTCLastKbdFlags;
-    {$ENDIF}
+    { Estado ACTUAL de modificadores (Shift=3, Ctrl=4, Alt=8), consultado al
+      backend al estilo de la BIOS DOS 0040:0017. Asi funciona tanto en atajos de
+      teclado como en raton+modificador (zoom del mapa con Shift/Ctrl). Sin
+      backend activo VPAKbdModifiers devuelve los de la ultima pulsacion. }
+    KbdFlags := VPAKbdModifiers;
   end;
 
 function KbdQuitNoSave : boolean;
   begin
     { Indicador fijado al pulsar Alt+X: True si era Ctrl-Alt-X (salir sin guardar). }
-    KbdQuitNoSave := ptccrt.PTCQuitNoSave;
+    KbdQuitNoSave := VPAQuitNoSave;
   end;
 
 begin

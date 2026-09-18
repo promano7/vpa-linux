@@ -68,7 +68,7 @@ IMPLEMENTATION
 {$IFNDEF VPA}
 USES Drivers,Global,AAFont,User,Config,LowLevel,VGARegs;
 {$ELSE}
-USES VPACC, ptcgraph, StrF, Screen;
+USES VPACC, vpagraph, StrF, Screen;
 {$ENDIF}
 
 { Read a character, upcase it }

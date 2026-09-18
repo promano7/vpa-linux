@@ -3,7 +3,7 @@ Program	VHLPShow;	(* VHLP Show Utility *)
 {$I-}
 {$M 8192,20000,20000}
 
-uses	AuxF,StrF,VHLP,ptcgraph;
+uses	AuxF,StrF,VHLP,vpagraph;
 
 procedure EGAVGADriverProc; external;
 {$L egavga.obj}

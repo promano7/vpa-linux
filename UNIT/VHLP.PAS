@@ -40,7 +40,7 @@ procedure ShowHelp (var f:file; pageid:int);
 
 Implementation
 
-uses	ptcgraph,Keyboard;
+uses	vpagraph,Keyboard;
 
 procedure ShowHelp (var f:file; pageid:int);
   var   vd	: VDRec;

@@ -14,7 +14,7 @@ unit VPA4;
 
 interface
 
-uses ptcgraph, VPAData, AuxF, Building;
+uses vpagraph, VPAData, AuxF, Building;
 
 procedure SetTaxes (nat:boolean; var tax:int);                  { M.O.T. }
 procedure WriteMiningRate;
