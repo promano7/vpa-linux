@@ -49,7 +49,7 @@ FPCCORE   = $(FPC) -Mtp -Ci- -Cr- -Co- -Ct- -vwn
 
 .PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
         plugin-units x11-plugin plugins threads-test nodisplay-test window-test input-test scene-test deps-test \
-        graphapi-test initgraph-test
+        graphapi-test initgraph-test coreinput-test
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -282,6 +282,36 @@ initgraph-test: x11-plugin
 	grep -q '^detail: "bogus" is not valid' $$L.bogus || fail "bogus: reason missing"; \
 	echo "  ok   unknown VPA_GRAPH_BACKEND"
 	@echo ">> initgraph-test passed"
+
+## coreinput-test : core half of T6.6/T6.7 (GRAPH/vpagraph_input.pas). One -Mtp
+##                  source built twice: over the core + plugin, and over the
+##                  ptccrt + ptcmouse the executable uses today. Both get the
+##                  same xdotool keystrokes and pointer moves under Xvfb; every
+##                  key word, LastKbdFlags, QuitNoSave and mouse state must
+##                  match. The core variant also runs the synthetic checks that
+##                  need no display and must not link libX11 or libpthread.
+coreinput-test: x11-plugin build
+	@mkdir -p $(CORETESTS)/core $(CORETESTS)/direct $(CORETESTS)/out
+	$(FPCCORE) -FuGRAPH -FiGRAPH -FU$(CORETESTS)/core -o$(CORETESTS)/input_test_core TESTS/vpagraph/input_test.pas
+	$(FPCCORE) -dDIRECT -Fubuild -Fu$(PTCUNITS) -FU$(CORETESTS)/direct -o$(CORETESTS)/input_test_direct TESTS/vpagraph/input_test.pas
+	@echo ">> running both variants under Xvfb (about two minutes)"
+	@O=$(CORETESTS)/out; rm -f $$O/input_*.txt; \
+	( VPA_SCALE=1 VPA_GRAPH_BACKEND=x11 VPA_GRAPH_PLUGIN_DIR=$(abspath $(PLUGDIR)) \
+	  xvfb-run -a -s "-screen 0 1024x768x24" ./$(CORETESTS)/input_test_core > $$O/input_core.txt 2>&1 ) & \
+	( VPA_SCALE=1 xvfb-run -a -s "-screen 0 1024x768x24" ./$(CORETESTS)/input_test_direct > $$O/input_direct.txt 2>&1 ) & \
+	wait; \
+	grep -v '^key \|^mouse ' $$O/input_core.txt; \
+	grep -q '^input_test: PASS' $$O/input_core.txt || { echo ">> core variant failed, see $$O/input_core.txt"; exit 1; }; \
+	grep -q '^input_test: PASS' $$O/input_direct.txt || { echo ">> direct variant failed, see $$O/input_direct.txt"; exit 1; }; \
+	grep '^key \|^mouse ' $$O/input_core.txt | grep -v '^key r ' > $$O/input_core.seen; \
+	grep '^key \|^mouse ' $$O/input_direct.txt > $$O/input_direct.seen; \
+	n=$$(wc -l < $$O/input_core.seen); test $$n -ge 200 || { echo ">> only $$n key/mouse lines"; exit 1; }; \
+	diff $$O/input_core.seen $$O/input_direct.seen || { echo ">> the core and ptccrt/ptcmouse disagree"; exit 1; }; \
+	grep -q '^key r -> \$$0072 ' $$O/input_core.txt || { echo ">> no keyboard after Suspend/Resume"; exit 1; }; \
+	echo ">> $$n key and mouse readings identical"
+	@if readelf -d $(CORETESTS)/input_test_core | grep -q 'libX11\|libpthread'; then \
+	  echo ">> input_test_core links libX11 or libpthread"; exit 1; fi
+	@echo ">> coreinput-test passed"
 
 ## abi-plugins : build the six ABI test plugins (stub + five faulty ones) into
 ##               build/abi/, and check that vpagraph_abi.inc compiles both from
