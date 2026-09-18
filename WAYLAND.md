@@ -65,7 +65,7 @@ más fácil es saltárselas:
 | 3 | Cargador dinámico | ☑ cerrada (2026-09-15) |
 | 4 | Detección y selección de backend | ☑ cerrada (2026-09-15) |
 | 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ☑ cerrada (2026-09-16) |
-| 6 | Migración de VPA-Linux a `VPAGraph` | ☐ |
+| 6 | Migración de VPA-Linux a `VPAGraph` | ◐ en curso: T6.1–T6.3 hechas (2026-09-18) |
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☐ |
 | 8 | Motor de dibujo Wayland (vía B o vía A) | ☐ |
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☐ |
@@ -1209,18 +1209,46 @@ Aquí está el truco que hace viable toda la operación.
 > `uses`**, no reescribir 1195 llamadas a `OutTextXY` ni 706 a `SetColor`. El
 > diff de esta fase debe ser de unas 30 líneas en total, más la unidad nueva.
 
-- [ ] **T6.1** — Escribir `GRAPH/vpagraph.pas` con la API pública completa:
+- [x] **T6.1** — Escribir `GRAPH/vpagraph.pas` con la API pública completa:
       firmas idénticas a `ptcgraph`, reexportación de constantes y tipos (T1.2),
       conversión de cadenas, y redirección a la tabla de funciones del backend.
-- [ ] **T6.2** — Comprobar que `VPAGraph` es consumible desde `-Mtp`
-      compilando una unidad de prueba mínima antes de tocar nada real.
-- [ ] **T6.3** — Inicialización: `InitGraph` de `VPAGraph` detecta, carga y
-      valida el backend antes de delegar. `CloseGraph` descarga el plugin.
+      — `100674a`, `5ed871e`. La terna `RestoreCrtMode` / `SetGraphMode` /
+      `GetGraphMode` se reexporta sobre `Suspend`/`Resume` (D-08). Con el
+      backend sin cargar las primitivas son inocuas. La lógica de `VPA_SCALE`
+      (`xfocus.ResolveScale`) vive ya en el núcleo y pregunta el tamaño de
+      pantalla al backend; `fullscreen` viaja como bandera de `Init`.
+- [x] **T6.2** — Comprobar que `VPAGraph` es consumible desde `-Mtp`
+      compilando una unidad de prueba mínima antes de tocar nada real. —
+      `100674a`. `TESTS/vpagraph/graphapi_test.pas`, objetivo `graphapi-test`:
+      un fuente `-Mtp` compilado dos veces con **una palabra** de diferencia en
+      su `uses` (`vpagraph` / `ptcgraph`); 10 volcados idénticos byte a byte,
+      y la variante del núcleo no enlaza `libX11` ni `libpthread`.
+- [x] **T6.3** — Inicialización: `InitGraph` de `VPAGraph` detecta, carga y
+      valida el backend antes de delegar. `CloseGraph` descarga el plugin. —
+      `26e5985`. Objetivo `initgraph-test`: respaldo solo en `auto` (y `Init`
+      cuenta como fallo), sin respaldo si es forzado, todos los motivos en
+      `VPAGraphInitDetail`, ciclo repetible, sin fugas.
 - [x] **T6.4** — Añadir `-FuGRAPH` y `-FiGRAPH` a `vpa.cfg`. — `ad0ba5c`
       Adelantado a la Fase 4: `VPA.PAS` ya consume `vpagraph_info`.
 - [ ] **T6.5** — Sustituir `ptcgraph` por `VPAGraph` en las 24 unidades, **una
       por commit o en grupos pequeños y coherentes**, verificando compilación
       tras cada grupo:
+
+  > **Ensayo hecho (2026-09-18, `5ed871e`):** en una copia desechable, cambiar
+  > la palabra en todas las unidades enlazadas compila y enlaza el ejecutable
+  > entero con **una sola línea borrada** (la asignación de
+  > `ptcgraph.VPAForceScale` en `VPAINIT.PAS:1394`). D-03 se sostiene.
+  >
+  > **Orden de trabajo:** un ejecutable a medio migrar compila pero **no
+  > funciona**: los gráficos irían por el plugin y el teclado (`ptccrt`)
+  > seguiría esperando teclas de una consola ptc del ejecutable que ya nadie
+  > abre. T6.5–T6.8 solo son coherentes en ejecución cuando están las cuatro.
+  > Por eso se hace **antes** la parte del núcleo de T6.6/T6.7 (traducción de
+  > teclas y búfer, D-10; estado del ratón), probada con arnés y `xdotool`
+  > sin tocar el ejecutable, y **después**, en una misma sesión, el cambio de
+  > `uses`, `KEYBOARD.PAS`, `MOUSE.PAS` y `xfocus`, cerrando con las escenas
+  > doradas (T6.13). Así `feature/wayland` nunca queda en un commit que no
+  > arranca.
 
   - [ ] `VPA/VPADATA.PAS`
   - [ ] `VPA/SCREEN.PAS`
