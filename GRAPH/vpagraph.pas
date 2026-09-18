@@ -48,6 +48,12 @@ unit vpagraph;
 
 interface
 
+{ vpagraph_loader va en la interfaz solo por PVPAGraphInterface
+  (VPAGraphActiveInterface). Las clausulas uses no son transitivas: las
+  unidades -Mtp que usan vpagraph no ven nada del cargador. }
+uses
+  vpagraph_loader;
+
 { ---------------------------------------------------------------------------
   Constantes y tipos reexportados (tabla 2 del inventario), con los mismos
   valores que ptcgraph: los de color viajan por SetColor y por los buferes
@@ -127,6 +133,14 @@ function VPAGraphBackendName: AnsiString;
 { Escala de ventana que se paso al backend en Init, en porcentaje. }
 function VPAGraphScalePercent: longint;
 
+{ La tabla de funciones del backend EN USO, o nil si no hay ninguno o si la
+  ventana esta suspendida (entre RestoreCrtMode y SetGraphMode). Es el unico
+  acceso a la tabla fuera de esta unidad y existe para
+  GRAPH/vpagraph_input.pas (D-10): teclado y raton comparten plugin con el
+  dibujo, pero no son API Graph y no tienen por que estar aqui. El puntero
+  no se guarda entre llamadas: CloseGraph lo deja colgando. }
+function VPAGraphActiveInterface: PVPAGraphInterface;
+
 { Volcado del framebuffer para la comparacion de escenas (T0.4, Fase 11).
   Mismos nombres y firmas que los anadidos de VENDOR/ptcgraph.pp, que es lo
   que llama UNIT/KEYBOARD.PAS con Ctrl-F12. VPADumpEnabled es True si
@@ -196,7 +210,7 @@ function  InstallUserFont(const FontFileName: ShortString): smallint;
 implementation
 
 uses
-  SysUtils, vpagraph_loader, vpagraph_detect, vpagraph_errors;
+  SysUtils, vpagraph_detect, vpagraph_errors;
 
 var
   GPlugin : TVPAGraphPlugin;      { Loaded = False mientras no haya backend }
@@ -414,6 +428,17 @@ end;
 function VPAGraphScalePercent: longint;
 begin
   Result := GScale;
+end;
+
+{ El tipo se cualifica: vpagraph_errors tambien incluye vpagraph_abi.inc, va
+  detras en el uses de la implementacion y su PVPAGraphInterface -otro tipo
+  para FPC- taparia al de la interfaz. }
+function VPAGraphActiveInterface: vpagraph_loader.PVPAGraphInterface;
+begin
+  if GActive and not GSuspended then
+    Result := @GPlugin.Iface
+  else
+    Result := nil;
 end;
 
 var
