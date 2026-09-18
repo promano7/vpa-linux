@@ -259,8 +259,9 @@ initgraph-test: x11-plugin
 	HEAPTRC=log=$$L.auto.heaptrc xvfb-run -a $$T > $$L.auto 2>&1 || fail "auto under X failed"; \
 	test "$$(grep -c '^backend x11' $$L.auto)" = 2 || fail "auto under X: expected x11 twice"; \
 	grep -q '^detail' $$L.auto && fail "auto under X: unexpected detail"; \
+	test "$$(grep -c '^after resume: pixel 14 result 0' $$L.auto)" = 2 || fail "RestoreCrtMode/SetGraphMode cycle"; \
 	grep -q '^0 unfreed memory blocks' $$L.auto.heaptrc || fail "leaks, see $$L.auto.heaptrc"; \
-	echo "  ok   auto with DISPLAY only: x11, no detail, repeatable, no leaks"; \
+	echo "  ok   auto with DISPLAY only: x11, no detail, suspend/resume, repeatable, no leaks"; \
 	HEAPTRC=log=$$L.fallback.heaptrc WAYLAND_DISPLAY=wayland-0 xvfb-run -a $$T > $$L.fallback 2>&1 || fail "fallback failed"; \
 	grep -q '^backend x11' $$L.fallback || fail "fallback: expected x11"; \
 	grep -q '^detail: wayland: .*libvpagraph-wayland.so' $$L.fallback || fail "fallback: no reason for wayland"; \

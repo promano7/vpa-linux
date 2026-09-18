@@ -144,6 +144,20 @@ procedure InitGraph(var GraphDriver: smallint; var GraphMode: smallint;
 procedure CloseGraph;
 function  GraphResult: smallint;
 
+{ El patron "suspender y reanudar la ventana" (inventario, 1.1; D-08). VPA
+  solo usa estas tres juntas, para ejecutar un programa externo y volver:
+      RestoreCrtMode; ...Exec...; SetGraphMode(GetGraphMode);
+  RestoreCrtMode es Suspend de la ABI (cierra la ventana y devuelve la
+  terminal) y el SetGraphMode que le sigue es Resume (reabre la ventana y
+  rehace foco, escala y pantalla completa, y deja el estado de dibujo en
+  sus valores por defecto, como hacia ptcgraph). Un SetGraphMode SIN
+  RestoreCrtMode previo no hace nada: no hay modos entre los que cambiar, y
+  los dos sitios que lo llaman asi (TCOMBAT, SCRSAVER) lo hacen tras
+  BadVideoOrMouse, que en Linux nunca se cumple. }
+procedure RestoreCrtMode;
+procedure SetGraphMode(Mode: smallint);
+function  GetGraphMode: smallint;
+
 procedure ClearDevice;
 procedure SetViewPort(X1, Y1, X2, Y2: smallint; Clip: Boolean);
 procedure GetViewSettings(var viewport: ViewPortType);
@@ -189,6 +203,7 @@ var
   GActive : Boolean = False;      { True entre un Init correcto y Shutdown }
   GResult : smallint = grNoInitGraph;
   GScale  : longint = 0;
+  GSuspended : Boolean = False;   { entre RestoreCrtMode y SetGraphMode }
 
 { ---------------------------------------------------------------------------
   Escala de ventana. Es la logica de xfocus.ResolveScale trasladada al
@@ -350,6 +365,7 @@ begin
   if GActive then
   begin
     GActive := False;
+    GSuspended := False;
     GPlugin.Iface.Shutdown();
   end;
   VPAGraph_UnloadPlugin(GPlugin);   { idempotente }
@@ -363,6 +379,28 @@ function GraphResult: smallint;
 begin
   Result := GResult;
   GResult := grOk;
+end;
+
+procedure RestoreCrtMode;
+begin
+  if GActive and not GSuspended then
+    if GPlugin.Iface.Suspend() = VPAG_OK then
+      GSuspended := True;
+end;
+
+procedure SetGraphMode(Mode: smallint);
+begin
+  if GActive and GSuspended then
+  begin
+    GSuspended := False;
+    if GPlugin.Iface.Resume() <> VPAG_OK then
+      GResult := grError;
+  end;
+end;
+
+function GetGraphMode: smallint;
+begin
+  Result := m640x480;
 end;
 
 function VPAGraphBackendName: AnsiString;

@@ -55,6 +55,15 @@ begin
     SetColor(White);
     Line(0, 0, 639, 479);
     OutTextXY(10, 10, 'initgraph_test');
+    { el patron de INI/BUILDING/MESSAGES/VCS para lanzar un programa externo:
+      Suspend y Resume de la ABI. Tras reanudar se tiene que poder dibujar, y
+      un SetGraphMode suelto no debe hacer nada. }
+    RestoreCrtMode;
+    SetGraphMode(GetGraphMode);
+    SetGraphMode(GetGraphMode);
+    PutPixel(5, 5, Yellow);
+    if r = grOk then
+      Writeln('after resume: pixel ', GetPixel(5, 5), ' result ', GraphResult);
     Flush(Output);
     CloseGraph;
   end;
