@@ -42,9 +42,14 @@ PLUGUNITS = $(PLUGDIR)/units
 PLUGCFG   = plugins.cfg
 X11PLUGIN = $(PLUGDIR)/libvpagraph-x11.so
 X11TESTS  = build/x11
+# Pruebas del nucleo VPAGraph (Fase 6). Se compilan en -Mtp con las opciones
+# de vpa.cfg, porque lo que prueban es que el nucleo se consume desde ahi.
+CORETESTS = build/vpagraph
+FPCCORE   = $(FPC) -Mtp -Ci- -Cr- -Co- -Ct- -vwn
 
 .PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
-        plugin-units x11-plugin plugins threads-test nodisplay-test window-test input-test scene-test deps-test
+        plugin-units x11-plugin plugins threads-test nodisplay-test window-test input-test scene-test deps-test \
+        graphapi-test
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -213,6 +218,32 @@ scene-test: x11-plugin build $(X11TESTS)/scene_test_plugin
 	  diff $(X11TESTS)/scenes/plugin/values.txt $(X11TESTS)/scenes/direct/values.txt \
 	  || { echo ">> GetPixel/GetViewSettings/GetRGBPalette differ between variants"; exit 1; }
 	@echo ">> scene-test passed: plugin and direct ptcgraph are pixel-identical"
+
+## graphapi-test : T6.2, and the dress rehearsal of T6.5. One -Mtp source that
+##                 draws the way VPA does, built twice: 'uses vpagraph' (core +
+##                 plugin) and 'uses ptcgraph' (-dDIRECT). That one word is the
+##                 only difference, and the dumps must be byte-identical.
+graphapi-test: x11-plugin build
+	@mkdir -p $(CORETESTS)/core $(CORETESTS)/direct
+	$(FPCCORE) -FuGRAPH -FiGRAPH -FU$(CORETESTS)/core -o$(CORETESTS)/graphapi_test_core TESTS/vpagraph/graphapi_test.pas
+	$(FPCCORE) -dDIRECT -Fubuild -Fu$(PTCUNITS) -FU$(CORETESTS)/direct -o$(CORETESTS)/graphapi_test_direct TESTS/vpagraph/graphapi_test.pas
+	rm -rf $(CORETESTS)/out && mkdir -p $(CORETESTS)/out/core $(CORETESTS)/out/direct
+	VPA_SCALE=1 VPA_GRAPH_BACKEND=x11 VPA_GRAPH_PLUGIN_DIR=$(abspath $(PLUGDIR)) VPA_GRAPH_DUMP=$(CORETESTS)/out/core/frame \
+	  xvfb-run -a -s "-screen 0 1024x768x24" ./$(CORETESTS)/graphapi_test_core > $(CORETESTS)/out/core/log.txt 2>&1; \
+	  grep -v '^VPA: volcado' $(CORETESTS)/out/core/log.txt; grep -q '^graphapi_test: PASS' $(CORETESTS)/out/core/log.txt
+	VPA_SCALE=1 VPA_GRAPH_DUMP=$(CORETESTS)/out/direct/frame \
+	  xvfb-run -a -s "-screen 0 1024x768x24" ./$(CORETESTS)/graphapi_test_direct > $(CORETESTS)/out/direct/log.txt 2>&1; \
+	  grep -q '^graphapi_test: PASS' $(CORETESTS)/out/direct/log.txt
+	@n=0; for f in $(CORETESTS)/out/core/frame*; do \
+	  cmp "$$f" "$(CORETESTS)/out/direct/$$(basename $$f)" || exit 1; n=$$((n+1)); done; \
+	  test $$n -eq 10 || { echo ">> expected 10 dump files, got $$n"; exit 1; }; \
+	  echo ">> $$n dump files identical"
+	@for v in core direct; do grep -E 'pixels|viewport|palette\[|imagesize' $(CORETESTS)/out/$$v/log.txt > $(CORETESTS)/out/$$v/values.txt; done; \
+	  diff $(CORETESTS)/out/core/values.txt $(CORETESTS)/out/direct/values.txt \
+	  || { echo ">> GetPixel/GetViewSettings/ImageSize/GetRGBPalette differ between variants"; exit 1; }
+	@if readelf -d $(CORETESTS)/graphapi_test_core | grep -q 'libX11\|libpthread'; then \
+	  echo ">> graphapi_test_core links libX11 or libpthread"; exit 1; fi
+	@echo ">> graphapi-test passed: 'uses vpagraph' and 'uses ptcgraph' are pixel-identical"
 
 ## abi-plugins : build the six ABI test plugins (stub + five faulty ones) into
 ##               build/abi/, and check that vpagraph_abi.inc compiles both from
