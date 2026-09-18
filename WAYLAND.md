@@ -65,7 +65,7 @@ más fácil es saltárselas:
 | 3 | Cargador dinámico | ☑ cerrada (2026-09-15) |
 | 4 | Detección y selección de backend | ☑ cerrada (2026-09-15) |
 | 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ☑ cerrada (2026-09-16) |
-| 6 | Migración de VPA-Linux a `VPAGraph` | ◐ en curso: T6.1–T6.3 y el núcleo de T6.6/T6.7 hechos (2026-09-18) |
+| 6 | Migración de VPA-Linux a `VPAGraph` | ◐ T6.1–T6.13 hechas (2026-09-18); solo falta T6.14, la partida real en la máquina de desarrollo |
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☐ |
 | 8 | Motor de dibujo Wayland (vía B o vía A) | ☐ |
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☐ |
@@ -1230,9 +1230,12 @@ Aquí está el truco que hace viable toda la operación.
       `VPAGraphInitDetail`, ciclo repetible, sin fugas.
 - [x] **T6.4** — Añadir `-FuGRAPH` y `-FiGRAPH` a `vpa.cfg`. — `ad0ba5c`
       Adelantado a la Fase 4: `VPA.PAS` ya consume `vpagraph_info`.
-- [ ] **T6.5** — Sustituir `ptcgraph` por `VPAGraph` en las 24 unidades, **una
+- [x] **T6.5** — Sustituir `ptcgraph` por `VPAGraph` en las 24 unidades, **una
       por commit o en grupos pequeños y coherentes**, verificando compilación
-      tras cada grupo:
+      tras cada grupo. — `8aecb96`. Hecho en **un solo commit** junto con
+      T6.6–T6.9, por lo explicado abajo en «Orden de trabajo». Fueron 26
+      unidades: las 24 de la lista más `CC/MSGWIN.PAS` y `CC/VPACC.PAS`, que el
+      inventario no recogía.
 
   > **Ensayo hecho (2026-09-18, `5ed871e`):** en una copia desechable, cambiar
   > la palabra en todas las unidades enlazadas compila y enlaza el ejecutable
@@ -1280,34 +1283,34 @@ Aquí está el truco que hace viable toda la operación.
   >   `vpagraph_loader` en el `uses` de su interfaz; no afecta a las unidades
   >   `-Mtp`, porque `uses` no es transitivo.
 
-  - [ ] `VPA/VPADATA.PAS`
-  - [ ] `VPA/SCREEN.PAS`
-  - [ ] `VPA/VPAINIT.PAS`
-  - [ ] `VPA/VPAEXIT.PAS`
-  - [ ] `VPA/VPA2.PAS`
-  - [ ] `VPA/VPA3.PAS`
-  - [ ] `VPA/VPA4.PAS`
-  - [ ] `VPA/INI.PAS`
-  - [ ] `VPA/CONFIG.PAS`
-  - [ ] `VPA/MESSAGES.PAS`
-  - [ ] `VPA/EXTFEAT.PAS`
-  - [ ] `VPA/TCOMBAT.PAS`
-  - [ ] `VPA/BUILDING.PAS`
-  - [ ] `VPA/TASKS.PAS`
-  - [ ] `VPA/PLANSIM.PAS`
-  - [ ] `VPA/REPORT.PAS`
-  - [ ] `VPA/SCORES.PAS`
-  - [ ] `VPA/SCRSAVER.PAS`
-  - [ ] `VPA/DETAILS.PAS`
-  - [ ] `VPA/VCS.PAS`
-  - [ ] `UNIT/VHLP.PAS`
-  - [ ] `UNIT/VHLPSHOW.PAS`
-  - [ ] `VHLP/VHLP.PAS` *(duplicado histórico de `UNIT/`; comprobar cuál gana
+  - [x] `VPA/VPADATA.PAS`
+  - [x] `VPA/SCREEN.PAS`
+  - [x] `VPA/VPAINIT.PAS`
+  - [x] `VPA/VPAEXIT.PAS`
+  - [x] `VPA/VPA2.PAS`
+  - [x] `VPA/VPA3.PAS`
+  - [x] `VPA/VPA4.PAS`
+  - [x] `VPA/INI.PAS`
+  - [x] `VPA/CONFIG.PAS`
+  - [x] `VPA/MESSAGES.PAS`
+  - [x] `VPA/EXTFEAT.PAS`
+  - [x] `VPA/TCOMBAT.PAS`
+  - [x] `VPA/BUILDING.PAS`
+  - [x] `VPA/TASKS.PAS`
+  - [x] `VPA/PLANSIM.PAS`
+  - [x] `VPA/REPORT.PAS`
+  - [x] `VPA/SCORES.PAS`
+  - [x] `VPA/SCRSAVER.PAS`
+  - [x] `VPA/DETAILS.PAS`
+  - [x] `VPA/VCS.PAS`
+  - [x] `UNIT/VHLP.PAS`
+  - [x] `UNIT/VHLPSHOW.PAS`
+  - [x] `VHLP/VHLP.PAS` *(duplicado histórico de `UNIT/`; comprobar cuál gana
         según el orden de `-Fu` en `vpa.cfg` y decidir si procede unificarlos —
         tarea aparte, no mezclar con esta)*
-  - [ ] `VHLP/VHLPSHOW.PAS` *(ídem)*
+  - [x] `VHLP/VHLPSHOW.PAS` *(ídem)*
 
-- [ ] **T6.6** — Reescribir `UNIT/KEYBOARD.PAS` contra la ABI en lugar de
+- [x] **T6.6** — Reescribir `UNIT/KEYBOARD.PAS` contra la ABI en lugar de
       `ptccrt` + `xfocus`.
   - [x] Núcleo: traducción `VPAGK_*` + Unicode + modificadores → scancodes de
         Turbo Pascal y búfer de teclas en `GRAPH/vpagraph_input.pas` (D-10).
@@ -1320,31 +1323,68 @@ Aquí está el truco que hace viable toda la operación.
         `QuitNoSave`, ratón) **idénticas**; más las pruebas sintéticas de lo
         que `xdotool` no puede producir con el teclado `us` de Xvfb (el `+` de
         es/de/fr con tecla indefinida, búfer lleno, sin backend).
-  - [ ] `UNIT/KEYBOARD.PAS` sobre `vpagraph_input` (paso 2).
-- [ ] **T6.7** — Reescribir `UNIT/MOUSE.PAS` contra la ABI en lugar de
+  - [x] `UNIT/KEYBOARD.PAS` sobre `vpagraph_input` (paso 2). — `8aecb96`. Sin
+        backend activo cae a `crt`, igual que hacía `ptccrt` (que ya lo
+        enlazaba e inicializaba: la terminal se comporta como antes).
+- [x] **T6.7** — Reescribir `UNIT/MOUSE.PAS` contra la ABI en lugar de
       `ptcmouse` + `xfocus`.
   - [x] Núcleo: estado del ratón sobre `PollEvent`/`GetMouseState`, con
         `Present` antes de sondear, en la misma unidad y con la misma prueba
         (movimiento, arrastre, los tres botones, y que sondear el ratón no se
         come las teclas).
-  - [ ] `UNIT/MOUSE.PAS` sobre `vpagraph_input` (paso 2). El rango por
-        software y el despacho de manejadores se quedan como están.
-- [ ] **T6.8** — Sustituir las 19 llamadas a `xfocus` (sección 2.1) por llamadas
-      a `VPAGraph`, y **eliminar `UNIT/xfocus.pas`** del ejecutable.
-- [ ] **T6.9** — Revisar el `uses` de `VPA/VPA.PAS` a la luz de T5.9.
-- [ ] **T6.10** — `VHLP/VHLPMAKE.PAS` también enlaza la unidad gráfica (por eso
+  - [x] `UNIT/MOUSE.PAS` sobre `vpagraph_input` (paso 2). El rango por
+        software y el despacho de manejadores se quedan como están. —
+        `8aecb96`. Nuevo `Mouse.PointerInsideWindow` (envuelve
+        `VPAMouseInside`) para que `VPA2.PAS` siga hablando con `Mouse` y no
+        con el núcleo.
+- [x] **T6.8** — Sustituir las 19 llamadas a `xfocus` (sección 2.1) por llamadas
+      a `VPAGraph`, y **eliminar `UNIT/xfocus.pas`** del ejecutable. —
+      `8aecb96`. La mayoría desaparecen **sin sustituto**: foco, escalado del
+      ratón y pantalla completa los pone el plugin en `Init` y en `Resume`, así
+      que sobra el ritual de tres líneas tras `OpenGraph` y tras cada
+      `SetGraphMode(GetGraphMode)` de `INI.PAS`, y el `ReleaseFullscreen` de
+      `CloseGraphics`. Comprobado en vivo: ciclo Ctrl-O → «Edit file» → editor →
+      vuelta, volcados idénticos byte a byte a los del binario de `dc27c73` y
+      teclado vivo sin que nadie devuelva el foco desde fuera. `GrErr` imprime
+      `VPAGraphInitDetail`. `vpa.cfg` pierde `-FuVENDOR`, `-Fubuild/ptcunits` y
+      `-FiVENDOR`.
+- [x] **T6.9** — Revisar el `uses` de `VPA/VPA.PAS` a la luz de T5.9. —
+      `8aecb96`. `cthreads` y `xfocus` fuera; queda `vpagraph_info`.
+- [x] **T6.10** — `VHLP/VHLPMAKE.PAS` también enlaza la unidad gráfica (por eso
       el `Makefile` lo ejecuta con `xvfb-run`): decidir si pasa por `VPAGraph` o
       si se queda con `ptcgraph` como herramienta interna de compilación. La
       segunda opción es más simple y no compromete el objetivo, porque no forma
-      parte del binario distribuido.
-- [ ] **T6.11** — Verificación final: `grep -rn "ptcgraph\|ptccrt\|ptcmouse\|xlib"
-      VPA/ UNIT/ CC/` no devuelve nada fuera de comentarios históricos.
-- [ ] **T6.12** — `readelf -d build/VPA | grep NEEDED` comparado con la línea
-      base de T0.3: `libX11` y compañía han desaparecido.
-- [ ] **T6.13** — **Regresión completa**: reproducir las escenas de T0.5 y
-      compararlas con las imágenes doradas de T0.6. Cero diferencias.
+      parte del binario distribuido. — `f868923`. Ninguna de las dos: comparte
+      la unidad `VHLP` con VPA, así que pasa por `VPAGraph` sola, y como nunca
+      llama a `InitGraph` no abre ventana ni carga plugin. Se le quita
+      `cthreads` y **`make hlp` ya no necesita `xvfb-run`**. Los dos `.HLP`,
+      idénticos byte a byte.
+- [x] **T6.11** — Verificación final: `grep -rn "ptcgraph\|ptccrt\|ptcmouse\|xlib"
+      VPA/ UNIT/ CC/` no devuelve nada fuera de comentarios históricos. — 9
+      líneas, todas comentarios (formato de imagen de ptcgraph y notas de esta
+      migración).
+- [x] **T6.12** — `readelf -d build/VPA | grep NEEDED` comparado con la línea
+      base de T0.3: `libX11` y compañía han desaparecido. — Única entrada:
+      `libc.so.6`.
+- [x] **T6.13** — **Regresión completa**: reproducir las escenas de T0.5 y
+      compararlas con las imágenes doradas de T0.6. Cero diferencias. —
+      **40 de 40** ficheros de `TESTS/golden/SHA256SUMS` (20 `.ppm` + 20
+      `.pal`) con `TESTS/capture.sh` y el `RESOURCE.PLN` real, en el contenedor.
+      El binario de `dc27c73` da también 40 de 40 en el mismo entorno. Los once
+      objetivos de prueba del `Makefile` pasan desde un `build/` limpio; las
+      variantes «direct» salen ahora de `build/directunits` (objetivo
+      `direct-units`), porque `make build` ya no deja los `.ppu` de ptcgraph.
 - [ ] **T6.14** — Partida real completa en X11: cargar una partida de
-      `EXAMPLES/`, jugar un turno, guardar, salir y volver a entrar.
+      `EXAMPLES/`, jugar un turno, guardar, salir y volver a entrar. Solo puede
+      hacerse en la máquina de desarrollo. Mirar en especial lo que Xvfb sin
+      gestor de ventanas no cubre: `VPA_SCALE=fullscreen` (entrar, «Edit file»
+      y volver, salir: que el panel del escritorio reaparezca), el ratón con la
+      ventana escalada, y el foco al volver del editor bajo Cinnamon.
+
+> **Pendiente para la Fase 12 (documentación):** `BUILD.es.md`/`BUILD.en.md` y
+> los README siguen diciendo que `make hlp` necesita `xvfb`, que `cthreads` va
+> primero en `VPA.PAS` y que el binario enlaza X11; y no dicen que `VPA`
+> necesita su carpeta `plugins/` al lado (`make data` ya la empaqueta).
 
 **Criterio de aceptación:** VPA funciona en X11 exactamente igual que 3.67.6, el
 binario no enlaza X11, y las imágenes doradas coinciden píxel a píxel.
