@@ -49,7 +49,7 @@ FPCCORE   = $(FPC) -Mtp -Ci- -Cr- -Co- -Ct- -vwn
 
 .PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
         plugin-units x11-plugin plugins threads-test nodisplay-test window-test input-test scene-test deps-test \
-        graphapi-test
+        graphapi-test initgraph-test
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -244,6 +244,43 @@ graphapi-test: x11-plugin build
 	@if readelf -d $(CORETESTS)/graphapi_test_core | grep -q 'libX11\|libpthread'; then \
 	  echo ">> graphapi_test_core links libX11 or libpthread"; exit 1; fi
 	@echo ">> graphapi-test passed: 'uses vpagraph' and 'uses ptcgraph' are pixel-identical"
+
+## initgraph-test : T6.3. InitGraph of the core selects, loads and starts the
+##                  backend: fallback only with 'auto' (a missing wayland plugin
+##                  falls back to x11, and says why), none when forced, every
+##                  reason reported, Init/CloseGraph repeatable, no leaks.
+initgraph-test: x11-plugin
+	@mkdir -p $(CORETESTS)/core
+	$(FPCCORE) -gh -gl -FuGRAPH -FiGRAPH -FU$(CORETESTS)/core -o$(CORETESTS)/initgraph_test TESTS/vpagraph/initgraph_test.pas
+	@T=./$(CORETESTS)/initgraph_test; L=$(CORETESTS)/initgraph; rm -f $$L.*; \
+	export VPA_SCALE=1 VPA_GRAPH_PLUGIN_DIR=$(abspath $(PLUGDIR)); \
+	unset VPA_GRAPH_BACKEND WAYLAND_DISPLAY XDG_SESSION_TYPE; \
+	fail() { echo ">> initgraph-test: $$1"; exit 1; }; \
+	HEAPTRC=log=$$L.auto.heaptrc xvfb-run -a $$T > $$L.auto 2>&1 || fail "auto under X failed"; \
+	test "$$(grep -c '^backend x11' $$L.auto)" = 2 || fail "auto under X: expected x11 twice"; \
+	grep -q '^detail' $$L.auto && fail "auto under X: unexpected detail"; \
+	grep -q '^0 unfreed memory blocks' $$L.auto.heaptrc || fail "leaks, see $$L.auto.heaptrc"; \
+	echo "  ok   auto with DISPLAY only: x11, no detail, repeatable, no leaks"; \
+	HEAPTRC=log=$$L.fallback.heaptrc WAYLAND_DISPLAY=wayland-0 xvfb-run -a $$T > $$L.fallback 2>&1 || fail "fallback failed"; \
+	grep -q '^backend x11' $$L.fallback || fail "fallback: expected x11"; \
+	grep -q '^detail: wayland: .*libvpagraph-wayland.so' $$L.fallback || fail "fallback: no reason for wayland"; \
+	grep -q '^0 unfreed memory blocks' $$L.fallback.heaptrc || fail "leaks, see $$L.fallback.heaptrc"; \
+	echo "  ok   auto with WAYLAND_DISPLAY and no wayland plugin: falls back to x11 and says why"; \
+	HEAPTRC=log=$$L.forced.heaptrc VPA_GRAPH_BACKEND=wayland xvfb-run -a $$T > $$L.forced 2>&1 && fail "forced wayland succeeded"; \
+	grep -q '^result -2' $$L.forced || fail "forced wayland: expected grNotDetected"; \
+	grep -q '^backend x11' $$L.forced && fail "forced wayland fell back to x11"; \
+	echo "  ok   forced wayland: no fallback"; \
+	HEAPTRC=log=$$L.nodisplay.heaptrc DISPLAY= VPA_GRAPH_BACKEND=x11 $$T > $$L.nodisplay 2>&1 && fail "x11 without DISPLAY succeeded"; \
+	grep -q '^detail: x11: .*Cannot open X display' $$L.nodisplay || fail "x11 without DISPLAY: reason missing"; \
+	grep -q '^0 unfreed memory blocks' $$L.nodisplay.heaptrc || fail "leaks, see $$L.nodisplay.heaptrc"; \
+	echo "  ok   forced x11 without DISPLAY: Init fails cleanly with the reason of ptc"; \
+	DISPLAY= $$T > $$L.nosession 2>&1 && fail "no session succeeded"; \
+	grep -q '^detail: .*both unset' $$L.nosession || fail "no session: reason missing"; \
+	echo "  ok   auto with no session at all"; \
+	VPA_GRAPH_BACKEND=bogus $$T > $$L.bogus 2>&1 && fail "bogus backend succeeded"; \
+	grep -q '^detail: "bogus" is not valid' $$L.bogus || fail "bogus: reason missing"; \
+	echo "  ok   unknown VPA_GRAPH_BACKEND"
+	@echo ">> initgraph-test passed"
 
 ## abi-plugins : build the six ABI test plugins (stub + five faulty ones) into
 ##               build/abi/, and check that vpagraph_abi.inc compiles both from
