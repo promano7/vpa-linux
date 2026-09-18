@@ -65,7 +65,7 @@ más fácil es saltárselas:
 | 3 | Cargador dinámico | ☑ cerrada (2026-09-15) |
 | 4 | Detección y selección de backend | ☑ cerrada (2026-09-15) |
 | 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ☑ cerrada (2026-09-16) |
-| 6 | Migración de VPA-Linux a `VPAGraph` | ◐ en curso: T6.1–T6.3 hechas (2026-09-18) |
+| 6 | Migración de VPA-Linux a `VPAGraph` | ◐ en curso: T6.1–T6.3 y el núcleo de T6.6/T6.7 hechos (2026-09-18) |
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☐ |
 | 8 | Motor de dibujo Wayland (vía B o vía A) | ☐ |
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☐ |
@@ -1249,6 +1249,36 @@ Aquí está el truco que hace viable toda la operación.
   > `uses`, `KEYBOARD.PAS`, `MOUSE.PAS` y `xfocus`, cerrando con las escenas
   > doradas (T6.13). Así `feature/wayland` nunca queda en un commit que no
   > arranca.
+  >
+  > **Paso 1 hecho (2026-09-18):** `GRAPH/vpagraph_input.pas` y el objetivo
+  > `coreinput-test`. El ejecutable sigue sin tocar. Lo que el paso 2 tiene
+  > que saber de esa unidad:
+  >
+  > - Nombres con prefijo, para no chocar con los `KeyPressed`/`ReadKey`/
+  >   `ShowMouse` que ya declaran `KEYBOARD.PAS` y `MOUSE.PAS`:
+  >   `VPAKeyPressed`, `VPAReadKey` (`#0` + scancode, como `ptccrt`),
+  >   `VPALastKbdFlags`, `VPAQuitNoSave`, `VPAKbdModifiers` (sustituye a
+  >   `xfocus.KbdModifiers`), `VPAGetMouseState`, `VPASetMousePos`,
+  >   `VPAShowMouse(Show)` y `VPAMouseInside` (sustituye a
+  >   `xfocus.PointerInsideWindow`, `VPA2.PAS:4078`). El ratón ya va en
+  >   coordenadas de superficie: los dos `xfocus.Map*` de `MOUSE.PAS`
+  >   desaparecen sin sustituto.
+  > - Una sola bomba de eventos (`PollEvent` no filtra por tipo, a diferencia
+  >   de `NextEvent` de ptc): la vacían tanto `VPAKeyPressed` como
+  >   `VPAGetMouseState`, con `Present` delante; las teclas van a un búfer de
+  >   256 y el ratón lo recuerda el plugin. Sondear el ratón no pierde teclas
+  >   (comprobado).
+  > - Sin backend activo —antes de `InitGraph`, tras `CloseGraph` o con la
+  >   ventana **suspendida**— `VPAInputReady` es `False` y `VPAReadKey`
+  >   devuelve `#0` **sin esperar**. `ptccrt` leía entonces de la terminal con
+  >   `crt`: `KEYBOARD.PAS` tiene que decidir qué hace en ese caso (lo natural,
+  >   `if VPAInputReady then … else crt.…`, porque `crt` no enlaza X11).
+  > - El volcado de Ctrl-F12 (`$8A00`, T0.4) se queda en `KEYBOARD.PAS`, que
+  >   pasa a llamar a `vpagraph.VPADumpFrame`.
+  > - `vpagraph.pas` expone `VPAGraphActiveInterface` (la tabla del backend en
+  >   uso, `nil` si no hay o está suspendido) y por eso lleva
+  >   `vpagraph_loader` en el `uses` de su interfaz; no afecta a las unidades
+  >   `-Mtp`, porque `uses` no es transitivo.
 
   - [ ] `VPA/VPADATA.PAS`
   - [ ] `VPA/SCREEN.PAS`
@@ -1279,8 +1309,26 @@ Aquí está el truco que hace viable toda la operación.
 
 - [ ] **T6.6** — Reescribir `UNIT/KEYBOARD.PAS` contra la ABI en lugar de
       `ptccrt` + `xfocus`.
+  - [x] Núcleo: traducción `VPAGK_*` + Unicode + modificadores → scancodes de
+        Turbo Pascal y búfer de teclas en `GRAPH/vpagraph_input.pas` (D-10).
+        Es la tabla `kmTP7` de `VENDOR/ptccrt.pp` —nadie asigna `KeyMode`— con
+        los arreglos de VPA: F11/F12, Ctrl-Tab, Ctrl-↑/↓, Alt-flechas,
+        Ctrl-+/- por carácter (D-09), botón [X] = Alt-X y Ctrl-Alt-X.
+        Objetivo `coreinput-test`: un fuente `-Mtp` compilado sobre el núcleo y
+        sobre `ptccrt`+`ptcmouse`, las mismas 203 órdenes de tecla de `xdotool` a
+        los dos, y 215 lecturas (palabra de tecla, `LastKbdFlags`,
+        `QuitNoSave`, ratón) **idénticas**; más las pruebas sintéticas de lo
+        que `xdotool` no puede producir con el teclado `us` de Xvfb (el `+` de
+        es/de/fr con tecla indefinida, búfer lleno, sin backend).
+  - [ ] `UNIT/KEYBOARD.PAS` sobre `vpagraph_input` (paso 2).
 - [ ] **T6.7** — Reescribir `UNIT/MOUSE.PAS` contra la ABI en lugar de
       `ptcmouse` + `xfocus`.
+  - [x] Núcleo: estado del ratón sobre `PollEvent`/`GetMouseState`, con
+        `Present` antes de sondear, en la misma unidad y con la misma prueba
+        (movimiento, arrastre, los tres botones, y que sondear el ratón no se
+        come las teclas).
+  - [ ] `UNIT/MOUSE.PAS` sobre `vpagraph_input` (paso 2). El rango por
+        software y el despacho de manejadores se quedan como están.
 - [ ] **T6.8** — Sustituir las 19 llamadas a `xfocus` (sección 2.1) por llamadas
       a `VPAGraph`, y **eliminar `UNIT/xfocus.pas`** del ejecutable.
 - [ ] **T6.9** — Revisar el `uses` de `VPA/VPA.PAS` a la luz de T5.9.
