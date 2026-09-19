@@ -7,8 +7,8 @@
   misma ruta TPTCCopy/Hermes que usa la consola X11, presentacion con
   vecino mas proximo y letterbox, raton en coordenadas de superficie,
   cursor en diana escalado con la ventana y ocultable, MoveMouseTo (R12),
-  Save/Clear/Copy, cierre de ventana y un mapa de teclas parcial.
-  Lo que NO hace (Fase 9): mapa de teclas completo con caracter Unicode.
+  Save/Clear/Copy, cierre de ventana y mapa de teclas completo con el
+  caracter de la distribucion activa (D-09, D-23).
   Fuera de alcance: modos, relative mouse mode, opciones de ptcpas.conf. }
 
 constructor TSDLConsole.Create;
@@ -380,43 +380,144 @@ begin
   Update;
 end;
 
+{ Codigo PTC de un keycode de SDL, o PTCKEY_UNDEFINED si no tiene. Es la
+  pareja de FNormalKeys/FFunctionKeys de la consola X11 (x11displayi.inc) y
+  cubre las mismas teclas; el teclado numerico va aparte, por scancode. }
+function SDLKeycodeToPTC(k: TSDL_Keycode): Integer;
+begin
+  case k of
+    SDLK_BACKSPACE:    Result := PTCKEY_BACKSPACE;
+    SDLK_TAB:          Result := PTCKEY_TAB;
+    SDLK_CLEAR:        Result := PTCKEY_CLEAR;
+    SDLK_RETURN:       Result := PTCKEY_ENTER;
+    SDLK_PAUSE:        Result := PTCKEY_PAUSE;
+    SDLK_SCROLLLOCK:   Result := PTCKEY_SCROLLLOCK;
+    SDLK_ESCAPE:       Result := PTCKEY_ESCAPE;
+    SDLK_DELETE:       Result := PTCKEY_DELETE;
+    SDLK_HOME:         Result := PTCKEY_HOME;
+    SDLK_LEFT:         Result := PTCKEY_LEFT;
+    SDLK_UP:           Result := PTCKEY_UP;
+    SDLK_RIGHT:        Result := PTCKEY_RIGHT;
+    SDLK_DOWN:         Result := PTCKEY_DOWN;
+    SDLK_PAGEUP:       Result := PTCKEY_PAGEUP;
+    SDLK_PAGEDOWN:     Result := PTCKEY_PAGEDOWN;
+    SDLK_END:          Result := PTCKEY_END;
+    SDLK_PRINTSCREEN:  Result := PTCKEY_PRINTSCREEN;
+    SDLK_INSERT:       Result := PTCKEY_INSERT;
+    SDLK_NUMLOCKCLEAR: Result := PTCKEY_NUMLOCK;
+    SDLK_F1..SDLK_F12: Result := PTCKEY_F1 + Integer(k - SDLK_F1);
+    SDLK_LSHIFT, SDLK_RSHIFT: Result := PTCKEY_SHIFT;
+    SDLK_LCTRL, SDLK_RCTRL:   Result := PTCKEY_CONTROL;
+    SDLK_CAPSLOCK:     Result := PTCKEY_CAPSLOCK;
+    SDLK_LALT, SDLK_RALT:     Result := PTCKEY_ALT;
+    SDLK_SPACE:        Result := PTCKEY_SPACE;
+    SDLK_COMMA:        Result := PTCKEY_COMMA;
+    SDLK_MINUS:        Result := PTCKEY_MINUS;
+    SDLK_PERIOD:       Result := PTCKEY_PERIOD;
+    SDLK_SLASH:        Result := PTCKEY_SLASH;
+    SDLK_0..SDLK_9:    Result := PTCKEY_ZERO + Integer(k - SDLK_0);
+    SDLK_SEMICOLON:    Result := PTCKEY_SEMICOLON;
+    SDLK_EQUALS:       Result := PTCKEY_EQUALS;
+    SDLK_GRAVE:        Result := PTCKEY_BACKQUOTE;
+    SDLK_APOSTROPHE:   Result := PTCKEY_QUOTE;
+    SDLK_LEFTBRACKET:  Result := PTCKEY_OPENBRACKET;
+    SDLK_BACKSLASH:    Result := PTCKEY_BACKSLASH;
+    SDLK_RIGHTBRACKET: Result := PTCKEY_CLOSEBRACKET;
+    SDLK_A..SDLK_Z:    Result := PTCKEY_A + Integer(k - SDLK_A);
+  else
+    Result := PTCKEY_UNDEFINED;
+  end;
+end;
+
+{ Teclado numerico, por scancode (la tecla fisica) y estado de NumLock: con
+  NumLock da PTCKEY_NUMPADn y el digito; sin el, la tecla de cursor, como la
+  consola X11 con XK_KP_1 / XK_KP_End. False si no es del teclado numerico. }
+function SDLNumPadToPTC(sc: TSDL_Scancode; NumLock: Boolean;
+                        out code, uni: Integer): Boolean;
+const
+  { SDL_SCANCODE_KP_1..KP_9, KP_0, KP_PERIOD, en ese orden }
+  Locked: array[0..10] of Integer = (PTCKEY_NUMPAD1, PTCKEY_NUMPAD2,
+    PTCKEY_NUMPAD3, PTCKEY_NUMPAD4, PTCKEY_NUMPAD5, PTCKEY_NUMPAD6,
+    PTCKEY_NUMPAD7, PTCKEY_NUMPAD8, PTCKEY_NUMPAD9, PTCKEY_NUMPAD0,
+    PTCKEY_DECIMAL);
+  LockedChar: array[0..10] of Char = '1234567890.';
+  Unlocked: array[0..10] of Integer = (PTCKEY_END, PTCKEY_DOWN,
+    PTCKEY_PAGEDOWN, PTCKEY_LEFT, PTCKEY_CLEAR, PTCKEY_RIGHT, PTCKEY_HOME,
+    PTCKEY_UP, PTCKEY_PAGEUP, PTCKEY_INSERT, PTCKEY_DELETE);
+begin
+  Result := True;
+  uni := 0;
+  case sc of
+    SDL_SCANCODE_KP_DIVIDE:   begin code := PTCKEY_DIVIDE;   uni := Ord('/'); end;
+    SDL_SCANCODE_KP_MULTIPLY: begin code := PTCKEY_MULTIPLY; uni := Ord('*'); end;
+    SDL_SCANCODE_KP_MINUS:    begin code := PTCKEY_SUBTRACT; uni := Ord('-'); end;
+    SDL_SCANCODE_KP_PLUS:     begin code := PTCKEY_ADD;      uni := Ord('+'); end;
+    SDL_SCANCODE_KP_ENTER:    begin code := PTCKEY_ENTER;    uni := 13; end;
+    SDL_SCANCODE_KP_1..SDL_SCANCODE_KP_PERIOD:
+      if NumLock then
+      begin
+        code := Locked[sc - SDL_SCANCODE_KP_1];
+        uni := Ord(LockedChar[sc - SDL_SCANCODE_KP_1]);
+      end
+      else
+        code := Unlocked[sc - SDL_SCANCODE_KP_1];
+  else
+    Result := False;
+  end;
+end;
+
+{ Evento de tecla de SDL -> TPTCKeyEvent, con lo mismo que entrega la consola
+  X11 (TX11Display.HandleKeyEvent), que es lo que espera ptccrt:
+    - Unicode: el caracter de la tecla EN LA DISTRIBUCION ACTIVA y con
+      Shift/AltGr/BloqMayus aplicados (D-09). Sale del mapa de teclas de SDL,
+      SDL_GetKeyFromScancode(scancode, mod, False), que en Wayland se
+      construye del keymap xkb del compositor. NO se usa
+      SDL_EVENT_TEXT_INPUT (D-23): llega en un evento aparte y, sobre todo,
+      no llega con Ctrl pulsado, que es justo el caso de Ctrl-+ / Ctrl-- de
+      3.67.5. X11 hace lo mismo: el caracter sale del keysym, no del texto
+      compuesto. Solo en la pulsacion; al soltar, -1, como X11.
+    - Code: primero el del caracter con modificadores y, si no tiene, el de
+      la tecla base: el mismo orden que el "hack" de X11 (en la distribucion
+      alemana Shift-7 es '/', y el codigo es PTCKEY_SLASH).
+    - Una tecla sin codigo PTC se entrega igual, con PTCKEY_UNDEFINED y su
+      caracter: asi llega el '+' de las distribuciones donde es tecla propia. }
 procedure TSDLConsole.TranslateKey(const AEvent: TSDL_KeyboardEvent);
 var
   code, uni: Integer;
-  k: TSDL_Keycode;
+  ch: TSDL_Keycode;
   m: TPTCModifierKeys;
 begin
-  k := AEvent.key;
-  code := 0; uni := 0;
-  case k of
-    SDLK_RETURN: code := PTCKEY_ENTER;
-    SDLK_ESCAPE, SDLK_BACKSPACE, SDLK_TAB, SDLK_SPACE, SDLK_DELETE: code := k;
-    SDLK_A..SDLK_Z: code := k - 32;
-    SDLK_0..SDLK_9: code := k;
-    SDLK_F1..SDLK_F12: code := PTCKEY_F1 + (k - SDLK_F1);
-    SDLK_LEFT: code := PTCKEY_LEFT;
-    SDLK_RIGHT: code := PTCKEY_RIGHT;
-    SDLK_UP: code := PTCKEY_UP;
-    SDLK_DOWN: code := PTCKEY_DOWN;
-    SDLK_HOME: code := PTCKEY_HOME;
-    SDLK_END: code := PTCKEY_END;
-    SDLK_PAGEUP: code := PTCKEY_PAGEUP;
-    SDLK_PAGEDOWN: code := PTCKEY_PAGEDOWN;
-    SDLK_INSERT: code := PTCKEY_INSERT;
-    SDLK_LSHIFT, SDLK_RSHIFT: code := PTCKEY_SHIFT;
-    SDLK_LCTRL, SDLK_RCTRL: code := PTCKEY_CONTROL;
-    SDLK_LALT, SDLK_RALT: code := PTCKEY_ALT;
-  end;
-  if code = 0 then
-    exit;
-  { PROTOTIPO: el caracter sale del keycode; el de verdad tiene que salir de
-    SDL_EVENT_TEXT_INPUT para respetar la distribucion (D-09). }
-  if (k >= 32) and (k < 127) then
-    uni := k;
   m := [];
   if (AEvent.mod_ and SDL_KMOD_SHIFT) <> 0 then Include(m, pmkShift);
   if (AEvent.mod_ and SDL_KMOD_CTRL) <> 0 then Include(m, pmkControl);
   if (AEvent.mod_ and SDL_KMOD_ALT) <> 0 then Include(m, pmkAlt);
+  if (AEvent.mod_ and SDL_KMOD_CAPS) <> 0 then Include(m, pmkCapsLockActive);
+  if (AEvent.mod_ and SDL_KMOD_NUM) <> 0 then Include(m, pmkNumLockActive);
+  case AEvent.key of
+    SDLK_RSHIFT, SDLK_RCTRL, SDLK_RALT: Include(m, pmkRightKey);
+  end;
+
+  if SDLNumPadToPTC(AEvent.scancode, pmkNumLockActive in m, code, uni) then
+    Include(m, pmkNumPadKey)
+  else
+  begin
+    if AEvent.key = SDLK_NUMLOCKCLEAR then
+      Include(m, pmkNumPadKey);
+    ch := SDL_GetKeyFromScancode(AEvent.scancode, AEvent.mod_, False);
+    uni := 0;
+    if (ch and (SDLK_SCANCODE_MASK or SDLK_EXTENDED_MASK)) = 0 then
+      uni := Integer(ch);
+    if uni = 127 then
+      uni := 0;                       { Supr: X11 no le da caracter }
+    code := SDLKeycodeToPTC(ch);
+    if code = PTCKEY_UNDEFINED then
+      code := SDLKeycodeToPTC(AEvent.key);
+    { Shift-Tab: X11 lo entrega como Tab con caracter 9 }
+    if code = PTCKEY_TAB then
+      uni := 9;
+  end;
+  if not AEvent.down then
+    uni := -1;
   FEventQueue.AddEvent(TPTCKeyEvent.Create(code, uni, m, AEvent.down));
 end;
 
