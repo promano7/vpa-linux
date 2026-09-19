@@ -67,7 +67,7 @@ más fácil es saltárselas:
 | 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ☑ cerrada (2026-09-16) |
 | 6 | Migración de VPA-Linux a `VPAGraph` | ☑ cerrada (2026-09-19) |
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☑ cerrada (2026-09-19) — **vía B** |
-| 8 | Motor de dibujo Wayland (vía B) | ☐ |
+| 8 | Motor de dibujo Wayland (vía B) | ◐ en curso: dibuja por el plugin, 0 diferencias (`make wayland-test`); falta revisar la consola (T8B.2, T8B.7) y las doradas |
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☐ |
 | 10 | Escalado, HiDPI y pantalla completa | ☐ |
 | 11 | Comparación visual automatizada | ☐ |
@@ -1465,36 +1465,61 @@ Se ejecuta **una** de las dos vías. La otra queda documentada como descartada.
 
 #### Vía B — Consola PTC sobre SDL3 *(elegida, ADR-001)*
 
-- [ ] **T8B.0** — Repetir `TESTS/fase7/medir.sh` en un compositor real (la VM
+- [x] **T8B.0** — Repetir `TESTS/fase7/medir.sh` en un compositor real (la VM
       Slackware/KDE-Wayland y, si se puede, Arch) con la `sdl3` de la
       distribución. La Fase 7 solo se midió bajo `weston` sin pantalla.
-- [ ] **T8B.1** — Vendorizar las piezas de PTCPas que falten (`ptcwrapper` y lo
+      *Hecho el 2026-09-19 en la VM Slackware/KDE-Wayland (KWin, sesión real,
+      `env -u DISPLAY`), con la `sdl3` **3.4.16** de la distribución contra
+      enlaces 3.4.4 (D-20 funciona en la práctica): T7.2 `controlador wayland`,
+      0 píxeles distintos al releer; vía B `scene_test: PASS` y los **10
+      volcados con el mismo SHA-256** que la referencia X11 del contenedor.
+      La VM no tiene 3D (VMware): Mesa avisa y el renderizador `opengl` cae a
+      software, sin consecuencias. Pendiente menor: la misma medida en Arch.*
+- [x] **T8B.1** — Vendorizar las piezas de PTCPas que falten (`ptcwrapper` y lo
       que T7.3 haya identificado), con el aviso de modificación que exige la
       LGPL, igual que ya se hizo en `VENDOR/ptcgraph.pp`.
+      *No faltaba ninguna pieza (`ptcwrapper` ya estaba vendorizado desde D-18
+      y no hace falta tocarlo). Faltaba el aviso de modificación en
+      `VENDOR/ptc/ptc.pp`, que ahora enumera los cuatro cambios de VPA-Linux.*
 - [ ] **T8B.2** — `VENDOR/ptc/sdl/sdlconsoled.inc` y `sdlconsolei.inc`:
       declaración e implementación de la consola SDL3.
-- [ ] **T8B.3** — Apertura de ventana: `SDL_Init(VIDEO)` con el controlador de
+      *Existe y dibuja (T8B.3–T8B.6 medidas). Queda la revisión de lo que el
+      prototipo dejó vacío: `Save`, `Clear` con color y área, `Copy`, la
+      opción `hide cursor` (la usa `ShowMouse`) y decidir si el volcado
+      `VPA_PROTO_PRESENTED` se queda para la Fase 11 o se quita.*
+- [x] **T8B.3** — Apertura de ventana: `SDL_Init(VIDEO)` con el controlador de
       vídeo forzado a `wayland` (hint de SDL3, no solo la variable de entorno),
       ventana redimensionable, textura de presentación en streaming.
-- [ ] **T8B.4** — Superficie lógica indexada de 8 bits y ciclo
+- [x] **T8B.4** — Superficie lógica indexada de 8 bits y ciclo
       `Lock` / `Unlock` / `Update`, conservando la semántica de PTC.
-- [ ] **T8B.5** — Conversión indexado → 32 bits en la presentación, respetando
+- [x] **T8B.5** — Conversión indexado → 32 bits en la presentación, respetando
       la ruta de paleta existente.
-- [ ] **T8B.6** — Presentación con **filtrado de vecino más próximo**: la
+- [x] **T8B.6** — Presentación con **filtrado de vecino más próximo**: la
       ventana actual escala con bordes nítidos y el aspecto tiene que ser el
       mismo. Nada de suavizado.
 - [ ] **T8B.7** — Cola de eventos: traducir eventos SDL3 a eventos PTC
       (`IPTCKeyEvent`, `IPTCMouseEvent`, `IPTCCloseEvent`), que es lo que hace
       que `ptccrt` y `ptcmouse` funcionen sin tocarlos.
-- [ ] **T8B.8** — Registrar la consola en `TPTCConsoleFactory` mediante un
+- [x] **T8B.8** — Registrar la consola en `TPTCConsoleFactory` mediante un
       define de compilación, de modo que la misma base de PTC produzca la
       consola X11 o la SDL según cómo se compile el plugin.
-- [ ] **T8B.9** — Construir `libvpagraph-wayland.so` reutilizando el adaptador
+- [x] **T8B.9** — Construir `libvpagraph-wayland.so` reutilizando el adaptador
       de ABI de la Fase 5 (idealmente **el mismo fichero**, compilado dos veces
       con distinto define: si el adaptador es común, la equivalencia entre
       backends deja de ser una esperanza y pasa a ser una propiedad del código).
+      *Hecho así: `BACKENDS/WAYLAND/vpagraph_wayland.lpr` compila
+      `BACKENDS/X11/vpagraph_x11_impl.pas` y `vpagraph_x11_input.pas` con
+      `-dVPAG_WAYLAND`; lo único propio es `vpagraph_wayland_window.pas`
+      (D-22). `make wayland-plugin` (opcional hasta la Fase 12: `make build`
+      no exige SDL3). El `.so` enlaza `libSDL3` y no `libX11`.*
 - [ ] **T8B.10** — Comparación píxel a píxel contra las imágenes doradas.
       Objetivo realista aquí: **cero diferencias**.
+      *A medias: `make wayland-test` (weston sin pantalla, sin `DISPLAY`) da
+      cero diferencias en las 5 escenas por el plugin y en los 10 volcados de
+      `graphapi-test` por el núcleo con `VPA_GRAPH_BACKEND=wayland`; además
+      2×20 ciclos Init/Shutdown + `dlclose` sin fugas y `VPAG_ERR_VIDEO` con
+      mensaje cuando no hay compositor. Faltan las 20 doradas de la partida
+      real (necesitan `fixture_tar.gz` y `RESOURCE.PLN`).*
 
 #### Vía A — Reimplementación BGI sobre SDL3 *(descartada, ADR-001)*
 
@@ -1811,6 +1836,7 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-17 | 2026-09-15 | `--graph-info` se intercepta en `VPA.PAS`, antes de instalar `Terminate`; `--help` en `Parameters`, junto a `/?` | `Terminate` fuerza `ExitCode := 0` en todo `Halt`, y `--graph-info` tiene que salir con 1 cuando no hay backend. La ayuda no necesita código de salida y va con la de siempre |
 | D-20 | 2026-09-19 | SDL3 objetivo **3.4.x**, mínima **3.4.4** (la de los enlaces `SDL3-for-Pascal` v0.6 vendorizados); la consola compara `SDL_GetVersion` con `SDL_VERSION` al abrir y se niega con una SDL más vieja | R10. Dentro de la serie 3 la ABI solo crece, así que una SDL más nueva vale y una más vieja no |
 | D-21 | 2026-09-19 | El controlador de vídeo se fuerza con `SDL_HINT_VIDEO_DRIVER=wayland` antes de `SDL_Init`, no con la variable de entorno | Medido en T7.2: sin compositor `SDL_Init` falla con mensaje en vez de caer a X11 en silencio, que es lo que exige 6.5 |
+| D-22 | 2026-09-19 | El plugin Wayland **no** expone la ventana (`PSDL_Window`) al adaptador: todo lo que toca la ventana (pantalla completa hoy; cursor, puntero y modificadores en la Fase 9) se pide a la consola con `PTCWrapperObject.Option`, que `ptcwrapper` ya ejecuta en el hilo de la consola. `GetScreenSize` devuelve `VPAG_ERR_UNSUPPORTED` | No es simetría con D-18 porque el protocolo no es simétrico: en X11 una segunda conexión puede manipular una ventana por su XID; en Wayland una superficie solo existe en la conexión que la creó, y R11 prohíbe llamar a SDL fuera del hilo de la consola. Un puntero a la ventana en manos del adaptador sería una invitación a violarlo. `ptcwrapper` queda sin tocar. El tamaño de pantalla no se conoce antes de tener ventana; el núcleo ya contempla ese caso y lo demás es de la Fase 10 |
 
 ---
 
