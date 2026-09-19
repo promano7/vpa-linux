@@ -65,7 +65,7 @@ más fácil es saltárselas:
 | 3 | Cargador dinámico | ☑ cerrada (2026-09-15) |
 | 4 | Detección y selección de backend | ☑ cerrada (2026-09-15) |
 | 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ☑ cerrada (2026-09-16) |
-| 6 | Migración de VPA-Linux a `VPAGraph` | ◐ T6.1–T6.13 hechas (2026-09-18); solo falta T6.14, la partida real en la máquina de desarrollo |
+| 6 | Migración de VPA-Linux a `VPAGraph` | ☑ cerrada (2026-09-19) |
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☐ |
 | 8 | Motor de dibujo Wayland (vía B o vía A) | ☐ |
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☐ |
@@ -1374,12 +1374,20 @@ Aquí está el truco que hace viable toda la operación.
       objetivos de prueba del `Makefile` pasan desde un `build/` limpio; las
       variantes «direct» salen ahora de `build/directunits` (objetivo
       `direct-units`), porque `make build` ya no deja los `.ppu` de ptcgraph.
-- [ ] **T6.14** — Partida real completa en X11: cargar una partida de
+- [x] **T6.14** — Partida real completa en X11: cargar una partida de
       `EXAMPLES/`, jugar un turno, guardar, salir y volver a entrar. Solo puede
       hacerse en la máquina de desarrollo. Mirar en especial lo que Xvfb sin
       gestor de ventanas no cubre: `VPA_SCALE=fullscreen` (entrar, «Edit file»
       y volver, salir: que el panel del escritorio reaparezca), el ratón con la
-      ventana escalada, y el foco al volver del editor bajo Cinnamon.
+      ventana escalada, y el foco al volver del editor bajo Cinnamon. —
+      Hecha por Pablo el 2026-09-19 en Arch/Cinnamon con el binario de
+      `631ccdb` (`make data`, `readelf`: solo `libc.so.6`): en ventana normal y
+      con `VPA_SCALE=fullscreen` entra y sale bien, y Ctrl-O → «Edit file»
+      abre `nano` y al salir vuelve a la ventana de VPA con el foco. Con
+      `VPA_SCALE=3` los clics del ratón caen donde toca, y se juega un turno,
+      se sale y se vuelve a entrar con todo correcto. Las 20
+      escenas doradas, recapturadas en esa máquina con su `RESOURCE.PLN`,
+      dan 20 de 20 idénticas con `TESTS/compare.py` (tolerancia 0).
 
 > **Pendiente para la Fase 12 (documentación):** `BUILD.es.md`/`BUILD.en.md` y
 > los README siguen diciendo que `make hlp` necesita `xvfb`, que `cthreads` va
@@ -1388,6 +1396,11 @@ Aquí está el truco que hace viable toda la operación.
 
 **Criterio de aceptación:** VPA funciona en X11 exactamente igual que 3.67.6, el
 binario no enlaza X11, y las imágenes doradas coinciden píxel a píxel.
+
+> **Fase cerrada el 2026-09-19.** Verificado: 40 de 40 doradas en el
+> contenedor y 20 de 20 `.ppm` en la máquina de desarrollo, los once objetivos
+> de prueba en PASS, `readelf` con `libc.so.6` como única dependencia, y la
+> partida real de T6.14 en Arch/Cinnamon, en ventana y a pantalla completa.
 
 > En este punto la arquitectura está completa y **no se ha escrito ni una línea
 > de Wayland**. Buen momento para fusionar a `main` y, si se quiere, publicar
