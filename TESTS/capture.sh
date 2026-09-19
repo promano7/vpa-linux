@@ -19,11 +19,27 @@
 #     VPA_FIXTURE   partida de referencia    (por defecto TESTS/fixture)
 #     VPA_RESOURCE  ruta de RESOURCE.PLN     (por defecto se busca, ver abajo)
 #     VPA_RACE      numero de raza           (por defecto el de RACE, abajo)
+#     VPA_CAPTURE   x11 | wayland            (por defecto x11; ver abajo)
 #     VPA_DISPLAY   display de Xvfb          (por defecto :99)
 #     VPA_KEYWAIT   segundos entre teclas    (por defecto 1.0)
 #     VPA_KEYMODE   xtest | sendevent        (por defecto xtest)
 #
 # Requisitos: Xvfb, xdotool, y un binario compilado con el volcado de T0.4.
+#
+# VPA_CAPTURE=wayland (T8B.10)
+# ----------------------------
+# Las mismas escenas con el backend Wayland, SIN DISPLAY. xdotool no existe en
+# Wayland, asi que cambian el servidor y el inyector, y nada mas:
+#   - servidor: sway sin pantalla (WLR_BACKENDS=headless, renderizador pixman)
+#     con una salida de 640x480 y sin bordes, para que la ventana de VPA la
+#     ocupe entera en (0,0) y las coordenadas de salida sean las de la imagen.
+#     weston sin pantalla no sirve aqui: no tiene forma de inyectar entrada;
+#   - teclas: wtype (protocolo virtual-keyboard); puntero: wlrctl
+#     (virtual-pointer, solo movimiento relativo: se lleva a la esquina y de
+#     ahi al punto);
+#   - VPA se lanza con VPA_GRAPH_BACKEND=wayland, que no degrada a X11.
+# Requisitos: sway, swaymsg, wtype, wlrctl, el plugin libvpagraph-wayland.so
+# junto al binario y, si SDL3 no esta en una ruta estandar, LD_LIBRARY_PATH.
 #
 # Las condiciones de captura (VPA_SCALE=1, sin gestor de ventanas, puntero
 # aparcado en (240,240), copia limpia por escena, directorio de ejecucion
@@ -65,6 +81,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VPA_BIN="${VPA_BIN:-$ROOT/build/VPA}"
 VPA_FIXTURE="${VPA_FIXTURE:-$ROOT/TESTS/fixture}"
 VPA_RACE="${VPA_RACE:-$RACE}"
+VPA_CAPTURE="${VPA_CAPTURE:-x11}"
 VPA_DISPLAY="${VPA_DISPLAY:-:99}"
 VPA_KEYWAIT="${VPA_KEYWAIT:-1.0}"
 VPA_KEYMODE="${VPA_KEYMODE:-xtest}"
@@ -117,7 +134,13 @@ case "$VPA_KEYMODE" in
   *) die "VPA_KEYMODE debe ser xtest o sendevent (es '$VPA_KEYMODE')" ;;
 esac
 
-for tool in Xvfb xdotool; do
+case "$VPA_CAPTURE" in
+  x11)     TOOLS="Xvfb xdotool" ;;
+  wayland) TOOLS="sway swaymsg wtype wlrctl python3" ;;
+  *) die "VPA_CAPTURE debe ser x11 o wayland (es '$VPA_CAPTURE')" ;;
+esac
+
+for tool in $TOOLS; do
   command -v "$tool" >/dev/null 2>&1 || die "falta $tool"
 done
 [ -x "$VPA_BIN" ] || die "no hay ejecutable en $VPA_BIN (make build)"
@@ -126,7 +149,7 @@ done
 mkdir -p "$OUT" || die "no se puede crear $OUT"
 OUT="$(cd "$OUT" && pwd)"
 TMP="$(mktemp -d)"
-trap 'kill "${XVFB_PID:-}" 2>/dev/null; rm -rf "$TMP"' EXIT
+trap 'kill "${XVFB_PID:-}" "${SWAY_PID:-}" 2>/dev/null; rm -rf "$TMP"' EXIT
 
 # --- directorio de ejecucion --------------------------------------------------
 
@@ -200,6 +223,8 @@ grep -qi '^ScreenSaverTime[[:space:]]*=[[:space:]]*0[[:space:]]*$' "$RUN/VPA.INI
 
 # --- servidor X ---------------------------------------------------------------
 
+if [ "$VPA_CAPTURE" = x11 ]; then
+
 # Xvfb propio, sin gestor de ventanas: la ventana de VPA aparece en (0,0).
 # '-s 0' apaga el salvapantallas del servidor. No afecta al volcado (que sale de
 # la superficie de ptc, no del servidor), pero evita que xdotool tenga que
@@ -222,6 +247,36 @@ done
   die "Xvfb no acepta conexiones en $VPA_DISPLAY: $(tail -2 "$TMP/xvfb.log" | tr '\n' ' ')"
 command -v xset >/dev/null 2>&1 && xset s off -dpms >/dev/null 2>&1
 
+else  # --- compositor Wayland (VPA_CAPTURE=wayland) ---------------------------
+
+unset DISPLAY
+export XDG_RUNTIME_DIR="$TMP/xdg"
+mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+cat > "$TMP/sway.conf" <<'EOC'
+xwayland disable
+output HEADLESS-1 mode 640x480 position 0 0
+default_border none
+focus_follows_mouse no
+EOC
+WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 \
+  sway -c "$TMP/sway.conf" >"$TMP/sway.log" 2>&1 &
+SWAY_PID=$!
+sway_ready=no
+for _ in $(seq 1 40); do
+  kill -0 "$SWAY_PID" 2>/dev/null ||
+    die "sway ha terminado: $(tail -2 "$TMP/sway.log" | tr '\n' ' ')"
+  SWAYSOCK="$(ls "$XDG_RUNTIME_DIR"/sway-ipc.*.sock 2>/dev/null | head -1)"
+  WAYLAND_DISPLAY="$(cd "$XDG_RUNTIME_DIR" && ls wayland-* 2>/dev/null | grep -v lock | head -1)"
+  if [ -n "$SWAYSOCK" ] && [ -n "$WAYLAND_DISPLAY" ]; then
+    export SWAYSOCK WAYLAND_DISPLAY
+    swaymsg -t get_version >/dev/null 2>&1 && { sway_ready=yes; break; }
+  fi
+  sleep 0.25
+done
+[ "$sway_ready" = yes ] || die "sway no arranca: $(tail -2 "$TMP/sway.log" | tr '\n' ' ')"
+
+fi
+
 # El titulo de la ventana es ParamStr(0) (VENDOR/ptcgraph.pp, WindowTitle), o
 # sea la ruta exacta con la que lanzamos el binario. Buscar por ella en vez de
 # por "cualquier ventana visible" evita quedarse con una ventana ajena.
@@ -231,7 +286,21 @@ wait_for_window() {
   local pid="$1" n=0 w=""
   while [ $n -lt 60 ]; do
     kill -0 "$pid" 2>/dev/null || return 2      # ha muerto antes de abrir
+    if [ "$VPA_CAPTURE" = wayland ]; then
+      # La ventana de ESTE proceso, y ya con su 640x480 (sway la coloca en
+      # dos pasos y hasta entonces el puntero no cae donde se le manda).
+      w="$(swaymsg -t get_tree 2>/dev/null | python3 -c '
+import json, sys
+def walk(n):
+    r = n.get("rect", {})
+    if n.get("pid") == int(sys.argv[1]) and (r.get("width"), r.get("height")) == (640, 480):
+        print(n["id"])
+    for c in n.get("nodes", []) + n.get("floating_nodes", []):
+        walk(c)
+walk(json.load(sys.stdin))' "$pid" 2>/dev/null | head -1)"
+    else
     w="$(xdotool search --onlyvisible --name "$TITLE_RE" 2>/dev/null | head -1)"
+    fi
     [ -n "$w" ] && { echo "$w"; return 0; }
     sleep 0.5; n=$((n+1))
   done
@@ -254,14 +323,36 @@ wait_for_dump() {
 
 send_key() {
   local win="$1" key="$2"
-  if [ "$VPA_KEYMODE" = xtest ]; then
+  if [ "$VPA_CAPTURE" = wayland ]; then
+    # 'ctrl+F10' -> wtype -M ctrl -k F10 -m ctrl (nombres de keysym, como xdotool)
+    local parts m args=() rel=()
+    IFS='+' read -r -a parts <<< "$key"
+    for m in "${parts[@]:0:${#parts[@]}-1}"; do args+=(-M "$m"); rel=(-m "$m" "${rel[@]}"); done
+    # wtype crea un teclado virtual por invocacion y lo destruye al salir. Sin
+    # la pausa previa la tecla llega pegada al alta del teclado y SDL aun no
+    # tiene el foco de teclado (enter): se pierde, y no siempre (medido).
+    wtype -s 300 "${args[@]}" -k "${parts[-1]}" "${rel[@]}" -s 100
+  elif [ "$VPA_KEYMODE" = xtest ]; then
     xdotool key --clearmodifiers "$key"
   else
     xdotool key --window "$win" --clearmodifiers "$key"
   fi
 }
 
+# move_pointer VENTANA X Y: puntero a (X,Y) de la ventana.
+move_pointer() {
+  if [ "$VPA_CAPTURE" = wayland ]; then
+    wlrctl pointer move -4000 -4000      # esquina (0,0): la salida ES la ventana
+    wlrctl pointer move "$2" "$3"
+  else
+    xdotool mousemove --window "$1" "$2" "$3"
+  fi
+}
+
 # --- captura ------------------------------------------------------------------
+
+BACKEND_ENV=""
+[ "$VPA_CAPTURE" = wayland ] && BACKEND_ENV="VPA_GRAPH_BACKEND=wayland"
 
 capture_scene() {
   local id="$1" keys="$2" pointer="$3" game="$TMP/game" win app rc=0 k gini
@@ -292,7 +383,7 @@ capture_scene() {
   # sin ninguno escribe 'no editor found', asi que la escena dependia de la
   # maquina. Una ruta con barra se acepta tal cual, exista o no.
   ( cd "$RUN" && exec env VPA_SCALE=1 VPA_GRAPH_DUMP="$OUT/$id-" \
-      VISUAL=/usr/bin/nano \
+      VISUAL=/usr/bin/nano $BACKEND_ENV \
       "$VPA_BIN" "$VPA_RACE" "$game" ) >"$OUT/$id.log" 2>&1 &
   app=$!
 
@@ -306,19 +397,20 @@ capture_scene() {
 
   # Sin gestor de ventanas nadie reparte el foco: se lo damos nosotros, que es
   # lo que necesita xdotool en modo xtest (la tecla va a la ventana con foco).
-  xdotool windowfocus --sync "$win" 2>/dev/null
-  xdotool mousemove --window "$win" "$PARK_X" "$PARK_Y"; sleep 0.5
+  # (En sway la ventana nueva ya nace con el foco.)
+  [ "$VPA_CAPTURE" = x11 ] && xdotool windowfocus --sync "$win" 2>/dev/null
+  move_pointer "$win" "$PARK_X" "$PARK_Y"; sleep 0.5
 
   for k in $keys; do
     case "$k" in
-      @*) k="${k#@}"; xdotool mousemove --window "$win" ${k//,/ }; sleep 0.5 ;;
+      @*) k="${k#@}"; move_pointer "$win" ${k//,/ }; sleep 0.5 ;;
       *)  send_key "$win" "$k"
           sleep "$VPA_KEYWAIT" ;;
     esac
   done
   case "$pointer" in
-    park) xdotool mousemove --window "$win" "$PARK_X" "$PARK_Y" ;;
-    *)    xdotool mousemove --window "$win" "${pointer%,*}" "${pointer#*,}" ;;
+    park) move_pointer "$win" "$PARK_X" "$PARK_Y" ;;
+    *)    move_pointer "$win" "${pointer%,*}" "${pointer#*,}" ;;
   esac
   sleep 0.5
   send_key "$win" ctrl+F12
