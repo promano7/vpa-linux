@@ -66,8 +66,8 @@ más fácil es saltárselas:
 | 4 | Detección y selección de backend | ☑ cerrada (2026-09-15) |
 | 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ☑ cerrada (2026-09-16) |
 | 6 | Migración de VPA-Linux a `VPAGraph` | ☑ cerrada (2026-09-19) |
-| 7 | Decisión: motor de dibujo del plugin Wayland | ☐ |
-| 8 | Motor de dibujo Wayland (vía B o vía A) | ☐ |
+| 7 | Decisión: motor de dibujo del plugin Wayland | ☑ cerrada (2026-09-19) — **vía B** |
+| 8 | Motor de dibujo Wayland (vía B) | ☐ |
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☐ |
 | 10 | Escalado, HiDPI y pantalla completa | ☐ |
 | 11 | Comparación visual automatizada | ☐ |
@@ -349,6 +349,9 @@ Innegociables, y la razón de cada una:
 
 Esta es la única decisión grande que **no** se toma ahora. Se documenta para
 tomarla con datos en la Fase 7.
+
+> **Tomada el 2026-09-19: vía B** (D-06, `docs/adr-001-motor-wayland.md`). Lo
+> que sigue se conserva como estaba, porque es el razonamiento previo a medir.
 
 ### 4.1 Vía A — reimplementar BGI sobre SDL3
 
@@ -1413,29 +1416,43 @@ binario no enlaza X11, y las imágenes doradas coinciden píxel a píxel.
 Prototipos acotados en tiempo, para decidir con datos en vez de con intuición.
 **Este código es desechable y no se integra.**
 
-- [ ] **T7.1** — Fijar la versión de SDL3 objetivo y vendorizar los enlaces
+- [x] **T7.1** — Fijar la versión de SDL3 objetivo y vendorizar los enlaces
       Pascal de `PascalGameDevelopment/SDL3-for-Pascal` en `VENDOR/sdl3/`
       (licencia MPL-2.0 / zlib, compatible con la del port). Anotar versión
-      exacta y fecha.
-- [ ] **T7.2** — Prototipo mínimo de SDL3 en Free Pascal: abrir ventana en
+      exacta y fecha. — f8307a9, 928ac44
+      Enlaces `v0.6` (commit `8e9795000d3d`, 2026-05-05) → **SDL 3.4.4** como
+      mínima. La licencia de los enlaces es solo zlib. Hubo que quitarles un
+      `uses X, XLib` que metía `libX11` en todo lo que usara SDL3.
+- [x] **T7.2** — Prototipo mínimo de SDL3 en Free Pascal: abrir ventana en
       Wayland, subir una textura de 640×480 y presentarla. Sin ABI, sin plugin,
       sin nada. Solo confirmar que la cadena FPC → enlaces → SDL3 → Wayland
-      funciona en la máquina de desarrollo.
-- [ ] **T7.3** — **Prototipo de la vía B**: esqueleto de una consola PTC sobre
+      funciona en la máquina de desarrollo. — 06dfbd0
+- [x] **T7.3** — **Prototipo de la vía B**: esqueleto de una consola PTC sobre
       SDL3 en `VENDOR/ptc/sdl/`. No tiene que funcionar; tiene que responder a
       tres preguntas: ¿cuántos métodos de `IPTCConsole` hay que implementar de
       verdad?, ¿hace falta tocar `ptcwrapper` (que **no** está vendorizado, viene
-      de `fp-units-gfx`)?, ¿cómo encaja en `TPTCConsoleFactory`?
-- [ ] **T7.4** — **Prototipo de la vía A**: implementar sobre SDL3 solo
+      de `fp-units-gfx`)?, ¿cómo encaja en `TPTCConsoleFactory`? — b163699, adb529a
+- [x] **T7.4** — **Prototipo de la vía A**: implementar sobre SDL3 solo
       `Line` con `SetLineStyle` y `SetWriteMode(XORPut)`, y comparar píxel a
       píxel con `ptcgraph` usando `TESTS/compare.py`. Es la prueba de fuego: si
       reproducir *una* primitiva ya cuesta ajustes de trazado, reproducir las
-      veinte y las fuentes `.CHR` es un proyecto en sí mismo.
-- [ ] **T7.5** — Escribir `docs/adr-001-motor-wayland.md`: opciones, medidas
+      veinte y las fuentes `.CHR` es un proyecto en sí mismo. — fa36a85
+- [x] **T7.5** — Escribir `docs/adr-001-motor-wayland.md`: opciones, medidas
       obtenidas en T7.3 y T7.4, decisión y motivos. Registrarlo también en la
-      sección 8 de este documento.
-- [ ] **T7.6** — Marcar en la Fase 8 la vía descartada como `- [-]`, con el
+      sección 8 de este documento. — a2fd358
+- [x] **T7.6** — Marcar en la Fase 8 la vía descartada como `- [-]`, con el
       motivo. No se borra.
+
+**Cierre (2026-09-19): vía B.** Medido en contenedor (Ubuntu 24.04, SDL 3.4.4
+compilada desde fuente, `weston --backend=headless`, sin `DISPLAY`); todo se
+repite con `TESTS/fase7/medir.sh`. Vía B: consola SDL3 de 536 líneas que
+funciona, `ptcwrapper` y `ptcgraph` sin tocar, 10 de 10 volcados idénticos a
+X11 y cuadros presentados idénticos a los volcados. Vía A: `Line` pasó de
+10 054 píxeles distintos a 0 solo transcribiendo `graph.inc`/`clip.inc`.
+Detalle en `docs/adr-001-motor-wayland.md`. Los prototipos de `TESTS/fase7/`
+son desechables; la consola de `VENDOR/ptc/sdl/` es el punto de partida de la
+Fase 8, inerte sin `-dPTC_SDL3` (X11 comprobado: `scene-test` y 20/20 doradas).
+Queda fuera de lo medido un compositor real (KWin/Mutter): es T8B.0.
 
 **Criterio de aceptación:** decisión tomada, escrita y justificada con
 mediciones, no con preferencias.
@@ -1446,8 +1463,11 @@ mediciones, no con preferencias.
 
 Se ejecuta **una** de las dos vías. La otra queda documentada como descartada.
 
-#### Vía B — Consola PTC sobre SDL3 *(recomendada)*
+#### Vía B — Consola PTC sobre SDL3 *(elegida, ADR-001)*
 
+- [ ] **T8B.0** — Repetir `TESTS/fase7/medir.sh` en un compositor real (la VM
+      Slackware/KDE-Wayland y, si se puede, Arch) con la `sdl3` de la
+      distribución. La Fase 7 solo se midió bajo `weston` sin pantalla.
 - [ ] **T8B.1** — Vendorizar las piezas de PTCPas que falten (`ptcwrapper` y lo
       que T7.3 haya identificado), con el aviso de modificación que exige la
       LGPL, igual que ya se hizo en `VENDOR/ptcgraph.pp`.
@@ -1476,25 +1496,29 @@ Se ejecuta **una** de las dos vías. La otra queda documentada como descartada.
 - [ ] **T8B.10** — Comparación píxel a píxel contra las imágenes doradas.
       Objetivo realista aquí: **cero diferencias**.
 
-#### Vía A — Reimplementación BGI sobre SDL3 *(plan de contingencia)*
+#### Vía A — Reimplementación BGI sobre SDL3 *(descartada, ADR-001)*
 
-- [ ] **T8A.1** — Framebuffer indexado de 8 bits, paleta y presentación SDL3.
-- [ ] **T8A.2** — Estado gráfico: color, color de fondo, estilo de línea,
+> **Descartada el 2026-09-19 (D-06, `docs/adr-001-motor-wayland.md`).** T7.4
+> demostró que converge, pero solo copiando `graph.inc` manía a manía: es
+> reescribir a mano lo que la vía B reutiliza. Se conserva como contingencia.
+
+- [-] **T8A.1** — Framebuffer indexado de 8 bits, paleta y presentación SDL3.
+- [-] **T8A.2** — Estado gráfico: color, color de fondo, estilo de línea,
       estilo de relleno, modo de escritura, viewport, posición actual.
-- [ ] **T8A.3** — Primitivas: `PutPixel`, `GetPixel`, `Line` (con estilo y
+- [-] **T8A.3** — Primitivas: `PutPixel`, `GetPixel`, `Line` (con estilo y
       grosor), `LineTo`, `LineRel`, `MoveTo`, `Rectangle`, `Bar`, `Circle`,
       `Ellipse`. Solo las del inventario real.
-- [ ] **T8A.4** — Recorte y viewport con la semántica exacta de BGI.
-- [ ] **T8A.5** — Modos de escritura, empezando por `XORPut` (36 usos).
-- [ ] **T8A.6** — Paleta: `SetRGBPalette`, `GetRGBPalette` y la conversión de
+- [-] **T8A.4** — Recorte y viewport con la semántica exacta de BGI.
+- [-] **T8A.5** — Modos de escritura, empezando por `XORPut` (36 usos).
+- [-] **T8A.6** — Paleta: `SetRGBPalette`, `GetRGBPalette` y la conversión de
       T1.7.
-- [ ] **T8A.7** — Imágenes: `ImageSize`, `GetImage`, `PutImage` con el formato
+- [-] **T8A.7** — Imágenes: `ImageSize`, `GetImage`, `PutImage` con el formato
       exacto de T1.6, incluidos los buffers construidos a mano por `TCOMBAT` y
       `EXTFEAT`.
-- [ ] **T8A.8** — Texto: fuente bitmap 8×8 (`DefaultFont`), cargador y
+- [-] **T8A.8** — Texto: fuente bitmap 8×8 (`DefaultFont`), cargador y
       rasterizador de `.CHR` (`LittFont`), justificación, `TextWidth`,
       `TextHeight`. La parte más ingrata y la que más se nota si falla.
-- [ ] **T8A.9** — Comparación píxel a píxel e iteración hasta converger.
+- [-] **T8A.9** — Comparación píxel a píxel e iteración hasta converger.
       Documentar y justificar cada diferencia que se decida tolerar.
 
 **Criterio de aceptación:** `env -u DISPLAY VPA_GRAPH_BACKEND=wayland` abre
@@ -1746,7 +1770,7 @@ obligatoria en cada fase.
 | # | Riesgo | Impacto | Mitigación |
 |---|--------|---------|------------|
 | R1 | Dos RTL de FPC en un proceso con heaps y gestores de hilos separados | Cuelgues y corrupciones intermitentes, dificilísimos de depurar | `T5.9` lo investiga y documenta **antes** de construir encima; regla «quien reserva, libera»; `make heaptrc` en cada fase |
-| R2 | SDL3 no disponible en distribuciones conservadoras (Astra Linux, Kubuntu 24.04 LTS, Raspberry Pi OS). **Y donde no viene en la distribución, tampoco está en sus repositorios**: la única salida del usuario es compilarla, que para quien solo quiere jugar equivale a no tenerla | Alexander no puede probar Wayland; una parte de los usuarios se queda sin el backend nuevo | Tres capas: (a) el respaldo de fondo —sin SDL3 el `.so` no carga, `auto` se queda en X11 y VPA funciona como hoy—; (b) `T12.3b`, empaquetar `libSDL3.so.0` junto al plugin con `RPATH` `$ORIGIN`, que la licencia zlib de SDL permite; (c) `T12.5b`, documentar las tres vías de obtención. Publicar los plugins por separado |
+| R2 | *(Confirmado en la Fase 7: Ubuntu 24.04 no trae SDL3 en sus repositorios.)* SDL3 no disponible en distribuciones conservadoras (Astra Linux, Kubuntu 24.04 LTS, Raspberry Pi OS). **Y donde no viene en la distribución, tampoco está en sus repositorios**: la única salida del usuario es compilarla, que para quien solo quiere jugar equivale a no tenerla | Alexander no puede probar Wayland; una parte de los usuarios se queda sin el backend nuevo | Tres capas: (a) el respaldo de fondo —sin SDL3 el `.so` no carga, `auto` se queda en X11 y VPA funciona como hoy—; (b) `T12.3b`, empaquetar `libSDL3.so.0` junto al plugin con `RPATH` `$ORIGIN`, que la licencia zlib de SDL permite; (c) `T12.5b`, documentar las tres vías de obtención. Publicar los plugins por separado |
 | R3 | La vía A no converge visualmente | Meses de ajuste fino de trazado y fuentes | La vía B lo elimina de raíz; `T7.4` lo mide antes de comprometerse |
 | R4 | PTCPas está poco mantenido y hay que vendorizar más de lo previsto | Deuda de mantenimiento, obligaciones de LGPL | Ya está vendorizado parcialmente y el precedente de `VENDOR/ptcgraph.pp` muestra cómo marcar las modificaciones |
 | R5 | El texto del mapa se descuadra por métricas de `.CHR` distintas | Rotura visual masiva y difusa | Vía B lo evita; con vía A, `T8A.8` es la tarea más peligrosa del proyecto |
@@ -1755,6 +1779,8 @@ obligatoria en cada fase.
 | R8 | Regresión silenciosa en X11 durante la migración | Se rompe lo que funcionaba, sin darse cuenta | Imágenes doradas capturadas en la Fase 0, antes de tocar nada |
 | R9 | La rama larga diverge de `main` | Conflictos e integración dolorosa | Fusionar al cerrar la Fase 6; mantener `main` liberable |
 | R10 | Enlaces Pascal de SDL3 desalineados con la SDL3 instalada | Fallos de enlazado o, peor, corrupción silenciosa de estructuras | `T7.1` fija versión exacta y la vendoriza; comprobar la versión en tiempo de ejecución al inicializar |
+| R11 | El plugin Wayland tiene que enmascarar las excepciones de coma flotante (`SetExceptionMask`) o Mesa mata el proceso con *runtime error 207*. La máscara es estado del hilo | Con dos RTL en el proceso (R1), hoy solo cambia en el hilo de la consola, dentro del plugin. Si algún día SDL se llamara desde el hilo de VPA, una división por cero de VPA dejaría de dar error y daría `Inf` | Enmascarar solo en el hilo de `TPTCWrapperThread` (ya es así en el prototipo) y no llamar a SDL desde ningún otro; comprobarlo con una prueba en T8B.9 |
+| R12 | `SetMousePos` (lo usa `UNIT/MOUSE.PAS`): Wayland no deja a un cliente mover el puntero salvo con el protocolo `pointer-warp-v1`, reciente, o con trucos de modo relativo | El puntero no salta donde VPA espera en compositores sin ese protocolo. No depende de la vía elegida | Fase 9: probar `SDL_WarpMouseInWindow` en KWin y Mutter reales; si falla, decidir entonces qué hace VPA (no antes, y sin segundo camino de código en el ejecutable) |
 
 ---
 
@@ -1769,7 +1795,7 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-03 | 2026-09-12 | `GRAPH/vpagraph.pas` conserva **nombres y firmas idénticos** a `ptcgraph` | Convierte la migración de 24 unidades en un cambio de una palabra por unidad en vez de tocar 1195 llamadas |
 | D-04 | 2026-09-12 | La ABI cubre **también** ventana, foco, escala, teclado y ratón, no solo dibujo | `UNIT/xfocus.pas` usa Xlib directamente; sin esto el binario seguiría enlazando `libX11` |
 | D-05 | 2026-09-12 | Etapas de `Arc`, `PieSlice`, `FillPoly`, `FloodFill`, `DrawPoly`, `Sector`, `Bar3D`, `FillEllipse`, `SetActivePage`, `SetVisualPage` **fuera de la ABI v1** | El inventario demuestra que VPA no las usa |
-| D-06 | 2026-09-12 | Motor de dibujo del plugin Wayland: **pendiente** (Fase 7), con recomendación de la vía B (consola PTC sobre SDL3) | Se decide con prototipos medidos, no por intuición |
+| D-06 | 2026-09-19 | Motor de dibujo del plugin Wayland: **vía B**, consola PTC sobre SDL3 (`VENDOR/ptc/sdl/`, `-dPTC_SDL3`). Vía A descartada (pendiente desde 2026-09-12) | Medido en la Fase 7: 0 píxeles de diferencia con X11 por construcción, ~540 líneas, `ptcwrapper`/`ptcgraph` intactos; la vía A solo converge transcribiendo `graph.inc`. `docs/adr-001-motor-wayland.md` |
 | D-07 | 2026-09-13 | La ABI v1 se define sobre el código que el ejecutable **enlaza**; lo que solo usan `CC/`, `TASKS`, `DETAILS` o las utilidades `VHLP*` queda en `v2` (`TextWidth`, `RegisterBGIDriver`, `GraphErrorMsg`, `Detect`) | `SWITCHES.INC` no define `TASKS`/`VPACC`/`VPAMM` desde hace años; diseñar para código muerto es trabajo de escaparate |
 | D-08 | 2026-09-13 | La frontera de ventana de la ABI son **cuatro** peticiones —tamaño de pantalla, pantalla completa, bit «puntero dentro» y modificadores actuales— y una pareja `Suspend`/`Resume` que sustituye a `RestoreCrtMode`+`SetGraphMode(GetGraphMode)` y a la terna de `xfocus` que siempre la sigue. `GrabInputFocus`, `ApplyWindowScale` y los dos `Map*` desaparecen | Con la ventana dentro del plugin no hay nada que buscar por título ni escala que adivinar; el ratón cruza la ABI en coordenadas de superficie 640×480 |
 | D-10 | 2026-09-13 | La traducción de teclas a los scancodes del Turbo Pascal y el búfer de teclado viven en el **núcleo**, no en cada plugin; la ABI transporta código de tecla físico + carácter Unicode + modificadores, y los códigos reutilizan los valores de los `PTCKEY_*` de PTCPas | Si cada backend tradujera por su cuenta, X11 y Wayland divergirían en teclas raras y lo notaría antes el usuario que nosotros |
@@ -1783,6 +1809,8 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-18 | 2026-09-16 | La ventana X del plugin se obtiene de ptc por un método `X11WindowID` añadido a `TX11Console` y expuesto por un `ptcwrapper.pp` vendorizado; no se busca por título | ptcgraph no expone la ventana (`FConsole` y `FX11Display` son privados) y `FindWin` por título era un sondeo de 20×50 ms con respaldo laxo, justo lo que D-08 quería eliminar. Tres líneas de parche, en la línea del que ya existe para DGA |
 | D-19 | 2026-09-16 | `BackendVersion` del plugin X11 es `1.0 (ptcgraph, PTCPas 0.99.15, FPC 3.2.2)`, compuesto en tiempo de compilación con `PTCPAS_VERSION` y `{$I %FPCVERSION%}` | Desarrolla D-15. Para el `--graph-info` que lee Alexander, saber con qué PTCPas y qué compilador se hizo el `.so` que le falla vale mucho y no se desactualiza solo |
 | D-17 | 2026-09-15 | `--graph-info` se intercepta en `VPA.PAS`, antes de instalar `Terminate`; `--help` en `Parameters`, junto a `/?` | `Terminate` fuerza `ExitCode := 0` en todo `Halt`, y `--graph-info` tiene que salir con 1 cuando no hay backend. La ayuda no necesita código de salida y va con la de siempre |
+| D-20 | 2026-09-19 | SDL3 objetivo **3.4.x**, mínima **3.4.4** (la de los enlaces `SDL3-for-Pascal` v0.6 vendorizados); la consola compara `SDL_GetVersion` con `SDL_VERSION` al abrir y se niega con una SDL más vieja | R10. Dentro de la serie 3 la ABI solo crece, así que una SDL más nueva vale y una más vieja no |
+| D-21 | 2026-09-19 | El controlador de vídeo se fuerza con `SDL_HINT_VIDEO_DRIVER=wayland` antes de `SDL_Init`, no con la variable de entorno | Medido en T7.2: sin compositor `SDL_Init` falla con mensaje en vez de caer a X11 en silencio, que es lo que exige 6.5 |
 
 ---
 
