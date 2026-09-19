@@ -34,11 +34,12 @@
 #     con una salida de 640x480 y sin bordes, para que la ventana de VPA la
 #     ocupe entera en (0,0) y las coordenadas de salida sean las de la imagen.
 #     weston sin pantalla no sirve aqui: no tiene forma de inyectar entrada;
-#   - teclas: wtype (protocolo virtual-keyboard); puntero: wlrctl
-#     (virtual-pointer, solo movimiento relativo: se lleva a la esquina y de
-#     ahi al punto);
+#   - teclas: wtype (protocolo virtual-keyboard); puntero: 'swaymsg seat
+#     seat0 cursor set X Y' (absoluto), con TESTS/wayland/hold-pointer.py
+#     manteniendo un puntero virtual vivo para que el seat anuncie puntero
+#     (wlrctl no sirve: ver la cabecera de hold-pointer.py);
 #   - VPA se lanza con VPA_GRAPH_BACKEND=wayland, que no degrada a X11.
-# Requisitos: sway, swaymsg, wtype, wlrctl, el plugin libvpagraph-wayland.so
+# Requisitos: sway, swaymsg, wtype, python3, el plugin libvpagraph-wayland.so
 # junto al binario y, si SDL3 no esta en una ruta estandar, LD_LIBRARY_PATH.
 #
 # Las condiciones de captura (VPA_SCALE=1, sin gestor de ventanas, puntero
@@ -136,7 +137,7 @@ esac
 
 case "$VPA_CAPTURE" in
   x11)     TOOLS="Xvfb xdotool" ;;
-  wayland) TOOLS="sway swaymsg wtype wlrctl python3" ;;
+  wayland) TOOLS="sway swaymsg wtype python3" ;;
   *) die "VPA_CAPTURE debe ser x11 o wayland (es '$VPA_CAPTURE')" ;;
 esac
 
@@ -149,7 +150,7 @@ done
 mkdir -p "$OUT" || die "no se puede crear $OUT"
 OUT="$(cd "$OUT" && pwd)"
 TMP="$(mktemp -d)"
-trap 'kill "${XVFB_PID:-}" "${SWAY_PID:-}" 2>/dev/null; rm -rf "$TMP"' EXIT
+trap 'kill "${XVFB_PID:-}" "${HOLD_PID:-}" "${SWAY_PID:-}" 2>/dev/null; rm -rf "$TMP"' EXIT
 
 # --- directorio de ejecucion --------------------------------------------------
 
@@ -275,6 +276,18 @@ for _ in $(seq 1 40); do
 done
 [ "$sway_ready" = yes ] || die "sway no arranca: $(tail -2 "$TMP/sway.log" | tr '\n' ' ')"
 
+# Un sway sin dispositivos no anuncia puntero en el seat y VPA no recibiria ni
+# enter ni motion: hold-pointer.py mantiene un puntero virtual vivo durante
+# toda la captura (ver su cabecera). Los movimientos van por swaymsg.
+python3 "$ROOT/TESTS/wayland/hold-pointer.py" >"$TMP/hold.log" 2>&1 &
+HOLD_PID=$!
+for _ in $(seq 1 20); do
+  grep -q ready "$TMP/hold.log" 2>/dev/null && break
+  kill -0 "$HOLD_PID" 2>/dev/null || die "hold-pointer.py: $(tail -1 "$TMP/hold.log")"
+  sleep 0.25
+done
+grep -q ready "$TMP/hold.log" || die "hold-pointer.py no ha creado el puntero virtual"
+
 fi
 
 # El titulo de la ventana es ParamStr(0) (VENDOR/ptcgraph.pp, WindowTitle), o
@@ -342,8 +355,13 @@ send_key() {
 # move_pointer VENTANA X Y: puntero a (X,Y) de la ventana.
 move_pointer() {
   if [ "$VPA_CAPTURE" = wayland ]; then
-    wlrctl pointer move -4000 -4000      # esquina (0,0): la salida ES la ventana
-    wlrctl pointer move "$2" "$3"
+    # En dos pasos para que SIEMPRE haya un motion: cuando VPA mueve el puntero
+    # (MoveMouseTo), SDL le da por hecho el salto con un motion sintetico, pero
+    # este sway no aplica la pista de zwp_locked_pointer_v1 y su cursor sigue
+    # donde estaba; si ya estaba en (X,Y), 'cursor set X Y' no emite nada y VPA
+    # se queda creyendo que el puntero esta donde lo mando (E03, medido).
+    swaymsg -q seat seat0 cursor set "$(($2 + 1))" "$(($3 + 1))"
+    swaymsg -q seat seat0 cursor set "$2" "$3"
   else
     xdotool mousemove --window "$1" "$2" "$3"
   fi
