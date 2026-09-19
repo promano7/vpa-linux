@@ -183,6 +183,8 @@ wayland-plugin: wayland-units
 ##                - 20 Init/Shutdown cycles + dlclose, with and without cthreads
 ##                  in the harness, no leaks (R11, docs/threads-and-rtl.md);
 ##                - without a compositor Init returns VPAG_ERR_VIDEO and says why;
+##                - console_test: Clear/Save/Copy, cursor options and MoveMouseTo
+##                  of the SDL3 console itself (T8B.2);
 ##                - the .so links libSDL3 and does NOT link libX11 (6.4).
 wayland-test: wayland-plugin scene-test threads-test nodisplay-test graphapi-test
 	@ldd $(WLPLUGIN) | grep -q libSDL3 || { echo ">> $(WLPLUGIN) does not link libSDL3"; exit 1; }
@@ -211,6 +213,11 @@ wayland-test: wayland-plugin scene-test threads-test nodisplay-test graphapi-tes
 	  grep -q '^0 unfreed memory blocks' $(WLTESTS)/$$t.heaptrc \
 	    || { echo ">> heaptrc reports leaks, see $(WLTESTS)/$$t.heaptrc"; exit 1; }; \
 	done; echo ">> 2 x 20 Init/Shutdown cycles + dlclose, no leaks"
+	@mkdir -p $(WLTESTS)/console
+	$(FPC) -O2 -vwn -Fu$(WLUNITS) $(SDL3LIB) -FU$(WLTESTS)/console -o$(WLTESTS)/console_test TESTS/wayland/console_test.lpr
+	$(WESTON) ./$(WLTESTS)/console_test > $(WLTESTS)/console/log.txt 2>&1; \
+	  grep -E '^  (ok|FAIL|info)|^console_test' $(WLTESTS)/console/log.txt; \
+	  grep -q '^console_test: PASS' $(WLTESTS)/console/log.txt || { cat $(WLTESTS)/console/log.txt; exit 1; }
 	@mkdir -p $(WLTESTS)/empty-runtime-dir
 	env -u DISPLAY -u WAYLAND_DISPLAY XDG_RUNTIME_DIR=$(abspath $(WLTESTS))/empty-runtime-dir \
 	  HEAPTRC=log=$(WLTESTS)/nodisplay_test.heaptrc \
