@@ -133,6 +133,18 @@ type
 
 {$ENDIF FPDOC}
 
+{$IFDEF SDL3CONSOLE}
+{ VPA-Linux (WAYLAND.md, Fase 9, D-24): estado de entrada vivo de la consola
+  SDL3, para quien no puede llamar a SDL (R11). Ver sdl/sdlconsolei.inc. }
+const
+  PTC_SDL_INPUT_SHIFT          = 1;
+  PTC_SDL_INPUT_CONTROL        = 2;
+  PTC_SDL_INPUT_ALT            = 4;
+  PTC_SDL_INPUT_POINTER_INSIDE = 8;
+
+function PTCSDLInputState: LongWord;
+{$ENDIF SDL3CONSOLE}
+
 implementation
 
 {$IFDEF GO32V2}

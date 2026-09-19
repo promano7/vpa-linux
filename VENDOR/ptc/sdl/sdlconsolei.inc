@@ -7,9 +7,24 @@
   misma ruta TPTCCopy/Hermes que usa la consola X11, presentacion con
   vecino mas proximo y letterbox, raton en coordenadas de superficie,
   cursor en diana escalado con la ventana y ocultable, MoveMouseTo (R12),
-  Save/Clear/Copy, cierre de ventana y mapa de teclas completo con el
-  caracter de la distribucion activa (D-09, D-23).
+  Save/Clear/Copy, cierre de ventana, mapa de teclas completo con el
+  caracter de la distribucion activa (D-09, D-23) y el estado de entrada que
+  publica PTCSDLInputState.
   Fuera de alcance: modos, relative mouse mode, opciones de ptcpas.conf. }
+
+{ Estado de entrada vivo de la consola (modificadores y puntero dentro de la
+  ventana). Lo escribe SOLO el hilo de la consola, al final de cada
+  PumpEvents; lo lee cualquiera con PTCSDLInputState. Es una palabra de 32
+  bits que se escribe de una vez, asi que no necesita cerrojo. Existe porque
+  preguntarlo con Option cuesta una vuelta del bucle de ptcwrapper (10 ms) y
+  el adaptador lo consulta en cada evento de raton (D-24). }
+var
+  SDLInputState: LongWord = 0;
+
+function PTCSDLInputState: LongWord;
+begin
+  Result := SDLInputState;
+end;
 
 constructor TSDLConsole.Create;
 begin
@@ -195,6 +210,7 @@ begin
   SDL_QuitSubSystem(SDL_INIT_VIDEO);
   SetLength(FPixels, 0);
   FOpen := False;
+  SDLInputState := 0;
 end;
 
 procedure TSDLConsole.InternalResize(AWidth, AHeight: Integer);
@@ -581,6 +597,21 @@ begin
     end;
     got := SDL_PollEvent(@ev);
   end;
+  PublishInputState;
+end;
+
+procedure TSDLConsole.PublishInputState;
+var
+  st: LongWord;
+  md: TSDL_Keymod;
+begin
+  st := 0;
+  md := SDL_GetModState;
+  if (md and SDL_KMOD_SHIFT) <> 0 then st := st or PTC_SDL_INPUT_SHIFT;
+  if (md and SDL_KMOD_CTRL) <> 0 then st := st or PTC_SDL_INPUT_CONTROL;
+  if (md and SDL_KMOD_ALT) <> 0 then st := st or PTC_SDL_INPUT_ALT;
+  if SDL_GetMouseFocus = FWindow then st := st or PTC_SDL_INPUT_POINTER_INSIDE;
+  SDLInputState := st;
 end;
 
 function TSDLConsole.NextEvent(out AEvent: IPTCEvent; AWait: Boolean;

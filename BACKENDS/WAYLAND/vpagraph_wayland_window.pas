@@ -23,9 +23,11 @@
       VPAG_ERR_UNSUPPORTED, caso que el nucleo ya contempla (no recorta la
       escala). El tamano real y VPA_SCALE=fullscreen son de la Fase 10.
 
-  PENDIENTE de la Fase 9 (no de esta): PointerInsideWindow y
-  CurrentModifiers necesitan estado de entrada de la consola; hasta entonces
-  responden "dentro" y "ninguno". }
+  PointerInsideWindow y CurrentModifiers (Fase 9, D-24) leen el estado que la
+  consola SDL3 publica desde su hilo (ptc.PTCSDLInputState): no llaman a SDL
+  (R11) ni pasan por Option, que costaria 10 ms por consulta y se pregunta en
+  cada evento de raton. Wayland solo informa de los modificadores a la
+  ventana con foco de teclado: sin foco, "ninguno". }
 unit vpagraph_wayland_window;
 
 {$MODE OBJFPC}{$H+}
@@ -50,7 +52,7 @@ function X11GetWindowSize(Width, Height: PVPAGraphInt32): TVPAGraphInt32; cdecl;
 implementation
 
 uses
-  SysUtils, ptcwrapper, ptcgraph;
+  SysUtils, ptc, ptcwrapper, ptcgraph;
 
 var
   gAttached: Boolean = False;          { hay consola abierta }
@@ -96,12 +98,20 @@ end;
 
 function PointerInsideWindow: Boolean;
 begin
-  Result := True;   { Fase 9 }
+  if not gAttached then Exit(True);   { sin ventana, no bloquear (como X11) }
+  Result := (PTCSDLInputState and PTC_SDL_INPUT_POINTER_INSIDE) <> 0;
 end;
 
 function CurrentModifiers: TVPAGraphUInt32;
+var
+  St: LongWord;
 begin
-  Result := 0;      { Fase 9 }
+  Result := 0;
+  if not gAttached then Exit;
+  St := PTCSDLInputState;
+  if (St and PTC_SDL_INPUT_SHIFT)   <> 0 then Result := Result or VPAG_MOD_SHIFT;
+  if (St and PTC_SDL_INPUT_CONTROL) <> 0 then Result := Result or VPAG_MOD_CTRL;
+  if (St and PTC_SDL_INPUT_ALT)     <> 0 then Result := Result or VPAG_MOD_ALT;
 end;
 
 function X11GetScreenSize(Width, Height: PVPAGraphInt32): TVPAGraphInt32; cdecl;

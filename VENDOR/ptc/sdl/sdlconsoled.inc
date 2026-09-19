@@ -33,6 +33,7 @@ type
     procedure CheckOpen;
     procedure UpdateCursor;
     procedure PumpEvents(AWait: Boolean);
+    procedure PublishInputState;
     procedure TranslateKey(const AEvent: TSDL_KeyboardEvent);
 
     function GetWidth: Integer; override;
