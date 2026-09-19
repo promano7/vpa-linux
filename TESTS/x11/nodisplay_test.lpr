@@ -62,16 +62,21 @@ var
   Params : TVPAGraphInitParams;
   R      : TVPAGraphInt32;
   Msg    : AnsiString;
+  Expected : AnsiString;
   T0     : QWord;
 
 function Run: Integer;
 begin
   if ParamCount < 1 then
   begin
-    Writeln('usage: nodisplay_test <libvpagraph-x11.so>');
+    Writeln('usage: nodisplay_test <plugin.so> [text expected in GetLastError]');
     Exit(2);
   end;
   Path := ParamStr(1);
+  { T8B.9: el mismo arnes vale para el plugin Wayland sin compositor; solo
+    cambia el motivo que tiene que dar GetLastError. }
+  Expected := 'Cannot open X display';
+  if ParamCount >= 2 then Expected := ParamStr(2);
 
   Writeln('nodisplay_test: ', Path);
   Check(GetEnvironmentVariable('DISPLAY') = '', 'DISPLAY is not set');
@@ -104,7 +109,7 @@ begin
   Msg := ErrText(Iface);
   Check(R = VPAG_ERR_VIDEO, 'Init without DISPLAY -> ' + IntToStr(R) +
     ' (expected VPAG_ERR_VIDEO = ' + IntToStr(VPAG_ERR_VIDEO) + ')');
-  Check(Pos('Cannot open X display', Msg) > 0, 'GetLastError: "' + Msg + '"');
+  Check(Pos(Expected, Msg) > 0, 'GetLastError: "' + Msg + '"');
   Check(Iface.GraphResult() = VPAG_ERR_VIDEO, 'GraphResult keeps VPAG_ERR_VIDEO');
 
   R := Iface.Init(@Params);
