@@ -1,4 +1,5 @@
-{ VPA-Linux - PROTOTIPO de la Fase 7 (WAYLAND.md, T7.3, via B).
+{ VPA-Linux - consola PTC sobre SDL3 (WAYLAND.md, Fase 8, via B; nacio como
+  prototipo en T7.3).
   Implementacion de la consola PTC sobre SDL3. Ver sdlconsoled.inc.
 
   Lo que SI hace: ventana Wayland (controlador forzado por hint), bufer

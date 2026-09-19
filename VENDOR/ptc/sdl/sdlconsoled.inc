@@ -1,4 +1,5 @@
-{ VPA-Linux - PROTOTIPO de la Fase 7 (WAYLAND.md, T7.3, via B).
+{ VPA-Linux - consola PTC sobre SDL3 (WAYLAND.md, Fase 8, via B; nacio como
+  prototipo en T7.3).
   Consola PTC sobre SDL3. No existe en PTCPas rio arriba: es codigo nuevo de
   VPA-Linux que ocupa el hueco que PTCPas deja para cada plataforma
   (TPTCBaseConsole). Solo se compila con -dPTC_SDL3; sin ese define ptc.pp
