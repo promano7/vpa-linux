@@ -55,6 +55,7 @@ SDL3LIB   = $(if $(SDL3_LIBDIR),-Fl$(SDL3_LIBDIR))
 WLPTCFLAGS = -O2 -dPTC_SDL3 -Fi$(PTCSRC) -Fi$(PTCSRC)/core -Fi$(PTCSRC)/sdl -Fu$(PTCSRC) -Fu$(SDL3SRC) -Fi$(SDL3SRC)
 WLTESTS   = build/wayland
 WESTON    = TESTS/wayland/con-weston.sh
+SWAY      = TESTS/wayland/con-sway.sh
 X11TESTS  = build/x11
 # ptcgraph/ptccrt/ptcmouse built the way the executable linked them before
 # Phase 6 (-Mtp command line, checks off, non-PIC, against build/ptcunits). The
@@ -67,7 +68,7 @@ CORETESTS = build/vpagraph
 FPCCORE   = $(FPC) -Mtp -Ci- -Cr- -Co- -Ct- -vwn
 
 .PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
-        plugin-units x11-plugin wayland-units wayland-plugin wayland-test plugins threads-test nodisplay-test window-test input-test scene-test deps-test \
+        plugin-units x11-plugin wayland-units wayland-plugin wayland-test wayland-input-test plugins threads-test nodisplay-test window-test input-test scene-test deps-test \
         graphapi-test initgraph-test coreinput-test direct-units
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
@@ -185,7 +186,8 @@ wayland-plugin: wayland-units
 ##                - without a compositor Init returns VPAG_ERR_VIDEO and says why;
 ##                - console_test: Clear/Save/Copy, cursor options and MoveMouseTo
 ##                  of the SDL3 console itself (T8B.2);
-##                - the .so links libSDL3 and does NOT link libX11 (6.4).
+##                - the .so links libSDL3 and does NOT link libX11 (6.4);
+##                - wayland-input-test (Phase 9, below), run last.
 wayland-test: wayland-plugin scene-test threads-test nodisplay-test graphapi-test
 	@ldd $(WLPLUGIN) | grep -q libSDL3 || { echo ">> $(WLPLUGIN) does not link libSDL3"; exit 1; }
 	@if ldd $(WLPLUGIN) | grep -q libX11; then echo ">> $(WLPLUGIN) links libX11"; exit 1; fi
@@ -224,7 +226,25 @@ wayland-test: wayland-plugin scene-test threads-test nodisplay-test graphapi-tes
 	  ./$(X11TESTS)/nodisplay_test $(abspath $(WLPLUGIN)) 'wayland not available'
 	@grep -q '^0 unfreed memory blocks' $(WLTESTS)/nodisplay_test.heaptrc \
 	  || { echo ">> heaptrc reports leaks, see $(WLTESTS)/nodisplay_test.heaptrc"; exit 1; }
+	@$(MAKE) --no-print-directory wayland-input-test
 	@echo ">> wayland-test passed"
+
+## wayland-input-test : Phase 9: the T2.11 keyboard/mouse block of the Wayland
+##                plugin under a headless sway (needs sway, swaymsg, wtype,
+##                python3): real xkb layouts (us, es, ru) through a virtual
+##                keyboard, Ctrl-+/Ctrl-- by character, keypad, live modifiers,
+##                pointer inside/outside, buttons, window close. No leaks.
+wayland-input-test: wayland-plugin
+	@mkdir -p $(WLTESTS)/input
+	$(FPC) -MOBJFPC -gl -gh -FiGRAPH -FU$(WLTESTS)/input -o$(WLTESTS)/input_test TESTS/wayland/input_test.lpr
+	rm -f $(WLTESTS)/input_test.heaptrc
+	HEAPTRC=log=$(WLTESTS)/input_test.heaptrc $(SWAY) ./$(WLTESTS)/input_test \
+	  $(abspath $(WLPLUGIN)) $(abspath TESTS/wayland/vkbd.py) > $(WLTESTS)/input/log.txt 2>&1; \
+	  grep -E '^  FAIL|^input_test' $(WLTESTS)/input/log.txt; \
+	  grep -q '^input_test: PASS' $(WLTESTS)/input/log.txt || { cat $(WLTESTS)/input/log.txt; exit 1; }
+	@grep -q '^0 unfreed memory blocks' $(WLTESTS)/input_test.heaptrc \
+	  || { echo ">> heaptrc reports leaks, see $(WLTESTS)/input_test.heaptrc"; exit 1; }
+	@echo ">> wayland-input-test passed, no leaks"
 
 ## plugins : build the backend plugins of a default build (today: x11; the
 ##           Wayland plugin is still opt-in, 'make wayland-plugin', until Phase 12)
