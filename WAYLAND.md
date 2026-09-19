@@ -1481,12 +1481,18 @@ Se ejecuta **una** de las dos vías. La otra queda documentada como descartada.
       *No faltaba ninguna pieza (`ptcwrapper` ya estaba vendorizado desde D-18
       y no hace falta tocarlo). Faltaba el aviso de modificación en
       `VENDOR/ptc/ptc.pp`, que ahora enumera los cuatro cambios de VPA-Linux.*
-- [ ] **T8B.2** — `VENDOR/ptc/sdl/sdlconsoled.inc` y `sdlconsolei.inc`:
+- [x] **T8B.2** — `VENDOR/ptc/sdl/sdlconsoled.inc` y `sdlconsolei.inc`:
       declaración e implementación de la consola SDL3.
-      *Existe y dibuja (T8B.3–T8B.6 medidas). Queda la revisión de lo que el
-      prototipo dejó vacío: `Save`, `Clear` con color y área, `Copy`, la
-      opción `hide cursor` (la usa `ShowMouse`) y decidir si el volcado
-      `VPA_PROTO_PRESENTED` se queda para la Fase 11 o se quita.*
+      *Revisado lo que el prototipo dejó vacío (`a16e742`): cursor en diana
+      (el mismo dibujo 15×15 que en X11, con `SDL_CreateCursor`, escalado
+      según el tamaño real de la imagen en la ventana y rehecho al
+      redimensionar), opciones `show cursor`/`hide cursor`, `Save`, `Clear`
+      con color y área, y `Copy`. El volcado de cuadros presentados **se
+      queda** como instrumento para la Fase 11, renombrado a
+      `VPA_GRAPH_PRESENTED`. Además: `MoveMouseTo` (R12, `c15c869`) y
+      `SDL_HINT_NO_SIGNAL_HANDLERS`, porque SDL convertía SIGTERM en «cerrar
+      ventana» y un `kill` fuera del mapa no mataba a VPA. Prueba:
+      `TESTS/wayland/console_test.lpr`, dentro de `make wayland-test`.*
 - [x] **T8B.3** — Apertura de ventana: `SDL_Init(VIDEO)` con el controlador de
       vídeo forzado a `wayland` (hint de SDL3, no solo la variable de entorno),
       ventana redimensionable, textura de presentación en streaming.
@@ -1518,8 +1524,14 @@ Se ejecuta **una** de las dos vías. La otra queda documentada como descartada.
       cero diferencias en las 5 escenas por el plugin y en los 10 volcados de
       `graphapi-test` por el núcleo con `VPA_GRAPH_BACKEND=wayland`; además
       2×20 ciclos Init/Shutdown + `dlclose` sin fugas y `VPAG_ERR_VIDEO` con
-      mensaje cuando no hay compositor. Faltan las 20 doradas de la partida
-      real (necesitan `fixture_tar.gz` y `RESOURCE.PLN`).*
+      mensaje cuando no hay compositor.*
+      *Doradas de la partida real (2026-09-19): `VPA_CAPTURE=wayland
+      TESTS/capture.sh` (sway sin pantalla + `wtype` + `wlrctl`; weston no
+      permite inyectar entrada) da **16 de 20 idénticas**. Difieren E03
+      (`ctrl+Tab`) y las tres de puntero, E06, E07 y E17 (VPA ve el puntero
+      en (240,240), donde se aparca, y no en el punto pedido). **Sin
+      diagnosticar** si falla el arnés (movimiento relativo de `wlrctl`
+      pasando por la esquina, `wtype` con modificadores) o el backend.*
 
 #### Vía A — Reimplementación BGI sobre SDL3 *(descartada, ADR-001)*
 
@@ -1805,7 +1817,7 @@ obligatoria en cada fase.
 | R9 | La rama larga diverge de `main` | Conflictos e integración dolorosa | Fusionar al cerrar la Fase 6; mantener `main` liberable |
 | R10 | Enlaces Pascal de SDL3 desalineados con la SDL3 instalada | Fallos de enlazado o, peor, corrupción silenciosa de estructuras | `T7.1` fija versión exacta y la vendoriza; comprobar la versión en tiempo de ejecución al inicializar |
 | R11 | El plugin Wayland tiene que enmascarar las excepciones de coma flotante (`SetExceptionMask`) o Mesa mata el proceso con *runtime error 207*. La máscara es estado del hilo | Con dos RTL en el proceso (R1), hoy solo cambia en el hilo de la consola, dentro del plugin. Si algún día SDL se llamara desde el hilo de VPA, una división por cero de VPA dejaría de dar error y daría `Inf` | Enmascarar solo en el hilo de `TPTCWrapperThread` (ya es así en el prototipo) y no llamar a SDL desde ningún otro; comprobarlo con una prueba en T8B.9 |
-| R12 | `SetMousePos` (lo usa `UNIT/MOUSE.PAS`): Wayland no deja a un cliente mover el puntero salvo con el protocolo `pointer-warp-v1`, reciente, o con trucos de modo relativo | El puntero no salta donde VPA espera en compositores sin ese protocolo. No depende de la vía elegida | Fase 9: probar `SDL_WarpMouseInWindow` en KWin y Mutter reales; si falla, decidir entonces qué hace VPA (no antes, y sin segundo camino de código en el ejecutable) |
+| R12 | `SetMousePos` (lo usa `UNIT/MOUSE.PAS`): Wayland no deja a un cliente mover el puntero salvo con el protocolo `pointer-warp-v1`, reciente, o con trucos de modo relativo | El puntero no salta donde VPA espera en compositores sin ese protocolo. No depende de la vía elegida | Fase 9: probar `SDL_WarpMouseInWindow` en KWin y Mutter reales; si falla, decidir entonces qué hace VPA (no antes, y sin segundo camino de código en el ejecutable). *2026-09-19:* `MoveMouseTo` de la consola SDL3 ya llama a `SDL_WarpMouseInWindow` (`c15c869`). Leído en el código de SDL 3.4: usa `wp_pointer_warp_v1` si el compositor lo anuncia (KWin 6.7.5 de la VM Slackware **sí**, versión 1) y, si no, el truco de `zwp_pointer_constraints_v1` (bloquear, pista de posición, soltar), que tienen casi todos los compositores; sin ninguno de los dos devuelve `False`. Pendiente: la prueba real del imán en KWin, y Mutter |
 
 ---
 
