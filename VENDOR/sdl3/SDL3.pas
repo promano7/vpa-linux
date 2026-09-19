@@ -23,16 +23,19 @@ interface
 
   {$IF DEFINED(UNIX) AND NOT DEFINED(ANDROID)}
     uses
+      { VPA-Linux, 2026-09-19: modificado respecto a SDL3-for-Pascal v0.6.
+        El original anadia aqui 'X, XLib' fuera de Darwin. Ningun tipo de
+        esas unidades se usa en los enlaces, pero XLib arrastra un
+        $LINKLIB X11 y todo lo que use SDL3 acababa con libX11.so.6 en sus
+        DT_NEEDED: justo lo que el plugin Wayland no puede tener. }
       {$IFDEF FPC}
       ctypes,
-      UnixType,
+      UnixType
       {$ENDIF}
       {$IFDEF DARWIN}
-      CocoaAll;
-      {$ELSE}
-      X,
-      XLib;
+      , CocoaAll
       {$ENDIF}
+      ;
   {$ENDIF}
 
   {$IF DEFINED(UNIX) AND DEFINED(ANDROID) AND DEFINED(FPC)}

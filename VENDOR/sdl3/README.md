@@ -22,7 +22,12 @@ zlib, y se lista aquí debajo.
 
 ## Modificaciones locales
 
-Ninguna.
+- `SDL3.pas`, cláusula `uses` de la interfaz: eliminadas las unidades `X` y
+  `XLib`. Los enlaces no usan ningún tipo de ellas, pero `XLib` lleva un
+  `{$LINKLIB X11}` y todo binario que usara `SDL3` salía con `libX11.so.6`
+  entre sus `DT_NEEDED`. Para un plugin cuya razón de ser es funcionar sin X11
+  (secciones 6.3 y 6.4 de `WAYLAND.md`) eso es un fallo, no un detalle. Marcado
+  en el propio fichero.
 
 ## Versión de SDL3 objetivo (riesgo R10)
 
