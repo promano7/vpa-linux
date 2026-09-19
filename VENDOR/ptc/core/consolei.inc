@@ -139,6 +139,9 @@ const
  {$IFDEF X11}
   ConsoleTypesNumber = 1;
  {$ENDIF X11}
+ {$IFDEF SDL3CONSOLE}
+  ConsoleTypesNumber = 1;   { VPA-Linux, prototipo Fase 7 }
+ {$ENDIF SDL3CONSOLE}
  {$IFDEF COCOA}
   ConsoleTypesNumber = 1;
  {$ENDIF COCOA}
@@ -169,6 +172,10 @@ const
   {$IFDEF X11}
    (ConsoleClass: TX11Console;       Names: ('X11', '');         OpenGL: {$IFDEF ENABLE_X11_EXTENSION_GLX}True{$ELSE}False{$ENDIF})
   {$ENDIF X11}
+
+  {$IFDEF SDL3CONSOLE}
+   (ConsoleClass: TSDLConsole;       Names: ('SDL3', '');        OpenGL: False)
+  {$ENDIF SDL3CONSOLE}
 
   {$IFDEF COCOA}
    (ConsoleClass: TCocoaConsole;       Names: ('COCOA', '');         OpenGL: False)

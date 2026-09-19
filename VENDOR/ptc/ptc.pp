@@ -40,6 +40,10 @@
   {$IF defined(DARWIN)}
     {$DEFINE COCOA}
     {$MODESWITCH objectivec1}
+  {$ELSEIF defined(PTC_SDL3)}
+    { VPA-Linux, prototipo de la Fase 7 (via B): con -dPTC_SDL3 la consola
+      de plataforma es la de SDL3 (sdl/) en lugar de la de X11. }
+    {$DEFINE SDL3CONSOLE}
   {$ELSE}
     {$DEFINE X11}
   {$ENDIF}
@@ -157,6 +161,9 @@ uses
   {$IFDEF COCOA}
     , CocoaAll
   {$ENDIF COCOA}
+  {$IFDEF SDL3CONSOLE}
+    , Math, SDL3
+  {$ENDIF SDL3CONSOLE}
   ;
 {$ENDIF UNIX}
 
@@ -254,6 +261,11 @@ end;
 {$IFDEF X11}
 {$INCLUDE x11/x11includes.inc}
 {$ENDIF X11}
+
+{$IFDEF SDL3CONSOLE}
+{$INCLUDE sdl/sdlconsoled.inc}
+{$INCLUDE sdl/sdlconsolei.inc}
+{$ENDIF SDL3CONSOLE}
 
 {$IFDEF COCOA}
 {$INCLUDE cocoa/cocoaconsoled.inc}
