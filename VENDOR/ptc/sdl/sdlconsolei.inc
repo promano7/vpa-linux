@@ -87,6 +87,11 @@ begin
   { Hint y no variable de entorno (T8B.3): si no hay Wayland, SDL_Init
     falla en vez de caer a X11 en silencio. }
   SDL_SetHint(SDL_HINT_VIDEO_DRIVER, 'wayland');
+  { Las senales son del proceso, no de un plugin. Por omision SDL captura
+    SIGINT y SIGTERM y las convierte en SDL_EVENT_QUIT, o sea en un "cerrar
+    ventana" que VPA solo atiende en el mapa: un 'kill' con un menu o la
+    ayuda abiertos no mataba a VPA. Con X11 la senal mata, y aqui tambien. }
+  SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, '1');
   if not SDL_InitSubSystem(SDL_INIT_VIDEO) then
     raise TPTCError.Create('SDL_Init(video, wayland): ' + SDL_GetError);
   FOpen := True;
