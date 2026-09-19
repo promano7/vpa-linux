@@ -1,8 +1,9 @@
 #!/bin/sh
-# Prototipos de la Fase 7 (desechable): ejecuta una orden dentro de un
-# compositor Wayland sin pantalla (weston --backend=headless) y SIN DISPLAY,
-# para que nada pueda caer a X11/XWayland sin que se note.
-#   uso: TESTS/fase7/con-weston.sh orden [argumentos...]
+# El 'xvfb-run' de Wayland: ejecuta una orden dentro de un compositor sin
+# pantalla (weston --backend=headless) y SIN DISPLAY, para que nada pueda caer
+# a X11/XWayland sin que se note. Nacio en la Fase 7; lo usan los objetivos
+# wayland-* del Makefile.
+#   uso: TESTS/wayland/con-weston.sh orden [argumentos...]
 XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/tmp/xdg-fase7}; export XDG_RUNTIME_DIR
 mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
 sock=wl-fase7-$$

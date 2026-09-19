@@ -13,8 +13,8 @@ make -s direct-units > /dev/null
 
 echo "== T7.2  SDL3 minimo en Wayland (sin DISPLAY)"
 q fpc -FuVENDOR/sdl3 -FiVENDOR/sdl3 -FU$B/o72 -FE$B/o72 $L TESTS/fase7/t72_sdl3min.lpr
-TESTS/fase7/con-weston.sh $B/o72/t72_sdl3min 2>/dev/null
-SDL_RENDER_DRIVER=software TESTS/fase7/con-weston.sh $B/o72/t72_sdl3min 2>/dev/null | grep -E "renderizador|distintos"
+TESTS/wayland/con-weston.sh $B/o72/t72_sdl3min 2>/dev/null
+SDL_RENDER_DRIVER=software TESTS/wayland/con-weston.sh $B/o72/t72_sdl3min 2>/dev/null | grep -E "renderizador|distintos"
 
 echo "== T7.3  via B: ptcgraph sobre la consola SDL3, contra ptcgraph sobre X11"
 F="-O2 -Cg -dPTC_SDL3 -FiVENDOR/ptc -FiVENDOR/ptc/core -FiVENDOR/ptc/sdl -FuVENDOR/ptc -FuVENDOR/sdl3 -FiVENDOR/sdl3 $L"
@@ -26,7 +26,7 @@ q fpc -MOBJFPC -dDIRECT -FiGRAPH -Fubuild/directunits -Fubuild/ptcunits -FU$B/x1
 echo "   bibliotecas de scene_viaB: $(ldd $B/scene_viaB | awk '{print $1}' | grep -v 'vdso\|ld-linux' | tr '\n' ' ')"
 xvfb-run -a -s "-screen 0 1024x768x24" $B/scene_x11 - $B/x11/scene > $B/x11/log.txt 2>&1
 VPA_SCENE_PAUSE_MS=200 VPA_PROTO_PRESENTED=$PWD/$B/viaB/pres/f \
-  TESTS/fase7/con-weston.sh $B/scene_viaB - $B/viaB/scene > $B/viaB/log.txt 2>&1
+  TESTS/wayland/con-weston.sh $B/scene_viaB - $B/viaB/scene > $B/viaB/log.txt 2>&1
 grep '^scene_test:' $B/x11/log.txt $B/viaB/log.txt
 n=0; for f in $B/x11/scene0*; do cmp -s $f $B/viaB/$(basename $f) && n=$((n+1)); done
 echo "   volcados (.ppm y .pal) identicos entre X11 y Wayland: $n de 10"
