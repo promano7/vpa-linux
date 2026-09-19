@@ -43,6 +43,18 @@ PLUGDIR   = build/plugins
 PLUGUNITS = $(PLUGDIR)/units
 PLUGCFG   = plugins.cfg
 X11PLUGIN = $(PLUGDIR)/libvpagraph-x11.so
+# Wayland plugin (WAYLAND.md, Phase 8, route B): the SAME ABI adapter as the X11
+# plugin (BACKENDS/X11, built with -dVPAG_WAYLAND) on a second PIC build of ptc
+# whose console is VENDOR/ptc/sdl (-dPTC_SDL3). Needs libSDL3 >= 3.4.4 to link;
+# if it is not in a standard path: make wayland-plugin SDL3_LIBDIR=/usr/local/lib
+WLPLUGIN  = $(PLUGDIR)/libvpagraph-wayland.so
+WLUNITS   = $(PLUGDIR)/units-sdl3
+WLOBJ     = $(PLUGDIR)/wayland
+SDL3SRC   = VENDOR/sdl3
+SDL3LIB   = $(if $(SDL3_LIBDIR),-Fl$(SDL3_LIBDIR))
+WLPTCFLAGS = -O2 -dPTC_SDL3 -Fi$(PTCSRC) -Fi$(PTCSRC)/core -Fi$(PTCSRC)/sdl -Fu$(PTCSRC) -Fu$(SDL3SRC) -Fi$(SDL3SRC)
+WLTESTS   = build/wayland
+WESTON    = TESTS/wayland/con-weston.sh
 X11TESTS  = build/x11
 # ptcgraph/ptccrt/ptcmouse built the way the executable linked them before
 # Phase 6 (-Mtp command line, checks off, non-PIC, against build/ptcunits). The
@@ -55,7 +67,7 @@ CORETESTS = build/vpagraph
 FPCCORE   = $(FPC) -Mtp -Ci- -Cr- -Co- -Ct- -vwn
 
 .PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
-        plugin-units x11-plugin plugins threads-test nodisplay-test window-test input-test scene-test deps-test \
+        plugin-units x11-plugin wayland-units wayland-plugin wayland-test plugins threads-test nodisplay-test window-test input-test scene-test deps-test \
         graphapi-test initgraph-test coreinput-test direct-units
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
@@ -115,7 +127,7 @@ run: build
 ## clean : remove build artifacts
 clean:
 	rm -f build/*.ppu build/*.o build/*.rsj build/*.a $(BIN)
-	rm -rf $(PKGDIR) $(ABIDIR) $(PLUGDIR) $(X11TESTS) $(CORETESTS) $(DIRECTUNITS)
+	rm -rf $(PKGDIR) $(ABIDIR) $(PLUGDIR) $(X11TESTS) $(WLTESTS) $(CORETESTS) $(DIRECTUNITS)
 	@echo ">> Cleaned."
 
 ## plugin-units : PIC build of the vendored ptc, ptcwrapper and ptcgraph for the
@@ -142,10 +154,73 @@ $(DIRECTUNITS)/ptcmouse.ppu: $(PTCUNITS)/ptcwrapper.ppu VENDOR/ptcgraph.pp VENDO
 ## x11-plugin : build the X11 backend plugin, build/plugins/libvpagraph-x11.so
 x11-plugin: plugin-units
 	@mkdir -p $(PLUGDIR)
-	$(FPC) @$(PLUGCFG) -o$(X11PLUGIN) BACKENDS/X11/vpagraph_x11.lpr
+	$(FPC) @$(PLUGCFG) -Fu$(PLUGUNITS) -FU$(PLUGDIR) -o$(X11PLUGIN) BACKENDS/X11/vpagraph_x11.lpr
 	@echo ">> Done: $(X11PLUGIN)"
 
-## plugins : build every backend plugin (today: x11)
+## wayland-units : PIC build of ptc (SDL3 console), ptcwrapper and ptcgraph for
+##                 the Wayland plugin, into build/plugins/units-sdl3/.
+wayland-units: $(WLUNITS)/ptcgraph.ppu
+$(WLUNITS)/ptcgraph.ppu: VENDOR/ptcgraph.pp $(wildcard VENDOR/*.inc) $(PTCSRC)/ptc.pp $(wildcard $(PTCSRC)/*.pp) $(wildcard $(PTCSRC)/sdl/*.inc) $(wildcard $(PTCSRC)/core/*.inc) $(wildcard $(SDL3SRC)/*)
+	@mkdir -p $(WLUNITS)
+	$(FPC) $(WLPTCFLAGS) -Cg -FU$(WLUNITS) $(PTCSRC)/ptc.pp
+	$(FPC) $(WLPTCFLAGS) -Cg -FU$(WLUNITS) $(PTCSRC)/ptcwrapper.pp
+	$(FPC) -O2 -Cg -FiVENDOR -Fu$(WLUNITS) -FU$(WLUNITS) VENDOR/ptcgraph.pp
+	@echo ">> PIC units for the Wayland plugin in $(WLUNITS)/"
+
+## wayland-plugin : build the Wayland backend plugin,
+##                  build/plugins/libvpagraph-wayland.so (needs libSDL3)
+wayland-plugin: wayland-units
+	@mkdir -p $(WLOBJ)
+	$(FPC) @$(PLUGCFG) -dVPAG_WAYLAND -FuBACKENDS/X11 -Fu$(WLUNITS) -FU$(WLOBJ) $(SDL3LIB) -o$(WLPLUGIN) BACKENDS/WAYLAND/vpagraph_wayland.lpr
+	@echo ">> Done: $(WLPLUGIN)"
+
+## wayland-test : the Phase 8 acceptance tests of the Wayland plugin, under a
+##                headless weston and WITHOUT a DISPLAY (needs weston):
+##                - the scenes of scene-test drawn through the plugin must be
+##                  byte-identical to the reference ptcgraph on X11 (T8B.10);
+##                - graphapi-test through the core with VPA_GRAPH_BACKEND=wayland,
+##                  byte-identical to 'uses ptcgraph';
+##                - 20 Init/Shutdown cycles + dlclose, with and without cthreads
+##                  in the harness, no leaks (R11, docs/threads-and-rtl.md);
+##                - without a compositor Init returns VPAG_ERR_VIDEO and says why;
+##                - the .so links libSDL3 and does NOT link libX11 (6.4).
+wayland-test: wayland-plugin scene-test threads-test nodisplay-test graphapi-test
+	@ldd $(WLPLUGIN) | grep -q libSDL3 || { echo ">> $(WLPLUGIN) does not link libSDL3"; exit 1; }
+	@if ldd $(WLPLUGIN) | grep -q libX11; then echo ">> $(WLPLUGIN) links libX11"; exit 1; fi
+	rm -rf $(WLTESTS) && mkdir -p $(WLTESTS)/scenes
+	$(WESTON) ./$(X11TESTS)/scene_test_plugin $(abspath $(WLPLUGIN)) \
+	  $(WLTESTS)/scenes/scene > $(WLTESTS)/scenes/log.txt 2>&1; \
+	  grep -q '^scene_test: PASS' $(WLTESTS)/scenes/log.txt || { cat $(WLTESTS)/scenes/log.txt; exit 1; }
+	@n=0; for f in $(WLTESTS)/scenes/scene0*; do \
+	  cmp "$$f" "$(X11TESTS)/scenes/direct/$$(basename $$f)" || exit 1; n=$$((n+1)); done; \
+	  test $$n -eq 10 || { echo ">> expected 10 dump files, got $$n"; exit 1; }; \
+	  echo ">> $$n dump files identical to the X11 reference"
+	@grep -E 'pixels|viewport|palette\[' $(WLTESTS)/scenes/log.txt | diff - $(X11TESTS)/scenes/direct/values.txt \
+	  || { echo ">> GetPixel/GetViewSettings/GetRGBPalette differ from the X11 reference"; exit 1; }
+	@mkdir -p $(WLTESTS)/core
+	VPA_SCALE=1 VPA_GRAPH_BACKEND=wayland VPA_GRAPH_PLUGIN_DIR=$(abspath $(PLUGDIR)) VPA_GRAPH_DUMP=$(WLTESTS)/core/frame \
+	  $(WESTON) ./$(CORETESTS)/graphapi_test_core > $(WLTESTS)/core/log.txt 2>&1; \
+	  grep -q '^graphapi_test: PASS' $(WLTESTS)/core/log.txt || { cat $(WLTESTS)/core/log.txt; exit 1; }
+	@n=0; for f in $(WLTESTS)/core/frame*; do \
+	  cmp "$$f" "$(CORETESTS)/out/direct/$$(basename $$f)" || exit 1; n=$$((n+1)); done; \
+	  test $$n -eq 10 || { echo ">> expected 10 dump files, got $$n"; exit 1; }; \
+	  echo ">> core + Wayland plugin (VPA_GRAPH_BACKEND=wayland): $$n dump files identical to ptcgraph"
+	@for t in threads_test threads_test_ct; do \
+	  HEAPTRC=log=$(WLTESTS)/$$t.heaptrc $(WESTON) ./$(X11TESTS)/$$t $(abspath $(WLPLUGIN)) 20 \
+	    > $(WLTESTS)/$$t.log 2>&1 || { cat $(WLTESTS)/$$t.log; exit 1; }; \
+	  grep -q '^0 unfreed memory blocks' $(WLTESTS)/$$t.heaptrc \
+	    || { echo ">> heaptrc reports leaks, see $(WLTESTS)/$$t.heaptrc"; exit 1; }; \
+	done; echo ">> 2 x 20 Init/Shutdown cycles + dlclose, no leaks"
+	@mkdir -p $(WLTESTS)/empty-runtime-dir
+	env -u DISPLAY -u WAYLAND_DISPLAY XDG_RUNTIME_DIR=$(abspath $(WLTESTS))/empty-runtime-dir \
+	  HEAPTRC=log=$(WLTESTS)/nodisplay_test.heaptrc \
+	  ./$(X11TESTS)/nodisplay_test $(abspath $(WLPLUGIN)) 'wayland not available'
+	@grep -q '^0 unfreed memory blocks' $(WLTESTS)/nodisplay_test.heaptrc \
+	  || { echo ">> heaptrc reports leaks, see $(WLTESTS)/nodisplay_test.heaptrc"; exit 1; }
+	@echo ">> wayland-test passed"
+
+## plugins : build the backend plugins of a default build (today: x11; the
+##           Wayland plugin is still opt-in, 'make wayland-plugin', until Phase 12)
 plugins: x11-plugin
 
 ## threads-test : the T5.9 experiment (docs/threads-and-rtl.md): load the X11

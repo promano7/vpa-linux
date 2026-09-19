@@ -47,10 +47,14 @@ function Initialized: Boolean;
 implementation
 
 uses
-  ptc, ptcgraph, vpagraph_x11_window, vpagraph_x11_input;
+  ptc, ptcgraph,
+  { T8B.9: este fichero es tambien el adaptador del plugin Wayland; la unica
+    diferencia entre ambos es la unidad de ventana (D-22). }
+  {$IFDEF VPAG_WAYLAND}vpagraph_wayland_window{$ELSE}vpagraph_x11_window{$ENDIF},
+  vpagraph_x11_input;
 
 const
-  BackendNameStr    : PAnsiChar = 'x11';
+  BackendNameStr    : PAnsiChar = {$IFDEF VPAG_WAYLAND}'wayland'{$ELSE}'x11'{$ENDIF};
   { Decision D-19: el motor y con que se compilo, compuesto en tiempo de
     compilacion para que no se desactualice solo. Se copia a un buffer
     estatico en la inicializacion: una constante PAnsiChar formada por

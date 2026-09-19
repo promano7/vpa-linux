@@ -57,7 +57,8 @@ procedure X11ShowMouse(Show: TVPAGraphBool); cdecl;
 implementation
 
 uses
-  SysUtils, ptc, ptcwrapper, ptcgraph, vpagraph_x11_window;
+  SysUtils, ptc, ptcwrapper, ptcgraph,
+  {$IFDEF VPAG_WAYLAND}vpagraph_wayland_window{$ELSE}vpagraph_x11_window{$ENDIF};
 
 const
   SurfaceWidth  = 640;
