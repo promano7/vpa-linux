@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fase 7 (desechable): para cada volcado sceneNNNN.ppm comprueba que entre
-los cuadros que la consola SDL3 PRESENTO (XRGB en bruto, VPA_PROTO_PRESENTED)
+los cuadros que la consola SDL3 PRESENTO (XRGB en bruto, VPA_GRAPH_PRESENTED)
 hay uno identico pixel a pixel.   uso: presentado.py <dir volcados> <dir raw>"""
 import sys, re, glob, hashlib
 W, H = 640, 480

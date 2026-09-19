@@ -25,7 +25,7 @@ q fpc -MOBJFPC -dDIRECT -FiGRAPH -Fu$U -FU$U $L -o$B/scene_viaB TESTS/x11/scene_
 q fpc -MOBJFPC -dDIRECT -FiGRAPH -Fubuild/directunits -Fubuild/ptcunits -FU$B/x11 -o$B/scene_x11 TESTS/x11/scene_test.lpr
 echo "   bibliotecas de scene_viaB: $(ldd $B/scene_viaB | awk '{print $1}' | grep -v 'vdso\|ld-linux' | tr '\n' ' ')"
 xvfb-run -a -s "-screen 0 1024x768x24" $B/scene_x11 - $B/x11/scene > $B/x11/log.txt 2>&1
-VPA_SCENE_PAUSE_MS=200 VPA_PROTO_PRESENTED=$PWD/$B/viaB/pres/f \
+VPA_SCENE_PAUSE_MS=200 VPA_GRAPH_PRESENTED=$PWD/$B/viaB/pres/f \
   TESTS/wayland/con-weston.sh $B/scene_viaB - $B/viaB/scene > $B/viaB/log.txt 2>&1
 grep '^scene_test:' $B/x11/log.txt $B/viaB/log.txt
 n=0; for f in $B/x11/scene0*; do cmp -s $f $B/viaB/$(basename $f) && n=$((n+1)); done

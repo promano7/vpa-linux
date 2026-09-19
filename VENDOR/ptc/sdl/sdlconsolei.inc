@@ -6,21 +6,23 @@
   propio XRGB de 32 bits, conversion desde la superficie indexada por la
   misma ruta TPTCCopy/Hermes que usa la consola X11, presentacion con
   vecino mas proximo y letterbox, raton en coordenadas de superficie,
-  cierre de ventana y un mapa de teclas parcial.
-  Lo que NO hace (queda medido para la Fase 8/9, no resuelto): mapa de
-  teclas completo con caracter Unicode, modos, Save, Clear, relative mouse
-  mode, ocultar cursor, opciones de ptcpas.conf. }
+  cursor en diana escalado con la ventana y ocultable,
+  Save/Clear/Copy, cierre de ventana y un mapa de teclas parcial.
+  Lo que NO hace (Fase 9): mapa de teclas completo con caracter Unicode.
+  Fuera de alcance: modos, relative mouse mode, opciones de ptcpas.conf. }
 
 constructor TSDLConsole.Create;
 begin
   inherited Create;
   FCopy := TPTCCopy.Create;
+  FClear := TPTCClear.Create;
   FEventQueue := TEventQueue.Create;
   FPalette := TPTCPalette.Create;
   FFormat := TPTCFormat.Create(32, $FF0000, $FF00, $FF);
   FArea := TPTCArea.Create;
   FClip := TPTCArea.Create;
   FLastX := -1; FLastY := -1;
+  FCursorVisible := True;
 end;
 
 destructor TSDLConsole.Destroy;
@@ -28,6 +30,7 @@ begin
   Close;
   FreeAndNil(FEventQueue);
   FreeAndNil(FCopy);
+  FreeAndNil(FClear);
   inherited Destroy;
 end;
 
@@ -108,13 +111,78 @@ begin
   SetLength(FPixels, AWidth * AHeight);
   FArea := TPTCArea.Create(0, 0, AWidth, AHeight);
   FClip := FArea;
+  FPresentedPrefix := fpgetenv('VPA_GRAPH_PRESENTED');
+  FPresentedFrame := 0;
+  UpdateCursor;
+  if not FCursorVisible then
+    SDL_HideCursor;
   Update;
+end;
+
+{ La diana blanca de VPA: el mismo dibujo 15x15 que crea la consola X11 en
+  x11windowdisplayi.inc (brazos en la fila y la columna 7, hueco central de
+  3 px), ampliado NxN. Alli la escala se fija al abrir (ancho div 640); aqui
+  la ventana se puede redimensionar y SDL escala la imagen, asi que la escala
+  sale del tamano REAL de la imagen en la ventana y se rehace al cambiar.
+  El cursor va en coordenadas de ventana, como el raton; de la densidad de
+  pixeles (HiDPI) se ocupa SDL. Si no se puede crear, queda el del sistema. }
+procedure TSDLConsole.UpdateCursor;
+const
+  W = 64;                          { 15*4 redondeado a multiplo de 8 }
+var
+  data, mask: array [0..W * W div 8 - 1] of Uint8;
+  ww, wh, cscale, csize, cw, cx, cy, ox, oy: Integer;
+  f: Double;
+  cur: PSDL_Cursor;
+begin
+  if not FOpen or (FWindow = nil) then
+    exit;
+  ww := 0; wh := 0;
+  SDL_GetWindowSize(FWindow, @ww, @wh);
+  { letterbox: manda el eje que menos amplia }
+  f := ww / FWidth;
+  if wh / FHeight < f then
+    f := wh / FHeight;
+  cscale := Trunc(FWidth * f / 640 + 0.001);
+  if cscale < 1 then cscale := 1;
+  if cscale > 4 then cscale := 4;
+  if (cscale = FCrossScale) and (FCrossCursor <> nil) then
+    exit;
+  csize := 15 * cscale;
+  cw := (csize + 7) and not 7;     { SDL_CreateCursor: ancho multiplo de 8 }
+  FillChar(data, SizeOf(data), 0); { data=0 + mask=1 -> blanco }
+  FillChar(mask, SizeOf(mask), 0); { mask=0 -> transparente }
+  for cy := 0 to csize - 1 do
+    for cx := 0 to csize - 1 do
+    begin
+      ox := cx div cscale; oy := cy div cscale;
+      if ((ox = 7) and ((oy <= 5) or (oy >= 9))) or
+         ((oy = 7) and ((ox <= 5) or (ox >= 9))) then
+        mask[cy * (cw div 8) + (cx div 8)] :=
+          mask[cy * (cw div 8) + (cx div 8)] or ($80 shr (cx and 7));
+    end;
+  cur := SDL_CreateCursor(@data[0], @mask[0], cw, csize,
+                          7 * cscale + cscale div 2, 7 * cscale + cscale div 2);
+  if cur = nil then
+    exit;
+  SDL_SetCursor(cur);
+  if FCrossCursor <> nil then
+    SDL_DestroyCursor(FCrossCursor);
+  FCrossCursor := cur;
+  FCrossScale := cscale;
 end;
 
 procedure TSDLConsole.Close;
 begin
   if not FOpen then
     exit;
+  if FCrossCursor <> nil then
+  begin
+    SDL_SetCursor(SDL_GetDefaultCursor);
+    SDL_DestroyCursor(FCrossCursor);
+    FCrossCursor := nil;
+    FCrossScale := 0;
+  end;
   if FTexture <> nil then SDL_DestroyTexture(FTexture);
   if FRenderer <> nil then SDL_DestroyRenderer(FRenderer);
   if FWindow <> nil then SDL_DestroyWindow(FWindow);
@@ -129,14 +197,18 @@ begin
   { La superficie logica no cambia de tamano: escala SDL. }
 end;
 
+{ Copy, Save y Clear: lo mismo que TPTCSurface sobre el bufer propio. }
 procedure TSDLConsole.Copy(ASurface: IPTCSurface);
 begin
-  raise TPTCError.Create('TSDLConsole.Copy: not implemented');
+  CheckOpen;
+  ASurface.Load(@FPixels[0], FWidth, FHeight, FWidth * 4, FFormat, FPalette);
 end;
 
 procedure TSDLConsole.Copy(ASurface: IPTCSurface; ASource, ADestination: IPTCArea);
 begin
-  raise TPTCError.Create('TSDLConsole.Copy: not implemented');
+  CheckOpen;
+  ASurface.Load(@FPixels[0], FWidth, FHeight, FWidth * 4, FFormat, FPalette,
+                ASource, ADestination);
 end;
 
 procedure TSDLConsole.Load(const APixels: Pointer; AWidth, AHeight, APitch: Integer;
@@ -164,12 +236,23 @@ end;
 procedure TSDLConsole.Save(APixels: Pointer; AWidth, AHeight, APitch: Integer;
                            AFormat: IPTCFormat; APalette: IPTCPalette);
 begin
+  Save(APixels, AWidth, AHeight, APitch, AFormat, APalette,
+       FArea, TPTCArea.Create(0, 0, AWidth, AHeight));
 end;
 
 procedure TSDLConsole.Save(APixels: Pointer; AWidth, AHeight, APitch: Integer;
                            AFormat: IPTCFormat; APalette: IPTCPalette;
                            ASource, ADestination: IPTCArea);
+var
+  cs, cd: IPTCArea;
 begin
+  CheckOpen;
+  TPTCClipper.Clip(ASource, FClip, cs,
+                   ADestination, TPTCArea.Create(0, 0, AWidth, AHeight), cd);
+  FCopy.Request(FFormat, AFormat);
+  FCopy.Palette(FPalette, APalette);
+  FCopy.Copy(@FPixels[0], cs.Left, cs.Top, cs.Width, cs.Height, FWidth * 4,
+             APixels, cd.Left, cd.Top, cd.Width, cd.Height, APitch);
 end;
 
 function TSDLConsole.Lock: Pointer;
@@ -184,18 +267,23 @@ end;
 
 procedure TSDLConsole.Clear;
 begin
-  if FOpen then
-    FillDWord(FPixels[0], Length(FPixels), 0);
+  Clear(TPTCColor.Create(0, 0, 0, 0));
 end;
 
 procedure TSDLConsole.Clear(AColor: IPTCColor);
 begin
-  Clear;
+  Clear(AColor, FArea);
 end;
 
 procedure TSDLConsole.Clear(AColor: IPTCColor; AArea: IPTCArea);
+var
+  c: IPTCArea;
 begin
-  Clear;
+  CheckOpen;
+  c := TPTCClipper.Clip(AArea, FClip);
+  FClear.Request(FFormat);
+  FClear.Clear(@FPixels[0], c.Left, c.Top, c.Width, c.Height, FWidth * 4,
+               AColor);
 end;
 
 procedure TSDLConsole.Configure(const AFileName: String);
@@ -212,6 +300,13 @@ begin
     FFullscreen := AOption = 'fullscreen output';
     if FOpen then
       SDL_SetWindowFullscreen(FWindow, FFullscreen);
+  end
+  else if (AOption = 'show cursor') or (AOption = 'hide cursor') then
+  begin
+    { La usa ShowMouse. Antes de Open solo se anota. }
+    FCursorVisible := AOption = 'show cursor';
+    if FOpen then
+      if FCursorVisible then SDL_ShowCursor else SDL_HideCursor;
   end
   else
     Result := FCopy.Option(AOption);
@@ -261,14 +356,14 @@ begin
   SDL_RenderClear(FRenderer);
   SDL_RenderTexture(FRenderer, FTexture, nil, nil);
   SDL_RenderPresent(FRenderer);
-  { Solo para las medidas de la Fase 7: cada bufer tal como se presento,
-    en <prefijo>NNNN.raw. El hilo del wrapper presenta por su cuenta, asi
-    que es la unica forma de ver lo que de verdad llego a la ventana. }
-  s := fpgetenv('VPA_PROTO_PRESENTED');
-  if s <> '' then
+  { Instrumento de pruebas (nacio en la Fase 7, se queda para la 11): con
+    VPA_GRAPH_PRESENTED=<prefijo>, cada bufer tal como se presento, en
+    <prefijo>NNNNN.raw. El hilo del wrapper presenta por su cuenta, asi que
+    es la unica forma de ver lo que de verdad llego a la ventana. }
+  if FPresentedPrefix <> '' then
   begin
-    Inc(FProtoFrame);
-    s := s + IntToStr(10000 + FProtoFrame) + '.raw';
+    Inc(FPresentedFrame);
+    s := FPresentedPrefix + IntToStr(10000 + FPresentedFrame) + '.raw';
     Assign(f, s); Rewrite(f, 1);
     BlockWrite(f, FPixels[0], Length(FPixels) * 4);
     System.Close(f);
@@ -342,6 +437,8 @@ begin
           Halt(0);
       SDL_EVENT_WINDOW_EXPOSED:
         Update;
+      SDL_EVENT_WINDOW_RESIZED:
+        UpdateCursor;
       SDL_EVENT_KEY_DOWN, SDL_EVENT_KEY_UP:
         TranslateKey(ev.key);
       SDL_EVENT_MOUSE_MOTION:

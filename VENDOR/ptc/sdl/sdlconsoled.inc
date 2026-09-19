@@ -19,13 +19,19 @@ type
     FArea, FClip: IPTCArea;
     FPalette: IPTCPalette;
     FCopy: TPTCCopy;
+    FClear: TPTCClear;
     FEventQueue: TEventQueue;
     FFullscreen, FInterceptClose: Boolean;
     FButtons: TPTCMouseButtonState;
     FLastX, FLastY: Integer;
-    FProtoFrame: Integer;          { solo medidas de la Fase 7 }
+    FPresentedPrefix: string;      { VPA_GRAPH_PRESENTED, leido en Open }
+    FPresentedFrame: Integer;
+    FCrossCursor: PSDL_Cursor;     { la diana blanca de VPA }
+    FCrossScale: Integer;          { escala con la que se creo; 0 = ninguna }
+    FCursorVisible: Boolean;
 
     procedure CheckOpen;
+    procedure UpdateCursor;
     procedure PumpEvents(AWait: Boolean);
     procedure TranslateKey(const AEvent: TSDL_KeyboardEvent);
 
