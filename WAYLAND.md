@@ -1493,6 +1493,12 @@ Se ejecuta **una** de las dos vías. La otra queda documentada como descartada.
       `SDL_HINT_NO_SIGNAL_HANDLERS`, porque SDL convertía SIGTERM en «cerrar
       ventana» y un `kill` fuera del mapa no mataba a VPA. Prueba:
       `TESTS/wayland/console_test.lpr`, dentro de `make wayland-test`.*
+      *Diferencia conocida, del compositor y no de VPA (KWin 6.7.5): al sacar
+      el puntero de la ventana directamente al fondo del escritorio de Plasma
+      se sigue viendo la diana, porque el escritorio no fija cursor y KWin
+      deja el último; sobre otra ventana o la barra de tareas sale el del
+      sistema. En X11 la ventana raíz tiene cursor propio. Sin arreglo
+      posible desde el cliente.*
 - [x] **T8B.3** — Apertura de ventana: `SDL_Init(VIDEO)` con el controlador de
       vídeo forzado a `wayland` (hint de SDL3, no solo la variable de entorno),
       ventana redimensionable, textura de presentación en streaming.
@@ -1518,7 +1524,7 @@ Se ejecuta **una** de las dos vías. La otra queda documentada como descartada.
       `-dVPAG_WAYLAND`; lo único propio es `vpagraph_wayland_window.pas`
       (D-22). `make wayland-plugin` (opcional hasta la Fase 12: `make build`
       no exige SDL3). El `.so` enlaza `libSDL3` y no `libX11`.*
-- [ ] **T8B.10** — Comparación píxel a píxel contra las imágenes doradas.
+- [x] **T8B.10** — Comparación píxel a píxel contra las imágenes doradas.
       Objetivo realista aquí: **cero diferencias**.
       *A medias: `make wayland-test` (weston sin pantalla, sin `DISPLAY`) da
       cero diferencias en las 5 escenas por el plugin y en los 10 volcados de
@@ -1526,12 +1532,23 @@ Se ejecuta **una** de las dos vías. La otra queda documentada como descartada.
       2×20 ciclos Init/Shutdown + `dlclose` sin fugas y `VPAG_ERR_VIDEO` con
       mensaje cuando no hay compositor.*
       *Doradas de la partida real (2026-09-19): `VPA_CAPTURE=wayland
-      TESTS/capture.sh` (sway sin pantalla + `wtype` + `wlrctl`; weston no
-      permite inyectar entrada) da **16 de 20 idénticas**. Difieren E03
-      (`ctrl+Tab`) y las tres de puntero, E06, E07 y E17 (VPA ve el puntero
-      en (240,240), donde se aparca, y no en el punto pedido). **Sin
-      diagnosticar** si falla el arnés (movimiento relativo de `wlrctl`
-      pasando por la esquina, `wtype` con modificadores) o el backend.*
+      TESTS/capture.sh` (sway sin pantalla + `wtype`; weston no permite
+      inyectar entrada) da **20 de 20 idénticas** a la referencia X11 del
+      contenedor, que a su vez coincide con `TESTS/golden/SHA256SUMS`.*
+      *Las 4 que fallaban en la primera pasada eran del **arnés**, no del
+      backend (diagnosticado con `SDL_EVENT_LOGGING=2` y `WAYLAND_DEBUG=1`):
+      (a) E06, E07 y E17: un sway sin dispositivos no anuncia puntero en el
+      `wl_seat`, y `wlrctl` crea y destruye su puntero virtual en la misma
+      invocación, antes de que SDL llegue a enlazar `wl_pointer`: a VPA no le
+      llegaba ni un `motion`. Ahora `TESTS/wayland/hold-pointer.py` mantiene un
+      puntero virtual vivo toda la captura y los movimientos son absolutos,
+      con `swaymsg seat seat0 cursor set X Y` (`wlrctl` ya no hace falta).
+      (b) E03: `ctrl+Tab` llegaba bien; la diferencia venía de que `Zoom` mueve
+      el puntero (`MoveMouseTo`), SDL da el salto por hecho con un `motion`
+      sintético, el sway 1.9 del contenedor no aplica la pista de
+      `zwp_locked_pointer_v1` y su cursor seguía en (240,240), así que el
+      aparcado final en (240,240) no emitía nada. El arnés mueve ahora en dos
+      pasos para que siempre haya `motion`. Ver R12.*
 
 #### Vía A — Reimplementación BGI sobre SDL3 *(descartada, ADR-001)*
 
@@ -1817,7 +1834,7 @@ obligatoria en cada fase.
 | R9 | La rama larga diverge de `main` | Conflictos e integración dolorosa | Fusionar al cerrar la Fase 6; mantener `main` liberable |
 | R10 | Enlaces Pascal de SDL3 desalineados con la SDL3 instalada | Fallos de enlazado o, peor, corrupción silenciosa de estructuras | `T7.1` fija versión exacta y la vendoriza; comprobar la versión en tiempo de ejecución al inicializar |
 | R11 | El plugin Wayland tiene que enmascarar las excepciones de coma flotante (`SetExceptionMask`) o Mesa mata el proceso con *runtime error 207*. La máscara es estado del hilo | Con dos RTL en el proceso (R1), hoy solo cambia en el hilo de la consola, dentro del plugin. Si algún día SDL se llamara desde el hilo de VPA, una división por cero de VPA dejaría de dar error y daría `Inf` | Enmascarar solo en el hilo de `TPTCWrapperThread` (ya es así en el prototipo) y no llamar a SDL desde ningún otro; comprobarlo con una prueba en T8B.9 |
-| R12 | `SetMousePos` (lo usa `UNIT/MOUSE.PAS`): Wayland no deja a un cliente mover el puntero salvo con el protocolo `pointer-warp-v1`, reciente, o con trucos de modo relativo | El puntero no salta donde VPA espera en compositores sin ese protocolo. No depende de la vía elegida | Fase 9: probar `SDL_WarpMouseInWindow` en KWin y Mutter reales; si falla, decidir entonces qué hace VPA (no antes, y sin segundo camino de código en el ejecutable). *2026-09-19:* `MoveMouseTo` de la consola SDL3 ya llama a `SDL_WarpMouseInWindow` (`c15c869`). Leído en el código de SDL 3.4: usa `wp_pointer_warp_v1` si el compositor lo anuncia (KWin 6.7.5 de la VM Slackware **sí**, versión 1) y, si no, el truco de `zwp_pointer_constraints_v1` (bloquear, pista de posición, soltar), que tienen casi todos los compositores; sin ninguno de los dos devuelve `False`. Pendiente: la prueba real del imán en KWin, y Mutter |
+| R12 | `SetMousePos` (lo usa `UNIT/MOUSE.PAS`): Wayland no deja a un cliente mover el puntero salvo con el protocolo `pointer-warp-v1`, reciente, o con trucos de modo relativo | El puntero no salta donde VPA espera en compositores sin ese protocolo. No depende de la vía elegida | Fase 9: probar `SDL_WarpMouseInWindow` en KWin y Mutter reales; si falla, decidir entonces qué hace VPA (no antes, y sin segundo camino de código en el ejecutable). *2026-09-19:* `MoveMouseTo` de la consola SDL3 ya llama a `SDL_WarpMouseInWindow` (`c15c869`). Leído en el código de SDL 3.4: usa `wp_pointer_warp_v1` si el compositor lo anuncia (KWin 6.7.5 de la VM Slackware **sí**, versión 1) y, si no, el truco de `zwp_pointer_constraints_v1` (bloquear, pista de posición, soltar), que tienen casi todos los compositores; sin ninguno de los dos devuelve `False`. *Prueba real (2026-09-19, VM Slackware, KWin 6.7.5, SDL 3.4.16):* el imán **no** mueve el puntero. Revisado: VPA llama al warp sin condiciones (`MouseMove` → `MoveMouseTo` → `VPASetMousePos` → `X11SetMousePos`, el adaptador común → `TSDLConsole.MoveMouseTo`; no hay bandera de capacidad), `Wayland_SeatWarpMouse` es idéntico en SDL 3.4.4 y 3.4.16, y KWin 6.7.5 (`pointer_input.cpp`) acepta el warp si el serial es el del `enter` y el punto cae dentro de la superficie. Hipótesis: el ratón de la VM es una tableta absoluta y el anfitrión deshace (o ni muestra) el warp del invitado. Pendiente de la traza `WAYLAND_DEBUG=1` de Pablo (¿llega `wl_pointer.motion` tras cada `warp_pointer`?). **Ojo, medido:** SDL emite un `motion` sintético tras *pedir* el warp, lo aplique o no el compositor (el sway 1.9 del contenedor no aplica la pista de `zwp_locked_pointer_v1`): VPA no puede saber si el puntero se movió. Pendiente además Mutter |
 
 ---
 
