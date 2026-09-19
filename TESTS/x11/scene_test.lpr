@@ -163,6 +163,9 @@ begin
   Flush(Output);   { el 'VPA: volcado' lo escribe otro RTL: que no se entremezcle }
   R := G.DumpFrame(PAnsiChar(Prefix));
   Check(R > 0, 'scene ' + Name + ' dumped as frame ' + IntToStr(R));
+  { Opcional (medidas de la Fase 7): dejar la escena quieta un rato para que
+    el hilo de presentacion de ptc, que pinta cada 10 ms, llegue a verla. }
+  Sleep(StrToIntDef(GetEnvironmentVariable('VPA_SCENE_PAUSE_MS'), 0));
 end;
 
 procedure SceneLines;
