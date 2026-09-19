@@ -106,6 +106,12 @@ warn() { echo "capture.sh: aviso: $*" >&2; }
 OUT="$1"; shift
 WANTED="$*"
 
+# Una escena pedida que no existe no puede pasar por exito: sin esto el bucle
+# no captura nada y aun asi dice "todas las escenas capturadas".
+for w in $WANTED; do
+  grep -q "^$w|" <<< "$SCENES" || die "escena desconocida: '$w' (uso: $0 DESTINO [ESCENA...])"
+done
+
 case "$VPA_KEYMODE" in
   xtest|sendevent) ;;
   *) die "VPA_KEYMODE debe ser xtest o sendevent (es '$VPA_KEYMODE')" ;;
