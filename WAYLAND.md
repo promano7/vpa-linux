@@ -67,8 +67,8 @@ más fácil es saltárselas:
 | 5 | Plugin X11 (gráficos, ventana, teclado, ratón) | ☑ cerrada (2026-09-16) |
 | 6 | Migración de VPA-Linux a `VPAGraph` | ☑ cerrada (2026-09-19) |
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☑ cerrada (2026-09-19) — **vía B** |
-| 8 | Motor de dibujo Wayland (vía B) | ◐ en curso: dibuja por el plugin, 0 diferencias (`make wayland-test`); falta revisar la consola (T8B.2, T8B.7) y las doradas |
-| 9 | Eventos: teclado, ratón y cierre de ventana | ☐ |
+| 8 | Motor de dibujo Wayland (vía B) | ☑ cerrada (2026-09-20): 0 diferencias (`make wayland-test`), doradas 20/20 |
+| 9 | Eventos: teclado, ratón y cierre de ventana | ◐ en curso: T9.1–T9.6 hechas y probadas (`make wayland-input-test`, distribuciones us/es/ru); faltan T9.7 y T9.8, que son de prueba manual |
 | 10 | Escalado, HiDPI y pantalla completa | ☐ |
 | 11 | Comparación visual automatizada | ☐ |
 | 12 | Empaquetado, documentación y release | ☐ |
@@ -1509,9 +1509,11 @@ Se ejecuta **una** de las dos vías. La otra queda documentada como descartada.
 - [x] **T8B.6** — Presentación con **filtrado de vecino más próximo**: la
       ventana actual escala con bordes nítidos y el aspecto tiene que ser el
       mismo. Nada de suavizado.
-- [ ] **T8B.7** — Cola de eventos: traducir eventos SDL3 a eventos PTC
+- [x] **T8B.7** — Cola de eventos: traducir eventos SDL3 a eventos PTC
       (`IPTCKeyEvent`, `IPTCMouseEvent`, `IPTCCloseEvent`), que es lo que hace
       que `ptccrt` y `ptcmouse` funcionen sin tocarlos.
+      *Hecho (2026-09-20): ratón y cierre estaban desde la Fase 8; el teclado
+      completo es T9.1/T9.2.*
 - [x] **T8B.8** — Registrar la consola en `TPTCConsoleFactory` mediante un
       define de compilación, de modo que la misma base de PTC produzca la
       consola X11 o la SDL según cómo se compile el plugin.
@@ -1586,26 +1588,57 @@ elegida.
 Con la vía B esta fase es pequeña (la consola ya entrega eventos y `ptccrt` /
 `ptcmouse` los consumen). Con la vía A hay que hacerla entera.
 
-- [ ] **T9.1** — Tabla de traducción de teclas SDL3 → códigos que espera
+- [x] **T9.1** — Tabla de traducción de teclas SDL3 → códigos que espera
       `UNIT/KEYBOARD.PAS`: teclas extendidas, función, cursores, `Ctrl`+letra,
       `Alt`+letra.
+      *Hecho: `SDLKeycodeToPTC` y `SDLNumPadToPTC` en
+      `VENDOR/ptc/sdl/sdlconsolei.inc` cubren las mismas teclas que
+      `FNormalKeys`/`FFunctionKeys` de la consola X11, con las mismas banderas
+      (`pmkNumPadKey`, `pmkRightKey`, bloqueos). El teclado numérico va por
+      scancode y estado de BloqNum (`PTCKEY_NUMPADn` + dígito, o la tecla de
+      cursor), como `XK_KP_1`/`XK_KP_End`. Una tecla sin código PTC se entrega
+      con `PTCKEY_UNDEFINED` y su carácter, igual que X11 (el prototipo la
+      tiraba).*
 - [ ] **T9.2** — **Entrada de texto para distribuciones no estadounidenses.**
       `Ctrl-+` y `Ctrl--` se arreglaron en 3.67.5 comparando el carácter
       Unicode, no el scancode. En SDL3 hay que combinar el evento de tecla con
       el de entrada de texto y rellenar `UnicodeChar` en `TVPAGraphEvent`.
       Probar explícitamente con distribución española y con la rusa, que es la
       de Alexander.
-- [ ] **T9.3** — Modificadores (`Shift`/`Ctrl`/`Alt`) en el formato heredado
+      *Hecho, pero **sin** `SDL_EVENT_TEXT_INPUT` (D-23): el carácter sale de
+      `SDL_GetKeyFromScancode(scancode, mod, False)`, el mapa que SDL construye
+      del keymap xkb del compositor. Probado en `make wayland-input-test` con
+      `TESTS/wayland/vkbd.py` (teclado virtual con la distribución de verdad):
+      `us` (Ctrl-Shift-= → «+»), `es` («+» como tecla propia, sin código PTC;
+      «-» en la tecla del «/»; Shift-7 → «/» con código `PTCKEY_SLASH`;
+      AltGr-2 → «@») y `ru` sin grupo latino (Alt-X conserva el código de la
+      X gracias a la opción `latin_letters` de SDL, activa por defecto, y el
+      carácter es el cirílico; Ctrl-+ y Ctrl-- llegan). Mejora sobre X11: con
+      `ru` activa la consola X11 entrega las letras con `PTCKEY_UNDEFINED`.*
+- [x] **T9.3** — Modificadores (`Shift`/`Ctrl`/`Alt`) en el formato heredado
       estilo BIOS `0040:0017` que devuelve hoy `xfocus.KbdModifiers`.
-- [ ] **T9.4** — Ratón: posición, botones, movimiento, y la emulación de
+      *Hecho: `CurrentModifiers` del plugin lee `ptc.PTCSDLInputState` (D-24).
+      Wayland solo informa de modificadores a la ventana con foco: sin foco,
+      «ninguno».*
+- [x] **T9.4** — Ratón: posición, botones, movimiento, y la emulación de
       `StickyMouseRange`.
-- [ ] **T9.5** — Ocultar el cursor del sistema dentro de la ventana, como hace
+      *Hecho: posición, botones izquierdo/derecho e `Inside`
+      (`PointerInsideWindow`, D-24) probados en `wayland-input-test`. El imán
+      funciona en KWin 6.7.5 (prueba de Pablo, 2026-09-20, con el ratón
+      relativo de la VM; ver R12).*
+- [x] **T9.5** — Ocultar el cursor del sistema dentro de la ventana, como hace
       hoy `xfocus` con un cursor en blanco.
+      *Hecho en la Fase 8 (T8B.2): diana propia de la consola y opciones
+      `show cursor`/`hide cursor`.*
 - [ ] **T9.6** — Cierre de ventana: mapearlo al camino existente
       (`PTCQuitNoSave` / emulación de `Ctrl-C`) para que el guardado de
       emergencia de `VPA/VPAEXIT.PAS` siga funcionando. **Probar con una partida
       con cambios sin guardar**: es justamente el caso en que un fallo aquí
       duele de verdad.
+      *Hecho: `xdg_toplevel.close` llega como `CLOSE` (`wayland-input-test`) y
+      de ahí en adelante el camino es el de `ptccrt`, común con X11 ([X] =
+      Alt-X, salir guardando). **Pendiente de Pablo:** cerrar con [X] una
+      partida con cambios sin guardar en KWin y comprobar que guarda.*
 - [ ] **T9.7** — Foco de teclado al abrir y al volver del editor externo
       (`$VISUAL`/`$EDITOR`, arreglado en 3.67.5).
 - [ ] **T9.8** — Repetición de teclas y latencia comparadas con X11.
@@ -1834,7 +1867,7 @@ obligatoria en cada fase.
 | R9 | La rama larga diverge de `main` | Conflictos e integración dolorosa | Fusionar al cerrar la Fase 6; mantener `main` liberable |
 | R10 | Enlaces Pascal de SDL3 desalineados con la SDL3 instalada | Fallos de enlazado o, peor, corrupción silenciosa de estructuras | `T7.1` fija versión exacta y la vendoriza; comprobar la versión en tiempo de ejecución al inicializar |
 | R11 | El plugin Wayland tiene que enmascarar las excepciones de coma flotante (`SetExceptionMask`) o Mesa mata el proceso con *runtime error 207*. La máscara es estado del hilo | Con dos RTL en el proceso (R1), hoy solo cambia en el hilo de la consola, dentro del plugin. Si algún día SDL se llamara desde el hilo de VPA, una división por cero de VPA dejaría de dar error y daría `Inf` | Enmascarar solo en el hilo de `TPTCWrapperThread` (ya es así en el prototipo) y no llamar a SDL desde ningún otro; comprobarlo con una prueba en T8B.9 |
-| R12 | `SetMousePos` (lo usa `UNIT/MOUSE.PAS`): Wayland no deja a un cliente mover el puntero salvo con el protocolo `pointer-warp-v1`, reciente, o con trucos de modo relativo | El puntero no salta donde VPA espera en compositores sin ese protocolo. No depende de la vía elegida | Fase 9: probar `SDL_WarpMouseInWindow` en KWin y Mutter reales; si falla, decidir entonces qué hace VPA (no antes, y sin segundo camino de código en el ejecutable). *2026-09-19:* `MoveMouseTo` de la consola SDL3 ya llama a `SDL_WarpMouseInWindow` (`c15c869`). Leído en el código de SDL 3.4: usa `wp_pointer_warp_v1` si el compositor lo anuncia (KWin 6.7.5 de la VM Slackware **sí**, versión 1) y, si no, el truco de `zwp_pointer_constraints_v1` (bloquear, pista de posición, soltar), que tienen casi todos los compositores; sin ninguno de los dos devuelve `False`. *Prueba real (2026-09-19, VM Slackware, KWin 6.7.5, SDL 3.4.16):* el imán **no** mueve el puntero. Revisado: VPA llama al warp sin condiciones (`MouseMove` → `MoveMouseTo` → `VPASetMousePos` → `X11SetMousePos`, el adaptador común → `TSDLConsole.MoveMouseTo`; no hay bandera de capacidad), `Wayland_SeatWarpMouse` es idéntico en SDL 3.4.4 y 3.4.16, y KWin 6.7.5 (`pointer_input.cpp`) acepta el warp si el serial es el del `enter` y el punto cae dentro de la superficie. Hipótesis: el ratón de la VM es una tableta absoluta y el anfitrión deshace (o ni muestra) el warp del invitado. *Traza `WAYLAND_DEBUG=1` de Pablo (misma fecha):* **KWin acepta el warp**: cada `warp_pointer` lleva el serial del `enter` (7973) y, cuando el destino es distinto de donde ya está el puntero, KWin contesta con `wl_pointer.motion` en ese punto exacto ((481,481) y (477,475) con la ventana a ×2); a un warp al mismo punto no contesta, que es lo correcto. Las flechas «que no mueven el puntero» son comportamiento original de VPA, igual en X11 (reproducido): con un objeto fijado, `VPA2.PAS` convierte ←/→ en ^←/^→ (nave o planeta anterior/siguiente, con `CenterMap` y warp a (240,240)) y ↑/↓ en ^↑/^↓ (otro objeto del mismo punto). **Causa confirmada, no es de VPA ni de KWin:** el ratón de la VM es `VirtualBox mouse integration` (`libinput list-devices`), un dispositivo de posición **absoluta**. Segunda traza, moviendo el ratón sobre un objeto fijado en (295,545): llegan `motion` 296→297→298, VPA pide el warp a (295,545), KWin lo aplica y lo confirma con `motion(295,545)`, y el siguiente `motion` real es (300,547): sigue desde la posición del anfitrión e ignora el warp, así que a los `StickyMouseRange` píxeles el imán se suelta. Con un ratón relativo el siguiente `motion` saldría de (295,545). En X11 dentro de la misma VM pasaría lo mismo. Pendiente, opcional: repetir con la integración del ratón de VirtualBox desactivada (queda el `ImExPS/2`, relativo) o en hardware real con KWin. **Ojo, medido:** SDL emite un `motion` sintético tras *pedir* el warp, lo aplique o no el compositor (el sway 1.9 del contenedor no aplica la pista de `zwp_locked_pointer_v1`): VPA no puede saber si el puntero se movió. Pendiente además Mutter |
+| R12 | `SetMousePos` (lo usa `UNIT/MOUSE.PAS`): Wayland no deja a un cliente mover el puntero salvo con el protocolo `pointer-warp-v1`, reciente, o con trucos de modo relativo | El puntero no salta donde VPA espera en compositores sin ese protocolo. No depende de la vía elegida | Fase 9: probar `SDL_WarpMouseInWindow` en KWin y Mutter reales; si falla, decidir entonces qué hace VPA (no antes, y sin segundo camino de código en el ejecutable). *2026-09-19:* `MoveMouseTo` de la consola SDL3 ya llama a `SDL_WarpMouseInWindow` (`c15c869`). Leído en el código de SDL 3.4: usa `wp_pointer_warp_v1` si el compositor lo anuncia (KWin 6.7.5 de la VM Slackware **sí**, versión 1) y, si no, el truco de `zwp_pointer_constraints_v1` (bloquear, pista de posición, soltar), que tienen casi todos los compositores; sin ninguno de los dos devuelve `False`. *Prueba real (2026-09-19, VM Slackware, KWin 6.7.5, SDL 3.4.16):* el imán **no** mueve el puntero. Revisado: VPA llama al warp sin condiciones (`MouseMove` → `MoveMouseTo` → `VPASetMousePos` → `X11SetMousePos`, el adaptador común → `TSDLConsole.MoveMouseTo`; no hay bandera de capacidad), `Wayland_SeatWarpMouse` es idéntico en SDL 3.4.4 y 3.4.16, y KWin 6.7.5 (`pointer_input.cpp`) acepta el warp si el serial es el del `enter` y el punto cae dentro de la superficie. Hipótesis: el ratón de la VM es una tableta absoluta y el anfitrión deshace (o ni muestra) el warp del invitado. *Traza `WAYLAND_DEBUG=1` de Pablo (misma fecha):* **KWin acepta el warp**: cada `warp_pointer` lleva el serial del `enter` (7973) y, cuando el destino es distinto de donde ya está el puntero, KWin contesta con `wl_pointer.motion` en ese punto exacto ((481,481) y (477,475) con la ventana a ×2); a un warp al mismo punto no contesta, que es lo correcto. Las flechas «que no mueven el puntero» son comportamiento original de VPA, igual en X11 (reproducido): con un objeto fijado, `VPA2.PAS` convierte ←/→ en ^←/^→ (nave o planeta anterior/siguiente, con `CenterMap` y warp a (240,240)) y ↑/↓ en ^↑/^↓ (otro objeto del mismo punto). **Causa confirmada, no es de VPA ni de KWin:** el ratón de la VM es `VirtualBox mouse integration` (`libinput list-devices`), un dispositivo de posición **absoluta**. Segunda traza, moviendo el ratón sobre un objeto fijado en (295,545): llegan `motion` 296→297→298, VPA pide el warp a (295,545), KWin lo aplica y lo confirma con `motion(295,545)`, y el siguiente `motion` real es (300,547): sigue desde la posición del anfitrión e ignora el warp, así que a los `StickyMouseRange` píxeles el imán se suelta. Con un ratón relativo el siguiente `motion` saldría de (295,545). En X11 dentro de la misma VM pasaría lo mismo. **Confirmado por Pablo (2026-09-20):** con la integración del ratón de VirtualBox desactivada (la VM captura el cursor y queda el `ImExPS/2`, relativo) el imán funciona perfectamente en KWin 6.7.5. Cerrado. **Ojo, medido:** SDL emite un `motion` sintético tras *pedir* el warp, lo aplique o no el compositor (el sway 1.9 del contenedor no aplica la pista de `zwp_locked_pointer_v1`): VPA no puede saber si el puntero se movió. Pendiente además Mutter |
 
 ---
 
@@ -1866,6 +1899,8 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-20 | 2026-09-19 | SDL3 objetivo **3.4.x**, mínima **3.4.4** (la de los enlaces `SDL3-for-Pascal` v0.6 vendorizados); la consola compara `SDL_GetVersion` con `SDL_VERSION` al abrir y se niega con una SDL más vieja | R10. Dentro de la serie 3 la ABI solo crece, así que una SDL más nueva vale y una más vieja no |
 | D-21 | 2026-09-19 | El controlador de vídeo se fuerza con `SDL_HINT_VIDEO_DRIVER=wayland` antes de `SDL_Init`, no con la variable de entorno | Medido en T7.2: sin compositor `SDL_Init` falla con mensaje en vez de caer a X11 en silencio, que es lo que exige 6.5 |
 | D-22 | 2026-09-19 | El plugin Wayland **no** expone la ventana (`PSDL_Window`) al adaptador: todo lo que toca la ventana (pantalla completa hoy; cursor, puntero y modificadores en la Fase 9) se pide a la consola con `PTCWrapperObject.Option`, que `ptcwrapper` ya ejecuta en el hilo de la consola. `GetScreenSize` devuelve `VPAG_ERR_UNSUPPORTED` | No es simetría con D-18 porque el protocolo no es simétrico: en X11 una segunda conexión puede manipular una ventana por su XID; en Wayland una superficie solo existe en la conexión que la creó, y R11 prohíbe llamar a SDL fuera del hilo de la consola. Un puntero a la ventana en manos del adaptador sería una invitación a violarlo. `ptcwrapper` queda sin tocar. El tamaño de pantalla no se conoce antes de tener ventana; el núcleo ya contempla ese caso y lo demás es de la Fase 10 |
+| D-23 | 2026-09-20 | El carácter Unicode del evento de tecla (D-09) sale del **mapa de teclas de SDL** (`SDL_GetKeyFromScancode(scancode, mod, False)`), **no** de `SDL_EVENT_TEXT_INPUT` | `TEXT_INPUT` es un evento aparte que habría que casar con el de tecla y, sobre todo, SDL no lo emite con Ctrl pulsado: justo el caso de Ctrl-+/Ctrl-- que D-09 protege. El mapa de SDL en Wayland se construye del keymap xkb del compositor, con Shift, AltGr y BloqMayús, y es síncrono con la tecla. Es además lo mismo que hace la consola X11, que saca el carácter del keysym y no del texto compuesto, y evita activar la entrada de texto (y el IME) en un juego que no la usa. Corrige lo que pedía T9.2 |
+| D-24 | 2026-09-20 | La consola SDL3 **publica** su estado de entrada vivo (modificadores, puntero dentro de la ventana) en una palabra de 32 bits que escribe solo su hilo tras cada `PumpEvents`; el plugin la lee con `ptc.PTCSDLInputState` | Matiza D-22: lo que *toca* la ventana sigue yendo por `Option`, pero una *consulta* por `Option` cuesta una vuelta del bucle de `ptcwrapper` (`Sleep(10)`), y el adaptador pregunta los modificadores en cada evento de ratón y el `Inside` en cada `GetMouseState`. Leer una palabra no llama a SDL (R11) ni necesita cerrojo. `ptcwrapper` sigue sin tocar |
 
 ---
 
