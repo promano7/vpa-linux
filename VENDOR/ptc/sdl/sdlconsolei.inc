@@ -6,7 +6,7 @@
   propio XRGB de 32 bits, conversion desde la superficie indexada por la
   misma ruta TPTCCopy/Hermes que usa la consola X11, presentacion con
   vecino mas proximo y letterbox, raton en coordenadas de superficie,
-  cursor en diana escalado con la ventana y ocultable,
+  cursor en diana escalado con la ventana y ocultable, MoveMouseTo (R12),
   Save/Clear/Copy, cierre de ventana y un mapa de teclas parcial.
   Lo que NO hace (Fase 9): mapa de teclas completo con caracter Unicode.
   Fuera de alcance: modos, relative mouse mode, opciones de ptcpas.conf. }
@@ -497,11 +497,25 @@ begin
 end;
 
 function TSDLConsole.MoveMouseTo(X, Y: Integer): Boolean;
+var
+  wx, wy: cfloat;
 begin
-  { Wayland no deja mover el puntero a un cliente salvo con el protocolo
-    pointer-warp (reciente) o en modo relativo. SDL lo intenta y, si el
-    compositor no quiere, no pasa nada: hay que contar con que falle. }
+  { R12. X,Y vienen en coordenadas de consola; SDL_WarpMouseInWindow las
+    quiere de ventana: camino inverso al de los eventos, letterbox incluido.
+    En Wayland SDL usa wp_pointer_warp_v1 si el compositor lo anuncia y, si
+    no, el truco de zwp_pointer_constraints_v1 (bloquear, dar la pista de
+    posicion, soltar). Sin ninguno de los dos no mueve nada y solo deja el
+    motivo en SDL_GetError (el procedimiento no devuelve resultado): de ahi
+    el SDL_ClearError previo. Tras mover, la propia SDL encola el evento de
+    movimiento, asi que ptcmouse se entera por el camino normal. }
   Result := False;
+  if not FOpen or (X < 0) or (Y < 0) or (X >= FWidth) or (Y >= FHeight) then
+    exit;
+  if not SDL_RenderCoordinatesToWindow(FRenderer, X, Y, @wx, @wy) then
+    exit;
+  SDL_ClearError;
+  SDL_WarpMouseInWindow(FWindow, wx, wy);
+  Result := SDL_GetError^ = #0;
 end;
 
 function TSDLConsole.GetWidth: Integer;  begin Result := FWidth; end;
