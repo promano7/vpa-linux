@@ -69,7 +69,7 @@ FPCCORE   = $(FPC) -Mtp -Ci- -Cr- -Co- -Ct- -vwn
 
 .PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
         plugin-units x11-plugin wayland-units wayland-plugin wayland-test wayland-input-test plugins threads-test nodisplay-test window-test input-test scene-test deps-test \
-        graphapi-test initgraph-test coreinput-test direct-units
+        graphapi-test initgraph-test coreinput-test direct-units visual-test
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -247,6 +247,15 @@ wayland-input-test: wayland-plugin
 	@grep -q '^0 unfreed memory blocks' $(WLTESTS)/input_test.heaptrc \
 	  || { echo ">> heaptrc reports leaks, see $(WLTESTS)/input_test.heaptrc"; exit 1; }
 	@echo ">> wayland-input-test passed, no leaks"
+
+## visual-test : Phase 11: capture the reference scenes of
+##               docs/reference-scenes.md with the X11 and the Wayland plugin
+##               and compare every frame against TESTS/golden (threshold: zero
+##               pixels). Report in build/visual/informe.md. Needs the local,
+##               unversioned TESTS/fixture and TESTS/golden, a real
+##               RESOURCE.PLN (VPA_RESOURCE) and the tools of TESTS/capture.sh.
+visual-test: build hlp wayland-plugin
+	TESTS/visual/run.sh
 
 ## plugins : build the backend plugins of a default build (today: x11; the
 ##           Wayland plugin is still opt-in, 'make wayland-plugin', until Phase 12)
