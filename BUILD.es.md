@@ -9,41 +9,65 @@ Free Pascal. Pensada para **Arch Linux**; las notas para otras distros van al fi
 
 ## 1. Requisitos
 
+VPA-Linux se compone de un **ejecutable** (`build/VPA`), que no enlaza ninguna
+librería gráfica, y de **plugins gráficos** (`build/plugins/*.so`) que el
+ejecutable carga al arrancar: uno para X11 y otro para Wayland. Qué hace falta
+depende de qué quieras construir:
+
+| Orden | Qué construye | Qué necesita |
+|---|---|---|
+| `make` (= `make build`) | `VPA` + el plugin **X11** | FPC y las librerías X11 |
+| `make wayland-plugin` | además, el plugin **Wayland**, contra la **SDL3 del sistema** | lo anterior + SDL3 ≥ 3.4.4 instalada |
+| `make data` | **todo**: `VPA`, los dos plugins, la ayuda y **su propia SDL3**, en un paquete distribuible | lo de `make` + lo necesario para compilar SDL3 (ver abajo) |
+
+Para compilar y jugar en X11 basta con la primera fila; no hace falta SDL3 ni
+CMake.
+
 ### Compilador
 ```sh
 sudo pacman -S fpc
 ```
-El paquete `fpc` (Free Pascal 3.2.2) **ya incluye** las units gráficas que usa el
-port: `ptcgraph`, `ptccrt`, `ptcmouse` y `ptc`. No hay que instalarlas aparte, y
-FPC las localiza solo a través de `/etc/fpc.cfg` (por eso `vpa.cfg` no lleva rutas
-de units del sistema y es portable entre distros).
+Free Pascal **3.2.2**. Las units gráficas (`ptc`, `ptcgraph`…) van vendorizadas en
+`VENDOR/` y se compilan con el proyecto; no se usan las del sistema. `vpa.cfg` y
+`plugins.cfg` no llevan rutas de units del sistema, así que son portables entre
+distros.
 
-### Librerías X11 (en tiempo de enlace y ejecución)
-`ptcgraph` abre una ventana X11 y enlaza contra varias librerías X:
+### Librerías X11 (plugin X11)
+Las enlaza `libvpagraph-x11.so`, no el ejecutable:
 ```sh
 sudo pacman -S libx11 libxext libxfixes libxi libxrandr libxxf86vm
 ```
-> **Ya NO hace falta `libxxf86dga`.** El port vendoriza el backend `ptc` recompilado
-> **sin las extensiones DGA** (en `VENDOR/ptc/`; ver README §1 y Fase 7), así que el
-> binario no enlaza `libxxf86dga` —que además fue retirada de los repos oficiales de
-> Arch en 2019—. Puedes comprobarlo con `ldd build/VPA | grep dga`: no debe aparecer
-> nada. (VPA usa siempre la consola X11 en ventana, nunca DGA, así que no se pierde
-> nada.)
+> **No hace falta `libxxf86dga`.** El backend `ptc` vendorizado está recompilado
+> **sin las extensiones DGA** (`VENDOR/ptc/`), así que nada enlaza esa librería,
+> retirada de los repos oficiales de Arch en 2019.
 
-### (Opcional) Xvfb — solo para compilar la ayuda
-Solo si vas a regenerar el fichero de ayuda con `make hlp` (ver §4): el compilador
-de ayuda enlaza la capa gráfica y necesita un display X, que se le da con `xvfb-run`
-(un display virtual, sin pantalla real). El paquete:
-- **Arch:** `sudo pacman -S xorg-server-xvfb`
-- **Debian/Ubuntu:** `sudo apt install xvfb`
-- **Fedora:** `sudo dnf install xorg-x11-server-Xvfb`
+Comprobaciones:
+```sh
+ldd build/VPA                          # solo libc
+ldd build/plugins/libvpagraph-x11.so   # las librerías X11
+```
 
-> No hace falta ni para el `make` normal ni para ejecutar VPA; únicamente para
-> `make hlp`/`make data`.
+### SDL3 del sistema (solo para `make wayland-plugin`)
+El plugin Wayland dibuja con SDL3 (3.4.4 o posterior):
+```sh
+sudo pacman -S sdl3
+```
+Si tu SDL3 no está en una ruta estándar: `make wayland-plugin SDL3_LIBDIR=/usr/local/lib`.
+`make data` **no** usa la SDL3 del sistema: compila la suya (siguiente apartado).
 
-### Wayland
-El binario necesita X11. En una sesión Wayland se ejecuta igualmente a través de
-**XWayland** (transparente en la mayoría de entornos). No requiere configuración.
+### Para compilar la SDL3 del paquete (solo para `make data` / `make sdl3`)
+`make data` descarga el tarball oficial de **SDL 3.4.16**, comprueba su SHA256 y
+lo compila con CMake, solo con lo que VPA usa (vídeo Wayland, eventos y render).
+Necesita `curl`, CMake, un compilador de C y las cabeceras de Wayland, xkbcommon,
+EGL/GLES y libdecor:
+```sh
+sudo pacman -S curl cmake gcc make pkgconf wayland wayland-protocols \
+               libxkbcommon libdecor mesa
+```
+`make sdl3` se detiene con un mensaje claro si SDL se ha configurado sin Wayland
+o sin libdecor (sin libdecor la ventana no tendría barra de título en GNOME).
+
+Los paquetes equivalentes de Debian/Ubuntu, Fedora y Raspberry Pi OS están en §7.
 
 ---
 
@@ -53,19 +77,25 @@ Desde la raíz del proyecto (donde están `vpa.cfg`, `Makefile`, y las carpetas
 `VPA/`, `UNIT/`, `VENDOR/`, etc.):
 
 ```sh
-make            # compila -> build/VPA
-make clean      # borra los .ppu/.o y el binario
+make                  # compila -> build/VPA y build/plugins/libvpagraph-x11.so
+make wayland-plugin   # (opcional) -> build/plugins/libvpagraph-wayland.so, con la SDL3 del sistema
+make clean            # borra los artefactos de compilación (conserva build/sdl3/)
 make run ARGS="3 /ruta/a/la/partida"   # compila y ejecuta
+make help             # lista todos los objetivos
 ```
 
-Equivale a invocar FPC directamente:
-```sh
-fpc @vpa.cfg VPA/VPA.PAS
-```
+`make` construye **solo el plugin X11**: es lo que hace falta para compilar y
+probar, y no pide SDL3. Quien quiera el backend Wayland en su árbol de trabajo
+ejecuta además `make wayland-plugin`; el paquete completo, con los dos plugins y
+su SDL3, lo monta `make data` (§4.1).
+
+El ejecutable busca los plugins en `plugins/` **junto a sí mismo**, así que
+`build/VPA` encuentra `build/plugins/` sin configurar nada. `build/VPA --graph-info`
+dice qué backend se elegiría y por qué.
 
 El ejecutable y los `.ppu`/`.o` quedan en `build/`. La primera compilación también
-recompila el backend `ptc` vendorizado a `build/ptcunits/` (sin DGA); las siguientes
-solo lo rehacen si cambian sus fuentes. Debe terminar con `Linking build/VPA` y sin
+compila el backend `ptc` vendorizado (sin DGA) para el plugin, en
+`build/plugins/units/`; las siguientes solo lo rehacen si cambian sus fuentes. Debe terminar con `Linking build/VPA` y sin
 errores (solo avisos benignos de FPC: switches `$E/$L/$N` ignorados, alguna
 comparación «siempre cierta», etc.).
 
@@ -122,7 +152,7 @@ Sin argumentos, el programa imprime el banner y la ayuda de uso y sale — es la
 forma rápida de comprobar que el binario arranca:
 ```
 $ ./build/VPA
--= VGA Planets Assistant 3.67.3  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
+-= VGA Planets Assistant 3.67.6  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
 Use: VPA race [dir] ...
 ```
 
@@ -149,11 +179,8 @@ VPA lee siempre el fichero que indique la clave `HelpFile` de `VPA.INI`
 (`VPA.HLP` por omisión), así que para jugar con la ayuda rusa basta con poner
 `HelpFile = VPA_RUS.HLP` o renombrar el fichero — ver `HOWTO.es.md`.
 
-Esto compila `VHLP/VHLPMAKE.PAS` y lo ejecuta sobre cada fuente. Como
-`VHLPMAKE` enlaza la unit gráfica, necesita un display X: el `Makefile` usa
-`xvfb-run` (display virtual) de forma automática, con *fallback* a ejecución
-directa si ya tienes una sesión gráfica. Por eso necesita el paquete **xvfb** (ver
-§1); si no lo tienes y tampoco hay display, `make hlp` fallará.
+Esto compila `VHLP/VHLPMAKE.PAS` y lo ejecuta sobre cada fuente. No necesita
+sesión gráfica ni `xvfb`.
 
 Copia el resultado a tu carpeta de partida:
 ```sh
@@ -167,10 +194,11 @@ cp build/VPA.HLP build/VPA_RUS.HLP ~/PLANETS/
 
 ### 4.1 Montar el paquete distribuible (`make data`)
 
-`make data` construye **todos los artefactos a la vez** — el binario `VPA` (regla
-`build`) y los ficheros de ayuda `VPA.HLP` y `VPA_RUS.HLP` (regla `hlp`) — y después monta una
-carpeta lista para distribuir, **`build/vpa-linux_package/`**, con todo lo que
-necesita un usuario final:
+`make data` construye **todos los artefactos a la vez** — el binario `VPA` y el
+plugin X11 (regla `build`), los ficheros de ayuda (regla `hlp`), la SDL3 del
+paquete (regla `sdl3`) y el plugin Wayland enlazado contra ella — y después monta
+una carpeta lista para distribuir, **`build/vpa-linux_package/`**, con todo lo
+que necesita un usuario final:
 
 ```sh
 make data
@@ -179,6 +207,10 @@ make data
 | Dentro de `build/vpa-linux_package/` | De dónde sale |
 |---|---|
 | `VPA` | el binario recién compilado (`build/VPA`) |
+| `plugins/libvpagraph-x11.so` | el plugin X11 (`build/plugins/`) |
+| `plugins/libvpagraph-wayland.so` | el plugin Wayland (`build/plugins/`) |
+| `plugins/libSDL3.so.0` | la SDL 3.4.16 de `make sdl3` (`build/sdl3/prefix/lib/`), sin símbolos de depuración |
+| `LICENSE.SDL3.txt` | la licencia zlib de SDL, tomada de su tarball |
 | `VPA.HLP` | la ayuda inglesa recién compilada (`build/VPA.HLP`) |
 | `VPA_RUS.HLP` | la ayuda rusa recién compilada (`build/VPA_RUS.HLP`) |
 | `EXAMPLES/` | copiado de la raíz del repo (`VPA.INI` de ejemplo) |
@@ -187,6 +219,32 @@ make data
 | `VPA.MSG` | copiado de la raíz del repo — plantillas de mensajes |
 | `HOWTO.en.md`, `HOWTO.es.md` | copiados de la raíz del repo — guía de usuario |
 | `LICENSE.md`, `MPL-2.0.txt` | copiados de la raíz del repo — licencias |
+
+**La SDL3 del paquete.** El plugin Wayland se enlaza con `RUNPATH=$ORIGIN`: busca
+`libSDL3.so.0` **primero en su propio directorio** (`plugins/`) y después en el
+sistema. Por eso el paquete funciona donde la distribución no trae SDL3, todos los
+usuarios tienen la misma versión, y quien prefiera la de su distro solo tiene que
+borrar `plugins/libSDL3.so.0` (está explicado en el HOWTO). La versión y el SHA256
+del tarball están fijados en el `Makefile` (`SDL3VER`, `SDL3SHA256`). La descarga y
+la compilación (unos dos minutos) se hacen **una sola vez**: quedan en
+`build/sdl3/`, que `make clean` **no** borra; para rehacerla, `rm -rf build/sdl3`.
+
+**Es la misma receta en todas las arquitecturas.** En una Raspberry Pi (aarch64)
+`make data` produce el mismo paquete, con los dos plugins y la misma SDL3,
+compilado para ARM.
+
+**En qué máquina montar el paquete que se publica.** Todo binario enlazado en
+Linux queda atado, como mínimo, a la versión de glibc de la máquina donde se
+enlazó, y el que más `libSDL3.so.0`, que la compila gcc (medido en Ubuntu 24.04:
+`VPA` y los plugins piden `GLIBC_2.34`; la SDL3, `GLIBC_2.38`). Un paquete hecho
+en una distro muy reciente no cargaría en una más antigua; en el caso de la SDL3,
+además, el enlazador dinámico no pasa entonces a la del sistema: el plugin Wayland
+falla y VPA se queda en X11. El paquete que se publica hay que montarlo en la
+distribución **más antigua** que se quiera soportar — p. ej. Debian 12 para
+x86-64 y Raspberry Pi OS (bookworm) para aarch64. Se comprueba con:
+```sh
+for f in VPA plugins/*.so*; do printf '%-36s' $f; objdump -T build/vpa-linux_package/$f | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1; done
+```
 
 La carpeta se rehace desde cero en cada ejecución (se borra antes), así que siempre
 corresponde al estado actual de los fuentes. Desde ahí puedes copiarla a tu carpeta
@@ -197,9 +255,8 @@ cp -a build/vpa-linux_package/. ~/PLANETS/          # usarlo ya
 tar -czf vpa-linux-x86_64.tar.gz -C build vpa-linux_package   # o distribuirlo
 ```
 
-> Como `make data` ejecuta también la regla `hlp`, necesita **xvfb** (o una sesión
-> gráfica) igual que `make hlp`. `make clean` borra `build/vpa-linux_package/`
-> junto con el resto de artefactos de compilación.
+> `make clean` borra `build/vpa-linux_package/` junto con el resto de artefactos
+> de compilación (salvo `build/sdl3/`).
 
 ---
 
@@ -247,9 +304,11 @@ referencian, así que puedes ignorarlos o borrarlos.
 | Síntoma | Causa / solución |
 |---|---|
 | `Can't find unit system` / `...ptcgraph` | Falta el paquete `fpc` o se está usando un `fpc.cfg` local que eclipsa al `/etc/fpc.cfg`. El fichero de config del proyecto debe llamarse `vpa.cfg`, **no** `fpc.cfg`. |
-| `Threading has been used before cthreads was initialized` | Ya resuelto en el port (`cthreads` es la primera unit del `uses` de `VPA.PAS`). Si reaparece, verifica que `VPA.PAS` no se haya regenerado sin ese cambio. |
-| `Exception ... TPTCError` al arrancar | `ptcgraph` no pudo abrir la ventana: no hay display X11. Lanza desde una sesión gráfica (o XWayland). En un servidor sin pantalla puedes probar con `xvfb-run ./build/VPA`. |
-| `make hlp` falla o no genera los `.HLP` | Falta **xvfb** y no hay display X. Instala el paquete xvfb de tu distro (ver §1) o ejecuta `make hlp` desde una sesión gráfica. |
+| `no graphics backend could be loaded` al arrancar | VPA no encuentra o no puede cargar ningún plugin. Ejecuta `./VPA --graph-info`: lista cada sitio donde buscó y el motivo exacto (falta `plugins/` junto al binario, falta una librería del plugin, SDL3 demasiado vieja…). |
+| `no graphical session detected` | No hay ni `WAYLAND_DISPLAY` ni `DISPLAY`: lanza VPA desde una sesión gráfica. En un servidor sin pantalla se puede probar con `xvfb-run ./build/VPA …`. |
+| `libSDL3.so.0: cannot open shared object file` (en `--graph-info`) | El plugin Wayland no tiene SDL3: ni la copia de `plugins/` ni la del sistema. En el árbol de trabajo, tras `make wayland-plugin`, hace falta la SDL3 del sistema (§1); en el paquete de `make data` va incluida. VPA sigue funcionando con X11. |
+| `make sdl3` se detiene con `configured WITHOUT Wayland` / `WITHOUT libdecor` | Faltan cabeceras de desarrollo: instala las de §1 / §7 y repite `make sdl3`. |
+| `make sdl3` se detiene con `SHA256 mismatch` | El tarball descargado no es el oficial de SDL 3.4.16 (descarga corrupta o interceptada). Se borra solo; repite la orden. |
 | Datos de la partida ilegibles / valores raros | Revisa que `SWITCHES.INC` tenga `{$PACKRECORDS 1}` (ver §5). |
 | VPA aborta con `Can't read file VPA.HLP` | Falta `VPA.HLP` en el directorio desde el que ejecutas VPA. Genéralo con `make hlp` y cópialo (ver §4); es obligatorio para arrancar. |
 
@@ -257,32 +316,45 @@ referencian, así que puedes ignorarlos o borrarlos.
 
 ## 7. Otras distribuciones
 
-El `vpa.cfg` no fija rutas del sistema, así que en cualquier distro con Free Pascal
-3.2.x basta con instalar `fpc` y las librerías X11 equivalentes (X11, Xext, Xfixes,
-Xi, Xrandr, Xxf86vm). **Ninguna necesita ya `libxxf86dga`.** El paquete **xvfb** es
-opcional y solo para `make hlp`.
+`vpa.cfg` y `plugins.cfg` no fijan rutas del sistema, así que en cualquier distro
+con Free Pascal 3.2.2 se compila igual. Cada bloque tiene tres líneas: lo necesario
+para `make` (plugin X11), lo que añade `make wayland-plugin` (SDL3 del sistema) y
+lo que añade `make data` (compilar la SDL3 del paquete). **Ninguna necesita
+`libxxf86dga`.**
 
-- **Arch Linux** (es lo que cubre §1; aquí en una línea, para tenerlo junto al resto):
+- **Arch Linux:**
   ```sh
-  sudo pacman -S fpc libx11 libxext libxfixes libxi libxrandr libxxf86vm
-  sudo pacman -S xorg-server-xvfb        # opcional, solo para 'make hlp'
+  sudo pacman -S fpc make libx11 libxext libxfixes libxi libxrandr libxxf86vm
+  sudo pacman -S sdl3                                   # make wayland-plugin
+  sudo pacman -S curl cmake gcc pkgconf wayland wayland-protocols \
+                 libxkbcommon libdecor mesa             # make data
   ```
 
-- **Debian/Ubuntu:**
+- **Debian/Ubuntu** (y **Raspberry Pi OS**):
   ```sh
-  sudo apt install fpc libx11-dev libxext-dev libxfixes-dev libxrandr-dev \
+  sudo apt install fpc make libx11-dev libxext-dev libxfixes-dev libxrandr-dev \
                    libxi-dev libxxf86vm-dev
-  sudo apt install xvfb        # opcional, solo para 'make hlp'
+  sudo apt install libsdl3-dev                          # make wayland-plugin (Debian testing, Ubuntu 25.10+)
+  sudo apt install curl cmake gcc pkg-config libwayland-dev wayland-protocols \
+                   libxkbcommon-dev libdecor-0-dev libegl1-mesa-dev \
+                   libgles2-mesa-dev                    # make data
   ```
+  Ubuntu 24.04 LTS, Debian 12 y Raspberry Pi OS (bookworm) no traen SDL3: ahí
+  `make wayland-plugin` no es posible sin compilar SDL3 a mano, pero **`make data`
+  sí funciona**, porque compila la suya.
 
 - **Fedora:**
   ```sh
-  sudo dnf install fpc libX11-devel libXext-devel libXfixes-devel \
+  sudo dnf install fpc make libX11-devel libXext-devel libXfixes-devel \
                    libXrandr-devel libXi-devel libXxf86vm-devel
-  sudo dnf install xorg-x11-server-Xvfb   # opcional, solo para 'make hlp'
+  sudo dnf install SDL3-devel                           # make wayland-plugin (Fedora 43+)
+  sudo dnf install curl cmake gcc pkgconf-pkg-config wayland-devel \
+                   wayland-protocols-devel libxkbcommon-devel libdecor-devel \
+                   mesa-libEGL-devel mesa-libGLES-devel # make data
   ```
+
+- **Slackware-current:** una instalación completa ya trae todo (X11, Wayland,
+  libdecor, CMake y SDL3 en la serie `l/`); solo falta `fpc`, de SlackBuilds.org.
 
 Después, en cualquiera de ellas, se compila igual con `make`.
 
-Si tu FPC es de otra versión mayor (4.x), revisa que siga ofreciendo `ptcgraph`;
-el resto del proyecto no depende de la ruta concreta de las units.
