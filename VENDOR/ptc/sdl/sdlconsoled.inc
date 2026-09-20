@@ -26,6 +26,7 @@ type
     FLastX, FLastY: Integer;
     FPresentedPrefix: string;      { VPA_GRAPH_PRESENTED, leido en Open }
     FPresentedFrame: Integer;
+    FKeyTrace: Boolean;            { VPA_KEY_TRACE, leido en Open }
     FCrossCursor: PSDL_Cursor;     { la diana blanca de VPA }
     FCrossScale: Integer;          { escala con la que se creo; 0 = ninguna }
     FCursorVisible: Boolean;

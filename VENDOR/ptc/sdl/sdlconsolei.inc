@@ -133,6 +133,7 @@ begin
   FClip := FArea;
   FPresentedPrefix := fpgetenv('VPA_GRAPH_PRESENTED');
   FPresentedFrame := 0;
+  FKeyTrace := fpgetenv('VPA_KEY_TRACE') <> nil;
   UpdateCursor;
   if not FCursorVisible then
     SDL_HideCursor;
@@ -534,6 +535,15 @@ begin
   end;
   if not AEvent.down then
     uni := -1;
+  { VPA_KEY_TRACE=1: una linea por evento de tecla en la salida de error, con
+    lo que entrega SDL y lo que se pasa a ptccrt. Para diagnosticar a
+    distancia teclados y compositores que aqui no se pueden reproducir. }
+  if FKeyTrace then
+    Writeln(StdErr, 'VPA_KEY_TRACE sdl: scancode=', AEvent.scancode,
+            ' key=$', HexStr(AEvent.key, 8), ' mod=$', HexStr(AEvent.mod_, 4),
+            ' down=', AEvent.down, ' repeat=', AEvent.repeat_,
+            ' -> ptc: code=', code, ' uni=', uni,
+            ' numlock=', pmkNumLockActive in m, ' numpad=', pmkNumPadKey in m);
   FEventQueue.AddEvent(TPTCKeyEvent.Create(code, uni, m, AEvent.down));
 end;
 
