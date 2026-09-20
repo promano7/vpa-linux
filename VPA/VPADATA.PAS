@@ -14,7 +14,7 @@ Unit    VPAData;        (* VPA Data Structures *)
 
 Interface
 
-uses    Mouse,AuxF,StrF,ptcgraph, Config; 
+uses    Mouse,AuxF,StrF,vpagraph, Config; 
 
 const   Version = '3.67.6';
         VerNum  = 367;

@@ -7,7 +7,7 @@ procedure ScreenSaver;
 
 Implementation
 
-uses	AuxF,ptcgraph,Keyboard,Mouse,Screen,VPAData,TCombat;
+uses	AuxF,vpagraph,Keyboard,Mouse,Screen,VPAData,TCombat;
 
 const	ShipPic	: set of byte =
 		[ 5..7,9..20,29..33,45..47,49,50,54..69,72..74,76..80,

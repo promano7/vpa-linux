@@ -56,11 +56,15 @@ procedure DeAllocateStatusBuffer;
 procedure SaveMouseStatus;
 procedure RestoreMouseStatus;
 procedure PollMouse;   { Linux: el bucle principal debe llamar a esto }
+function PointerInsideWindow : boolean;   { False si el puntero salio de la ventana (auto-scroll) }
 
 
 Implementation
 
-uses ptcmouse{$IFDEF UNIX}, xfocus{$ENDIF};
+{ Fase 6 de WAYLAND.md (T6.7): el raton sale del nucleo VPAGraph
+  (vpagraph_input) y llega ya en coordenadas de superficie (0..639, 0..479):
+  el escalado de la ventana es asunto del backend. }
+uses vpagraph_input;
 
 type TMouseProc = procedure;
 
@@ -98,9 +102,8 @@ procedure Dispatch(evbit: word);
 procedure EnableMouse;
   begin
     if MouseHandlerInstalled then Exit;
-    MousePresent := InitMouse;
-    if not MousePresent then Exit;
-    ptcmouse.ShowMouse;   { mostrar el puntero del sistema (la diana propia aun no va) }
+    MousePresent := True;   { como ptcmouse.InitMouse, que nunca fallaba: siempre hay puntero }
+    VPAShowMouse(True);   { mostrar el puntero del sistema (la diana propia aun no va) }
     MouseHandlerInstalled := True;
     MouseDisabled := False;
     MouseX := 160; MouseY := 100; MouseButtons := 0;
@@ -110,14 +113,14 @@ procedure EnableMouse;
 procedure DisableMouse;
   begin
     if not MouseHandlerInstalled then Exit;
-    ptcmouse.HideMouse;
+    VPAShowMouse(False);
     MouseHandlerInstalled := False;
   end;
 
-procedure ShowMouse;  begin ptcmouse.ShowMouse; end;
-procedure HideMouse;  begin ptcmouse.HideMouse; end;
-procedure SuspendMouse; begin ptcmouse.HideMouse; end;
-procedure ResumeMouse;  begin ptcmouse.ShowMouse; end;
+procedure ShowMouse;  begin VPAShowMouse(True); end;
+procedure HideMouse;  begin VPAShowMouse(False); end;
+procedure SuspendMouse; begin VPAShowMouse(False); end;
+procedure ResumeMouse;  begin VPAShowMouse(True); end;
 
 procedure HookMouseEvent (event:byte; handler:pointer);
   var idx: integer;
@@ -133,7 +136,7 @@ procedure UnHookMouseEvent (event:byte);
 
 procedure SetPointerShape (var shape:PointerShape; hx,hy:word);
   begin
-    { ptcmouse gestiona su propio cursor; la forma personalizada no se porta }
+    { el backend gestiona su propio cursor; la forma personalizada no se porta }
   end;
 
 procedure SetMouseSensitivity (mx,my,mt:byte);
@@ -143,17 +146,14 @@ procedure SetMouseSensitivity (mx,my,mt:byte);
 
 procedure SetMouseRange (x1,y1,x2,y2:word);
   begin
-    { ptcmouse no expone limitacion de rango: se emula por software en PollMouse }
+    { la ABI no expone limitacion de rango: se emula por software en PollMouse }
     rX1 := x1; rY1 := y1; rX2 := x2; rY2 := y2;
     rangeSet := True;
   end;
 
 procedure MoveMouse (x,y:word);
-  var wx, wy: longint;
   begin
-    wx := x; wy := y;
-    {$IFDEF UNIX}xfocus.MapSurfaceToWindow(wx, wy);{$ENDIF}  { superficie->ventana para el warp }
-    SetMousePos(wx, wy);
+    VPASetMousePos(x, y);   { coords de superficie: el backend las lleva a la ventana }
     MouseX := x; MouseY := y;   { la posicion logica sigue en coords de superficie }
   end;
 
@@ -174,8 +174,7 @@ procedure PollMouse;
   var lx, ly, lb: longint; mx, my: integer; btns: word;
   begin
     if MouseDisabled or (not MouseHandlerInstalled) then Exit;
-    GetMouseState(lx, ly, lb);
-    {$IFDEF UNIX}xfocus.MapMouseToSurface(lx, ly);{$ENDIF}   { pantalla completa: escalar a 640x480 }
+    VPAGetMouseState(lx, ly, lb);
     mx := lx; my := ly; btns := word(lb) and $07;
     if rangeSet then
     begin
@@ -196,6 +195,11 @@ procedure PollMouse;
     if ((btns and CenterButton)<>0) and ((prevButtons and CenterButton)=0) then Dispatch(EvCtPress);
     if ((btns and CenterButton)=0)  and ((prevButtons and CenterButton)<>0)then Dispatch(EvCtRelease);
     prevX := mx; prevY := my; prevButtons := btns;
+  end;
+
+function PointerInsideWindow : boolean;
+  begin
+    PointerInsideWindow := VPAMouseInside;
   end;
 
 var i: integer;

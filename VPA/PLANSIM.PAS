@@ -44,7 +44,7 @@ end;
 implementation
 
 uses
-      StrF,AuxF,ptcgraph,Screen,Mouse,Keyboard;
+      StrF,AuxF,vpagraph,Screen,Mouse,Keyboard;
 
 var
 cfg_ClimateLimitsPopulation: integer;

@@ -17,7 +17,7 @@ Program	VHLPMake;	(* VHLP Compiler *)
 	...
 }
 
-uses	{$IFDEF UNIX}cthreads,{$ENDIF}AuxF,StrF,VHLP;
+uses	AuxF,StrF,VHLP;
 
 var	f	: file;
 	t	: text;

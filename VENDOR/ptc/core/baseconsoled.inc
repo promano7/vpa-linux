@@ -37,6 +37,12 @@ type
     function GetTitle: string;
     function GetInformation: string;
 
+    { VPA-Linux (2026): identificador X11 de la ventana de la consola, 0 si
+      no hay ventana X (otro backend, aun no abierta). Lo necesita el plugin
+      grafico para hablar con la ventana desde su propia conexion X sin
+      buscarla por titulo (WAYLAND.md, D-18). }
+    function GetX11WindowID: PtrUInt;
+
     function GetOpenGL_Enabled: Boolean;
     procedure SetOpenGL_Enabled(AValue: Boolean);
     function GetOpenGL_Attributes: IPTCOpenGLAttributes;

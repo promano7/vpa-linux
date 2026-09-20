@@ -9,7 +9,7 @@ procedure CombatSimulation;
 
 Implementation
 
-uses	VPAData,ptcgraph,Screen,Mouse,Keyboard,StrF,AuxF,TCombat;
+uses	VPAData,vpagraph,Screen,Mouse,Keyboard,StrF,AuxF,TCombat;
 
 type    CArr20	= array [1..20] of char;
 	VRec	= record

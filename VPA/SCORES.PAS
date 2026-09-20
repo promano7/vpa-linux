@@ -18,7 +18,7 @@ procedure WriteScores;
 
 Implementation
 
-uses	ptcgraph,StrF,Screen,Mouse,Keyboard;
+uses	vpagraph,StrF,Screen,Mouse,Keyboard;
 
 const	RaceColor	: array [1..11] of byte =
 			(White,Yellow,LightGreen,Brown,Cyan,LightMagenta,

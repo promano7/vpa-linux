@@ -16,7 +16,7 @@ Unit    Screen;
 
 Interface
 
-uses ptcgraph,AuxF,StrF,Mouse,VPAData,Ini,VPA2;
+uses vpagraph,AuxF,StrF,Mouse,VPAData,Ini,VPA2;
 
 const
         cPInfo  : byte  = LightGreen;   { the order is used in CONFIG }
@@ -237,7 +237,7 @@ procedure DisplayHullfuncs(const qr:THullFuncQueryResult; build:boolean; highpl,
 
 Implementation
 
-uses    Keyboard,VHLP,dos{$IFDEF UNIX},xfocus{$ENDIF}
+uses    Keyboard,VHLP,dos
 {$IFDEF VPACC},
         Hullfunc
 {$ENDIF};
@@ -285,7 +285,6 @@ procedure CloseGraphics;
 {$ENDIF}
     if GrMode then
     begin
-      {$IFDEF UNIX}xfocus.ReleaseFullscreen;{$ENDIF}  { reaparece el panel del escritorio }
           CloseGraph;
       { la restauracion del modo de video la gestiona CloseGraph en Linux }
       GrMode:=No;

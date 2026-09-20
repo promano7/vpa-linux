@@ -17,8 +17,11 @@ look, same keys.
 
 ## 1. What you need
 
-- A **64-bit x86 Linux** system with a graphical (X11 or Wayland) session.
-- The **`VPA` binary** (in this package), plus the support files shipped with it:
+- A **64-bit Linux** system (x86-64, or aarch64 such as the Raspberry Pi; each
+  architecture has its own package) with a graphical session, **X11 or Wayland**.
+- The **`VPA` binary** (in this package) and, **next to it, the `plugins/`
+  folder** with the graphics backends (see "Graphics backends" below): VPA
+  **won't start** without it. Plus the support files shipped with it:
   **`DISTTABL.DAT`** (required — a distance table VPA needs to start),
   **`VPA.HLP`** (required — the help file; VPA **won't start** without it),
   **`VPA.MSG`** (message templates) and the **`LITT_VPA.CHR`** map font.
@@ -31,28 +34,83 @@ look, same keys.
   `PLANETS.EXE`, the `*SPEC.DAT` files…), which are not shipped with VPA-Linux —
   see "Files not shipped with VPA-Linux" in §2.
 
+### Graphics backends: X11 and Wayland
+
+The `VPA` binary does not draw by itself: at start-up it loads a **graphics
+plugin** from the **`plugins/`** folder, which must sit **next to the binary**
+(not in the game directory). The package ships both:
+
+| File in `plugins/` | What for |
+|---|---|
+| `libvpagraph-x11.so` | **X11** sessions. |
+| `libvpagraph-wayland.so` | **Wayland** sessions, **natively** (no XWayland). It draws with SDL3. |
+| `libSDL3.so.0` | The **SDL3** the Wayland plugin uses, bundled with the package (see below). |
+
+There is nothing to configure: VPA looks at the session it runs in and picks the
+matching backend; if that one fails, it tries the other. You can force one with
+`VPA_GRAPH_BACKEND`, and `./VPA --graph-info` tells which one is chosen and why
+(see §2). On screen both backends draw exactly the same.
+
 ### Runtime libraries
-The binary uses a handful of standard X11 libraries that are already present on
-virtually every Linux desktop. If it complains about a missing `lib…so`, install
-them:
+The `VPA` binary itself only needs libc. The graphics-system libraries are used
+by the plugins, and they are already present on virtually any Linux desktop. If
+`--graph-info` says a plugin is missing some `lib….so`:
 
-- **Arch:** `sudo pacman -S libx11 libxext libxfixes libxi libxrandr libxxf86vm`
-- **Debian/Ubuntu:** `sudo apt install libx11-6 libxext6 libxfixes3 libxi6 libxrandr2 libxxf86vm1`
-- **Fedora:** `sudo dnf install libX11 libXext libXfixes libXi libXrandr libXxf86vm`
+- **X11 plugin**
+  - **Arch:** `sudo pacman -S libx11 libxext libxfixes libxi libxrandr libxxf86vm`
+  - **Debian/Ubuntu:** `sudo apt install libx11-6 libxext6 libxfixes3 libxi6 libxrandr2 libxxf86vm1`
+  - **Fedora:** `sudo dnf install libX11 libXext libXfixes libXi libXrandr libXxf86vm`
+- **Wayland plugin** (the Wayland client libraries; any Wayland desktop has them)
+  - **Arch:** `sudo pacman -S wayland libxkbcommon libdecor`
+  - **Debian/Ubuntu:** `sudo apt install libwayland-client0 libwayland-cursor0 libwayland-egl1 libxkbcommon0 libdecor-0-0`
+  - **Fedora:** `sudo dnf install libwayland-client libwayland-cursor libwayland-egl libxkbcommon libdecor`
 
-> **Wayland:** works through **XWayland** (present in almost all desktops) with
-> nothing to configure, **with one known caveat**: the mouse pointer is grabbed
-> when it enters VPA's window but **never released** when it leaves, so it ends
-> up trapped. As a stopgap you can open a screen that releases the cursor (F1 or
-> F10), but if you plan to play regularly the comfortable option is to **pick
-> the X11 session** at your desktop's login screen: same environment, and it
-> behaves correctly there.
->
-> The reason is that all of VPA-Linux's pointer handling is X11 code running on
-> top of XWayland, and Wayland deliberately does not let a client grab and
-> release the pointer the way X11 does. The proper fix — a native Wayland
-> graphics backend — is planned but is a substantial piece of work. See "Known
-> limitations" in the README.
+### The bundled SDL3, and how to use your distribution's
+
+The Wayland plugin draws with **SDL3**. So that everybody plays with the same
+version, and because many distributions do not ship it yet, the package carries
+its own copy: **`plugins/libSDL3.so.0`** (SDL 3.4.16, built with only what VPA
+uses; its licence is in `LICENSE.SDL3.txt`). Nothing is installed in the system
+and no other program sees it.
+
+The plugin looks for SDL3 in this order:
+
+1. **the bundled copy**, `plugins/libSDL3.so.0`, next to the plugin itself;
+2. if it is not there, **the system's SDL3**.
+
+So, if you prefer your distribution's SDL3, just **delete the copy**:
+
+```sh
+rm plugins/libSDL3.so.0
+```
+
+It must be SDL **3.4.4 or later**; with an older one the plugin refuses to start
+and says why. Where SDL3 is in the repositories:
+
+- **Arch:** `sudo pacman -S sdl3`
+- **Fedora** (43 onwards): `sudo dnf install SDL3`
+- **Debian** testing/unstable and **Ubuntu** 25.10 onwards: `sudo apt install libsdl3-0`
+- **Slackware-current:** already there, in the `l/` series.
+
+Where the distribution does not ship it (Ubuntu 24.04 LTS and derivatives,
+Debian 12, Raspberry Pi OS on bookworm…) it can be built by hand with CMake:
+
+```sh
+tar xf SDL3-3.4.16.tar.gz && cd SDL3-3.4.16
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+sudo cmake --install build && sudo ldconfig
+```
+
+And **if there is no SDL3 at all, nothing breaks**: the Wayland plugin does not
+load, VPA stays on the X11 backend (through XWayland in a Wayland session) and
+works as it always has. Nobody is left unable to play because of this.
+
+> **XWayland:** if you force `VPA_GRAPH_BACKEND=x11` in a Wayland session, or the
+> Wayland plugin cannot be loaded, VPA runs on XWayland, with one known caveat:
+> the mouse pointer is grabbed when it enters the VPA window but is **not
+> released** when it leaves (as a workaround, F1 or F10 free the cursor). With
+> the native Wayland backend this does not happen.
 
 ---
 
@@ -82,15 +140,39 @@ Example (playing race 3, game in `~/PLANETS/mygame`):
 Run it with no arguments to see the banner and confirm it starts:
 ```
 $ ./VPA
--= VGA Planets Assistant 3.67.3  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
+-= VGA Planets Assistant 3.67.6  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
 Use: VPA race [dir] ...
 ```
 
 `./VPA /?` lists all command-line options (`/B`, `/K`, `/M`, `/O`, `/P`, `/PW:pwd`,
-`/R`, `/S`, `/REP:frm,rep`).
+`/R`, `/S`, `/REP:frm,rep`), exactly as the original VPA did.
+
+### VPA-Linux help: `--help` and `--graph-info`
+
+`./VPA --help` (or `-h`) shows the same help as `/?` **plus the VPA-Linux
+environment variables**, which appear in no other help of the program:
+
+| Variable | What it does |
+|---|---|
+| `VPA_SCALE` | Window size or fullscreen (section 3). |
+| `VPA_GRAPH_BACKEND` | Graphics backend: `auto` (default), `x11` or `wayland`. With `auto`, VPA detects the session (`WAYLAND_DISPLAY`, `DISPLAY`, `XDG_SESSION_TYPE`) and, if the first backend fails, tries the other one. With `x11` or `wayland` that backend is **forced** and VPA never switches to another: if it fails, VPA stops and says why. |
+| `VPA_GRAPH_PLUGIN_DIR` | **Absolute** directory searched first for the graphics plugins (`libvpagraph-x11.so`, `libvpagraph-wayland.so`), before `plugins/` next to the executable and the install directory. |
+| `VPA_GRAPH_DEBUG` | With `1`, traces the session detection and the plugin search on `stderr`. |
+| `VPA_GRAPH_DUMP` | Testing aid: given a path prefix, **Ctrl-F12** dumps the 640×480 screen to `<prefix>NNNN.ppm` and its palette to `<prefix>NNNN.pal`. |
+
+`./VPA --graph-info` is the diagnostic tool for bug reports: it prints the
+session environment, which backend was requested, in which order they would be
+tried and why, which one was selected (plugin path, ABI and backend version)
+or, if none works, **every reason**, one per place searched. It opens no
+window. If the window does not open or looks wrong, attach its output to the
+report. Exit status is 0 when a backend was selected and 1 otherwise.
+
+> `--help` and `--graph-info` open no window and need no graphical session: they
+> also work over SSH or on a console.
 
 ### Support files
-Keep these files where you run VPA — in your game directory or next to the binary:
+Keep these files where you run VPA — in your game directory or next to the binary
+(the `plugins/` folder, on the other hand, **always** goes next to the binary):
 
 - **`DISTTABL.DAT`** — a precomputed distance table. **Required:** VPA refuses to
   start (and exits) if it's missing or damaged. Ship it as-is; don't edit it.
@@ -284,6 +366,10 @@ VPA was written by **Alex V. Ivlev** (© 1993–96) and maintained afterwards by
 VPA team; it includes combat logic derived from **PCC2ng** by **Stefan Reuther**.
 This native Linux port keeps all original copyright notices. The program is based on
 the original work published on SourceForge under the **MPL** license.
+
+The package includes **SDL 3.4.16** (`plugins/libSDL3.so.0`), built from its
+unmodified official sources, © Sam Lantinga, under the **zlib** licence: see
+`LICENSE.SDL3.txt`.
 
 If you hit a problem specific to this Linux build, note your distribution and what
 you were doing when it happened.

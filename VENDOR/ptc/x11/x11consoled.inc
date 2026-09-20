@@ -53,6 +53,7 @@ type
     function GetName: string; override;
     function GetTitle: string; override;
     function GetInformation: string; override;
+    function GetX11WindowID: PtrUInt; override; { VPA-Linux }
     function GetOpenGL_Enabled: Boolean; override;
     procedure SetOpenGL_Enabled(AValue: Boolean); override;
   public

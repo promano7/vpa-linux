@@ -38,3 +38,19 @@ fpcmade.*
 .vscode/
 .idea/
 .DS_Store
+
+# --- Partida de referencia e imagenes doradas (T0.5b, T0.6) ---
+# Viven solo en la copia local: la partida contiene datos del juego, que son de
+# Tim Wisseman, y mensajes escritos por otros jugadores de una partida real; las
+# doradas son decenas de MB de binarios que solo crecerian. Lo que el repo si
+# conserva de TESTS/golden/ son los dos ficheros de texto que dejan constancia
+# de que se doro, con que partida y con que hashes.
+# (TESTS/golden/* y no TESTS/golden/: git no permite reincluir un fichero cuyo
+#  directorio padre esta excluido.)
+TESTS/fixture/
+TESTS/golden/*
+!TESTS/golden/README.md
+!TESTS/golden/SHA256SUMS
+
+# Cache de Python (TESTS/inventory.py, TESTS/compare.py)
+__pycache__/

@@ -11,7 +11,7 @@ procedure WriteReport (frmname,rptname:str79);
 
 Implementation
 
-uses	ptcgraph,Dos,VPAData,Screen,AuxF,Mouse,Scores;
+uses	vpagraph,Dos,VPAData,Screen,AuxF,Mouse,Scores;
 
 type	strg	= string[30];
 	Section = (_General,_Scores,_Planets,_Bases,_Ships,_Fleet,_Enemies,_Unknown);

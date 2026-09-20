@@ -69,7 +69,7 @@ procedure ini_parseline(ini_file:ini_files;name:str20;line:string);
 
 Implementation
 
-uses ptcgraph,{$IFDEF UNIX}xfocus,{$ENDIF}auxf,Screen,Vpadata,vpainit,rst_trn,extfeat,vpa3,messages, Config,vpa4,dos,vpa2;
+uses vpagraph,auxf,Screen,Vpadata,vpainit,rst_trn,extfeat,vpa3,messages, Config,vpa4,dos,vpa2;
 
 type
    Pini_entry = ^Tini_entry;
@@ -344,11 +344,6 @@ begin
 						end;
 						{ Ver las notas del SetGraphMode de la opcion "Edit file". }
 						SetGraphMode(GetGraphMode);
-						{$IFDEF UNIX}
-						GrabInputFocus;
-						ApplyWindowScale;
-						if xfocus.WantFullscreen then RequestFullscreen;
-						{$ENDIF}
 						NewMenu;
 						LockReservedMemory;
 						ResetMouseAndVideo;
@@ -401,16 +396,10 @@ begin
 				  sobrevive a RestoreCrtMode y devuelve el modo real en curso, sea
 				  cual sea el driver, asi que reabre siempre el modo correcto. }
 				SetGraphMode(GetGraphMode);
-				{ SetGraphMode no reabre la MISMA ventana X, crea otra: hay que rehacer
-				  lo que hace VPAINIT tras OpenGraph o nos quedamos sin foco de teclado,
-				  con la ventana que xfocus tiene cacheada ya destruida -y con ella el
-				  escalado del raton- y, con VPA_SCALE=fullscreen, fuera de la pantalla
-				  completa del gestor de ventanas. }
-				{$IFDEF UNIX}
-				GrabInputFocus;
-				ApplyWindowScale;
-				if xfocus.WantFullscreen then RequestFullscreen;
-				{$ENDIF}
+				{ SetGraphMode es el Resume del backend (WAYLAND.md, D-08): la ventana
+				  nueva vuelve con el foco de teclado, el escalado del raton y, con
+				  VPA_SCALE=fullscreen, la pantalla completa. Antes habia que rehacerlo
+				  aqui a mano con xfocus. }
 				NewMenu;
 				LockReservedMemory;
 				ResetMouseAndVideo;

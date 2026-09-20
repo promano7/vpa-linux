@@ -112,6 +112,7 @@ type
     function GetName: string; override;
     function GetTitle: string; override;
     function GetInformation: string; override;
+    function GetX11WindowID: PtrUInt; override; { VPA-Linux }
     function NextEvent(out AEvent: IPTCEvent; AWait: Boolean; const AEventMask: TPTCEventMask): Boolean; override;
     function PeekEvent(AWait: Boolean; const AEventMask: TPTCEventMask): IPTCEvent; override;
     function MoveMouseTo(X, Y: Integer): Boolean; override;
@@ -138,6 +139,9 @@ const
  {$IFDEF X11}
   ConsoleTypesNumber = 1;
  {$ENDIF X11}
+ {$IFDEF SDL3CONSOLE}
+  ConsoleTypesNumber = 1;   { VPA-Linux, prototipo Fase 7 }
+ {$ENDIF SDL3CONSOLE}
  {$IFDEF COCOA}
   ConsoleTypesNumber = 1;
  {$ENDIF COCOA}
@@ -168,6 +172,10 @@ const
   {$IFDEF X11}
    (ConsoleClass: TX11Console;       Names: ('X11', '');         OpenGL: {$IFDEF ENABLE_X11_EXTENSION_GLX}True{$ELSE}False{$ENDIF})
   {$ENDIF X11}
+
+  {$IFDEF SDL3CONSOLE}
+   (ConsoleClass: TSDLConsole;       Names: ('SDL3', '');        OpenGL: False)
+  {$ENDIF SDL3CONSOLE}
 
   {$IFDEF COCOA}
    (ConsoleClass: TCocoaConsole;       Names: ('COCOA', '');         OpenGL: False)
@@ -783,6 +791,15 @@ function TPTCConsole.GetInformation: string;
 begin
   Check;
   Result := FConsole.GetInformation;
+end;
+
+{ VPA-Linux: delega en la consola real; 0 si aun no hay ninguna. }
+function TPTCConsole.GetX11WindowID: PtrUInt;
+begin
+  if Assigned(FConsole) then
+    Result := FConsole.GetX11WindowID
+  else
+    Result := 0;
 end;
 
 function TPTCConsole.NextEvent(out AEvent: IPTCEvent; AWait: Boolean; const AEventMask: TPTCEventMask): Boolean;

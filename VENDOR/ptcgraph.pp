@@ -24,6 +24,31 @@
        mas grande opcional sin cambiar el modo de video.
     2. Anadida la directiva de modo objfpc (el build de VPA usa modo tp).
     3. Anadida la unidad sysutils al uses (para GetEnvironmentVariable y Val).
+    4. Anadidas VPADumpEnabled y VPADumpFrame: volcado del framebuffer indexado
+       y de su paleta a ficheros PPM/PAL, para poder comparar pixel a pixel el
+       resultado de este backend con el de otros backends futuros (tarea T0.4
+       de WAYLAND.md). Es codigo anadido, no modifica ninguna rutina original.
+    5. Anadida VPADumpFrameTo(prefijo): igual que VPADumpFrame pero con el
+       prefijo dado en vez del de VPA_GRAPH_DUMP. La usa el plugin X11
+       (BACKENDS/X11/) para implementar DumpFrame de la ABI, que recibe el
+       prefijo del llamante (T5.4 de WAYLAND.md).
+    6. El hilo de ptc (PTCWrapperObject) NO se crea en la initialization ni
+       se destruye en la finalization cuando la unidad vive dentro de una
+       biblioteca (IsLibrary): se crea al primer InitGraph y se destruye en
+       CloseGraph. Motivo: la finalization de un .so corre dentro de dlclose,
+       que tiene cogido el cerrojo del cargador dinamico, y el hilo, al
+       terminar, hace pthread_exit, que en glibc carga libgcc_s.so.1 con
+       dlopen y espera ese mismo cerrojo: interbloqueo seguro, medido en
+       T5.9 (docs/threads-and-rtl.md). En un ejecutable (IsLibrary = False)
+       el comportamiento es el original, sin cambios.
+    7. ptc_InternalOpen captura el TPTCError que el ptcwrapper vendorizado
+       (su cambio 2) relanza cuando la consola no se puede abrir -sin DISPLAY,
+       'Cannot open X display'- y lo traduce a _graphresult := grError, con el
+       texto en VPALastOpenError; los ptc_InternalInitMode* salen sin tocar
+       nada mas y InitGraph devuelve grError en vez de abortar el proceso
+       con un error 217. En una biblioteca el hilo de ptc, creado en ese
+       mismo ptc_InternalOpen, se destruye ahi mismo si Open falla, para que
+       no llegue vivo a dlclose (cambio 6). Tarea T5.5b de WAYLAND.md.
   El resto del fichero es el original de FPC. Sigue bajo la LGPL modificada
   con excepcion de enlazado estatico de Free Pascal; se conservan intactos los
   avisos de copyright de arriba. Este aviso cumple el requisito de la LGPL de
@@ -58,6 +83,32 @@ type
   0 = usar VPA_SCALE del entorno. }
 var
   VPAForceScale: LongInt = 0;
+
+{ VPA (cambio 7): texto del ultimo fallo de apertura de la consola de ptc
+  ('' si el ultimo InitGraph abrio bien). Acompana al grError que devuelve
+  GraphResult, que no tiene sitio para el motivo. }
+  VPALastOpenError: string = '';
+
+{ VPA (tarea T0.4 de WAYLAND.md): volcado del framebuffer a disco.
+
+  Existe para construir las "imagenes doradas" con las que se comprueba, mas
+  adelante, que un backend nuevo dibuja exactamente lo mismo que este. Se activa
+  definiendo la variable de entorno VPA_GRAPH_DUMP con el PREFIJO de ruta de los
+  ficheros de salida; sin ella la funcionalidad no existe y no cuesta nada.
+
+    VPA_GRAPH_DUMP=/tmp/vpa-   ->   /tmp/vpa-0001.ppm  +  /tmp/vpa-0001.pal
+
+  El disparo lo hace VPA al pulsar Ctrl-F12 (ver UNIT/KEYBOARD.PAS); aqui solo
+  esta el volcado. El .ppm es la imagen ya resuelta contra la paleta (formato P6
+  binario, sin comprimir, sin marca de tiempo: dos ejecuciones de la misma
+  escena producen ficheros identicos byte a byte). El .pal son las 256 entradas
+  RGB en crudo, para poder distinguir una diferencia de dibujo de una diferencia
+  de paleta.
+
+  Solo opera en el modo indexado de 8 bits, que es el unico que usa VPA. }
+function VPADumpEnabled: Boolean;
+function VPADumpFrame: LongInt;   { >0 numero de fotograma escrito; <0 error }
+function VPADumpFrameTo(const APrefix: AnsiString): LongInt;  { idem, con prefijo explicito }
 
 {Driver number for PTC.}
 const
@@ -396,6 +447,190 @@ begin
   PTCWrapperObject.Unlock;
 end;
 
+{ ==========================================================================
+  VPA: volcado del framebuffer (tarea T0.4 de WAYLAND.md). Ver la explicacion
+  en la interface. Codigo anadido por el port; no existe en el FPC original.
+  ========================================================================== }
+
+const
+  VPADumpMaxFiles = 9999;
+
+var
+  VPADumpPrefix : AnsiString = '';
+  VPADumpChecked: Boolean = False;
+  VPADumpCounter: LongInt = 0;
+
+function VPADumpEnabled: Boolean;
+begin
+  { la variable de entorno se lee una sola vez, en la primera consulta }
+  if not VPADumpChecked then
+  begin
+    VPADumpPrefix := GetEnvironmentVariable('VPA_GRAPH_DUMP');
+    VPADumpChecked := True;
+  end;
+  VPADumpEnabled := VPADumpPrefix <> '';
+end;
+
+{ numero de fotograma con relleno a 4 digitos, para que el orden alfabetico de
+  los ficheros coincida con el orden de captura }
+function VPADumpNum4(ANumber: LongInt): AnsiString;
+var
+  s: AnsiString;
+begin
+  Str(ANumber, s);
+  while Length(s) < 4 do
+    s := '0' + s;
+  VPADumpNum4 := s;
+end;
+
+function VPADumpFrame: LongInt;
+var
+  pal    : array [0..255] of LongWord;
+  palptr : PLongWord;
+  pixels : PByte;
+  row    : PByte;
+  f      : file;
+  hdr    : AnsiString;
+  name   : AnsiString;
+  i, x, y, w, h, rowbytes: LongInt;
+  c      : Byte;
+  failed : Boolean;
+begin
+  VPADumpFrame := -1;
+  if not VPADumpEnabled then Exit;
+
+  { sin modo grafico no hay superficie que volcar }
+  if not IsGraphMode then Exit;
+
+  { ColorMask vale 255 solo en los modos indexados de 256 colores (lo fija
+    ptc_InitMode256); en 16 colores vale 15 y en color directo es una mascara
+    de 15/16/32 bits. Es el discriminante mas barato que hay a mano. }
+  if ColorMask <> 255 then
+  begin
+    VPADumpFrame := -2;
+    Exit;
+  end;
+
+  w := PTCWidth;
+  h := PTCHeight;
+  if (w <= 0) or (h <= 0) then Exit;
+  rowbytes := w * 3;
+
+  if VPADumpCounter >= VPADumpMaxFiles then
+  begin
+    VPADumpFrame := -3;
+    Exit;
+  end;
+  Inc(VPADumpCounter);
+  name := VPADumpPrefix + VPADumpNum4(VPADumpCounter);
+
+  { La paleta se copia y se suelta su cerrojo de inmediato: no hace falta
+    retenerlo durante la escritura en disco. }
+  palptr := PLongWord(ptc_palette_lock);
+  for i := 0 to 255 do
+    pal[i] := palptr[i];
+  ptc_palette_unlock;
+
+  { --- imagen: PPM binario (P6) --- }
+  row := nil;
+  GetMem(row, rowbytes);
+  if row = nil then
+  begin
+    VPADumpFrame := -4;
+    Exit;
+  end;
+
+  failed := False;
+  Assign(f, name + '.ppm');
+  Rewrite(f, 1);
+  if IOResult <> 0 then
+  begin
+    FreeMem(row, rowbytes);
+    VPADumpFrame := -5;
+    Exit;
+  end;
+
+  { cabecera sin comentarios ni fecha: el fichero tiene que ser reproducible }
+  hdr := 'P6' + #10 + IntToStr(w) + ' ' + IntToStr(h) + #10 + '255' + #10;
+  BlockWrite(f, hdr[1], Length(hdr));
+  if IOResult <> 0 then failed := True;
+
+  { El cerrojo de la superficie se mantiene durante toda la escritura. Es una
+    captura manual y puntual, asi que la alternativa -copiar los 300 KB del
+    framebuffer a un buffer intermedio- saldria mas cara: reservar ese bloque
+    en el monton de VPA, que esta ajustado, tiene mas riesgo que retener el
+    cerrojo unos milisegundos. }
+  if not failed then
+  begin
+    pixels := PByte(ptc_surface_lock);
+    for y := 0 to h - 1 do
+    begin
+      for x := 0 to w - 1 do
+      begin
+        c := pixels[y * w + x];
+        row[x * 3    ] := Byte((pal[c] shr 16) and $FF);   { R }
+        row[x * 3 + 1] := Byte((pal[c] shr  8) and $FF);   { G }
+        row[x * 3 + 2] := Byte( pal[c]         and $FF);   { B }
+      end;
+      BlockWrite(f, row^, rowbytes);
+    end;
+    ptc_surface_unlock;
+    { una sola comprobacion al final: con -Ci- el error no aborta, y revisar
+      IOResult en cada fila solo anadiria ruido }
+    if IOResult <> 0 then failed := True;
+  end;
+
+  Close(f);
+  if IOResult <> 0 then failed := True;
+  FreeMem(row, rowbytes);
+
+  if failed then
+  begin
+    VPADumpFrame := -6;
+    Exit;
+  end;
+
+  { --- paleta en crudo: 256 tripletes RGB --- }
+  Assign(f, name + '.pal');
+  Rewrite(f, 1);
+  if IOResult = 0 then
+  begin
+    for i := 0 to 255 do
+    begin
+      hdr := Chr((pal[i] shr 16) and $FF) +
+             Chr((pal[i] shr  8) and $FF) +
+             Chr( pal[i]         and $FF);
+      BlockWrite(f, hdr[1], 3);
+    end;
+    if IOResult <> 0 then failed := True;
+    Close(f);
+    if IOResult <> 0 then failed := True;
+  end
+  else
+    failed := True;
+
+  if failed then
+    VPADumpFrame := -7
+  else
+  begin
+    { aviso por la salida de error: durante una sesion de capturas conviene ver
+      que la tecla ha hecho algo, y no estorba a la ventana grafica }
+    Writeln(StdErr, 'VPA: volcado -> ', name, '.ppm');
+    Flush(StdErr);
+    VPADumpFrame := VPADumpCounter;
+  end;
+end;
+
+{ Volcado con prefijo explicito: fija el prefijo (y lo deja fijado, como si
+  viniera de VPA_GRAPH_DUMP) y delega en VPADumpFrame. Mismo contador, mismo
+  formato de fichero. }
+function VPADumpFrameTo(const APrefix: AnsiString): LongInt;
+begin
+  VPADumpPrefix := APrefix;
+  VPADumpChecked := True;
+  VPADumpFrameTo := VPADumpFrame;
+end;
+
 procedure ptc_update;
 begin
 end;
@@ -629,7 +864,9 @@ begin
   CurrentCGABkColor := 0;
 end;
 
-procedure ptc_InternalOpen(const ATitle: string; AWidth, AHeight: Integer; AFormat: IPTCFormat; AVirtualPages: Integer);
+{ VPA (cambio 7): ahora es una funcion. Devuelve False, con _graphresult en
+  grError y el motivo en VPALastOpenError, si la consola no se pudo abrir. }
+function ptc_InternalOpen(const ATitle: string; AWidth, AHeight: Integer; AFormat: IPTCFormat; AVirtualPages: Integer): Boolean;
 var
   ConsoleWidth, ConsoleHeight: Integer;
   vpaScaleStr: string;
@@ -680,12 +917,43 @@ begin
     ConsoleHeight := (AHeight * vpaScale) div 100;
   end;
 
+  { VPA (cambio 6): dentro de una biblioteca el hilo se crea aqui, no al
+    cargar el .so. En un ejecutable ya existe desde la initialization. }
+  if PTCWrapperObject = nil then
+    PTCWrapperObject := TPTCWrapperThread.Create;
+
   if FullscreenGraph then
     PTCWrapperObject.Option('fullscreen output')
   else
     PTCWrapperObject.Option('windowed output');
 
-  PTCWrapperObject.Open(ATitle, AWidth, AHeight, ConsoleWidth, ConsoleHeight, AFormat, AVirtualPages, 0);
+  { VPA (cambio 7): el fallo de Open llega aqui como TPTCError, relanzado en
+    este hilo por el wrapper vendorizado. Se traduce a GraphResult. }
+  VPALastOpenError := '';
+  Result := True;
+  try
+    PTCWrapperObject.Open(ATitle, AWidth, AHeight, ConsoleWidth, ConsoleHeight, AFormat, AVirtualPages, 0);
+  except
+    on E: TPTCError do
+      begin
+        VPALastOpenError := E.Message;
+        Result := False;
+      end;
+  end;
+  if not Result then
+    begin
+      _graphresult := grError;
+      { En una biblioteca el hilo lo creo esta misma funcion (cambio 6) y
+        nadie va a llamar a CloseGraph: se destruye aqui o sobrevive hasta
+        dlclose y provoca el interbloqueo de T5.9. }
+      if IsLibrary then
+        begin
+          PTCWrapperObject.Terminate;
+          PTCWrapperObject.WaitFor;
+          PTCWrapperObject.Free;
+          PTCWrapperObject := nil;
+        end;
+    end;
 end;
 
 procedure ptc_InternalInitMode16(XResolution, YResolution, Pages: LongInt; UseCGAEmuPalette: Boolean);
@@ -694,7 +962,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 16 colours');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -719,7 +988,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 256 colours');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -734,7 +1004,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 4 colours, palette ' + strf(CGAPalette));
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, 1);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, 1) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -749,7 +1020,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 2 colours');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -764,7 +1036,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 2 colours');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat8, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -779,7 +1052,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 32768 colours');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat15, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat15, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -792,7 +1066,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 65536 colours');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat16, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat16, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -806,7 +1081,8 @@ begin
   LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 16777216 colours (32bpp)');
 {$ENDIF logging}
   { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat32, Pages);
+  if not ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat32, Pages) then
+    exit;  { VPA (cambio 7): _graphresult ya es grError }
   PTCWidth := XResolution;
   PTCHeight := YResolution;
   CurrentActivePage := 0;
@@ -2495,6 +2771,15 @@ end;
       end;
     RestoreVideoState;
     isgraphmode := false;
+    { VPA (cambio 6): en una biblioteca el hilo de ptc muere con CloseGraph,
+      fuera de dlclose. En un ejecutable sigue vivo hasta la finalization. }
+    if IsLibrary and (PTCWrapperObject <> nil) then
+      begin
+        PTCWrapperObject.Terminate;
+        PTCWrapperObject.WaitFor;
+        PTCWrapperObject.Free;
+        PTCWrapperObject := nil;
+      end;
  end;
 
   procedure FillCommonVESA16(var mode: TModeInfo);
@@ -2840,8 +3125,19 @@ end;
      if assigned(ModeList) then
        exit;
 
-     PTCModeList := Copy(PTCWrapperObject.Modes);
-     SortModes(Low(PTCModeList), High(PTCModeList));
+     { VPA (cambio 6): dentro de una biblioteca no hay hilo de ptc hasta el
+       primer InitGraph, asi que no se enumeran los modos de pantalla
+       completa del servidor. Solo condicionan el doblado de 320x200 en
+       pantalla completa, Hercules y los modos de 800x600 en adelante; el
+       640x480 que usa VPA se registra siempre. Ventaja anadida: dlopen del
+       plugin ya no necesita una sesion grafica. }
+     if PTCWrapperObject <> nil then
+       begin
+         PTCModeList := Copy(PTCWrapperObject.Modes);
+         SortModes(Low(PTCModeList), High(PTCModeList));
+       end
+     else
+       PTCModeList := nil;
 
      Has320x200 := ContainsExactResolution(320, 200);
      Has320x240 := ContainsExactResolution(320, 240);
@@ -3581,10 +3877,16 @@ initialization
 {$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
   PTCFormat32 := TPTCFormatFactory.CreateNew(32, $00FF0000, $0000FF00, $000000FF);
 {$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
-  PTCWrapperObject := TPTCWrapperThread.Create;
+  { VPA (cambio 6): en una biblioteca el hilo lo crea InitGraph }
+  if not IsLibrary then
+    PTCWrapperObject := TPTCWrapperThread.Create;
   InitializeGraph;
 finalization
-  PTCWrapperObject.Terminate;
-  PTCWrapperObject.WaitFor;
-  PTCWrapperObject.Free;
+  if PTCWrapperObject <> nil then
+    begin
+      PTCWrapperObject.Terminate;
+      PTCWrapperObject.WaitFor;
+      PTCWrapperObject.Free;
+      PTCWrapperObject := nil;
+    end;
 end.

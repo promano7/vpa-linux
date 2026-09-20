@@ -30,6 +30,22 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 }
 
+{ =====================================================================
+  MODIFICADO PARA VPA-Linux (port de VGA Planets Assistant a GNU/Linux).
+  Copia de packages/ptc/src/ de Free Pascal 3.2.2. Cambios respecto al
+  original (cada uno marcado con 'VPA' en el punto del cambio):
+    1. x11/x11extensions.inc: compilado SIN la extension XF86DGA, para no
+       depender de la obsoleta libXxf86dga.
+    2. x11/x11windowdisplay*.inc: ventana escalada, cursor en cruz, pantalla completa
+       centrada y coordenadas de raton corregidas (VPA-Linux 3.67.x).
+    3. core/baseconsole*.inc, core/consolei.inc, x11/x11console*.inc:
+       metodo GetX11WindowID (WAYLAND.md, D-18).
+    4. Con -dPTC_SDL3 la consola de plataforma deja de ser la de X11 y pasa
+       a ser TSDLConsole (sdl/sdlconsole*.inc), codigo nuevo de VPA-Linux
+       sobre SDL3, y la unidad deja de enlazar libX11 (WAYLAND.md, Fase 8,
+       docs/adr-001-motor-wayland.md). Sin ese define no cambia nada.
+  ===================================================================== }
+
 {$MODE objfpc}
 {$MACRO ON}
 {$UNDEF ENABLE_C_API}
@@ -40,6 +56,10 @@
   {$IF defined(DARWIN)}
     {$DEFINE COCOA}
     {$MODESWITCH objectivec1}
+  {$ELSEIF defined(PTC_SDL3)}
+    { VPA-Linux (WAYLAND.md, Fase 8, via B): con -dPTC_SDL3 la consola
+      de plataforma es la de SDL3 (sdl/) en lugar de la de X11. }
+    {$DEFINE SDL3CONSOLE}
   {$ELSE}
     {$DEFINE X11}
   {$ENDIF}
@@ -113,6 +133,22 @@ type
 
 {$ENDIF FPDOC}
 
+{$IFDEF SDL3CONSOLE}
+{ VPA-Linux (WAYLAND.md, Fase 9, D-24): estado de entrada vivo de la consola
+  SDL3, para quien no puede llamar a SDL (R11). Ver sdl/sdlconsolei.inc. }
+const
+  PTC_SDL_INPUT_SHIFT          = 1;
+  PTC_SDL_INPUT_CONTROL        = 2;
+  PTC_SDL_INPUT_ALT            = 4;
+  PTC_SDL_INPUT_POINTER_INSIDE = 8;
+
+function PTCSDLInputState: LongWord;
+
+{ Fase 10, T10.1: tamano de la pantalla primaria en unidades logicas, con o
+  sin consola abierta. False si no hay compositor. Ver sdl/sdlconsolei.inc. }
+function PTCSDLScreenSize(out AWidth, AHeight: Integer): Boolean;
+{$ENDIF SDL3CONSOLE}
+
 implementation
 
 {$IFDEF GO32V2}
@@ -157,6 +193,9 @@ uses
   {$IFDEF COCOA}
     , CocoaAll
   {$ENDIF COCOA}
+  {$IFDEF SDL3CONSOLE}
+    , Math, SDL3
+  {$ENDIF SDL3CONSOLE}
   ;
 {$ENDIF UNIX}
 
@@ -254,6 +293,11 @@ end;
 {$IFDEF X11}
 {$INCLUDE x11/x11includes.inc}
 {$ENDIF X11}
+
+{$IFDEF SDL3CONSOLE}
+{$INCLUDE sdl/sdlconsoled.inc}
+{$INCLUDE sdl/sdlconsolei.inc}
+{$ENDIF SDL3CONSOLE}
 
 {$IFDEF COCOA}
 {$INCLUDE cocoa/cocoaconsoled.inc}

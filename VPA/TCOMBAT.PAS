@@ -49,7 +49,7 @@ procedure SetPal;
 
 Implementation
 
-uses    ptcgraph,StrF,Screen,Keyboard,PVCRALG;
+uses    vpagraph,StrF,Screen,Keyboard,PVCRALG;
 
 const   SY      = 146;
         SR      = 30;

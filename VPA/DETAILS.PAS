@@ -7,7 +7,7 @@ procedure DetailedInfo;
 
 Implementation
 
-uses	AuxF,StrF,Mouse,Keyboard,Screen,ptcgraph,VPAData;
+uses	AuxF,StrF,Mouse,Keyboard,Screen,vpagraph,VPAData;
 
 var	number	: int;
 

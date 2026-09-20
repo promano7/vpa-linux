@@ -10,7 +10,7 @@ procedure QuitVPA;
 
 Implementation
 
-uses	AuxF,StrF,Mouse,Keyboard,ptcgraph,Screen,VPAData,Messages,MsgRead,Config,RST_TRN,VPAInit
+uses	AuxF,StrF,Mouse,Keyboard,vpagraph,Screen,VPAData,Messages,MsgRead,Config,RST_TRN,VPAInit
 {$IFDEF TASKS}
     ,Tasks
 {$ENDIF}

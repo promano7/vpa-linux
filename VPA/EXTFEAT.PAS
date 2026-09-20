@@ -22,7 +22,7 @@ unit ExtFeat;
 
 interface
 
-uses    AuxF,Strf,VPAData,Mouse,Keyboard,Messages,Config,TCombat,ptcgraph,Screen,Building;
+uses    AuxF,Strf,VPAData,Mouse,Keyboard,Messages,Config,TCombat,vpagraph,Screen,Building;
 
 const
   CGExtVersion = '0.38';
