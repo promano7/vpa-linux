@@ -12,7 +12,7 @@
   envuelve en Unix, y por un motivo concreto: Dynlibs.LoadLibrary abre con
   RTLD_LAZY, y con enlace perezoso un plugin al que le falte UN simbolo de
   su biblioteca grafica (un libSDL3 mas viejo que el que se uso al compilar,
-  el caso de Astra o de un Kubuntu LTS) cargaria bien y caeria en mitad de
+  el caso de un Kubuntu LTS) cargaria bien y caeria en mitad de
   una partida al llamar por primera vez a ese simbolo. Con RTLD_NOW el
   enlazador resuelve TODO al cargar y el fallo se ve aqui, con su mensaje,
   y el modo auto cae a X11 como debe (seccion 3.2 de WAYLAND.md).

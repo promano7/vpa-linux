@@ -71,7 +71,7 @@ más fácil es saltárselas:
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☑ cerrada (2026-09-20): T9.1–T9.8 hechas y probadas (`make wayland-input-test` y pruebas manuales de Pablo en KWin 6.7.5); el teclado numérico sin BloqNum resultó ser el ratón absoluto de la VM (R12), no VPA |
 | 10 | Escalado, HiDPI y pantalla completa | ✅ cerrada (2026-09-20): probada por Pablo en KWin (VM Slackware) a 800×600, 1920×1080 y 2048×1152, con KDE al 100 %, 150 % y 200 % (D-25 a D-29) |
 | 11 | Comparación visual automatizada | ☑ cerrada (2026-09-20): `make visual-test`, 21 escenas × 2 backends = 42 de 42 idénticas a las doradas, umbral cero |
-| 12 | Empaquetado, documentación y release | ☐ |
+| 12 | Empaquetado, documentación y release | ◐ en curso (2026-09-20): empaquetado y documentación hechos (`make sdl3`, `make data` con los dos plugins y SDL 3.4.16, D-30 a D-35) y rama fusionada en `main`; quedan las notas de publicación y la rama/etiqueta de versión (T12.9, T12.11), aplazadas por Pablo |
 
 ---
 
@@ -283,7 +283,7 @@ build/VPA                        (enlaza: libc, RTL de FPC, libdl)
 
 Si los dos backends se enlazaran dentro del binario, el cargador dinámico
 exigiría las bibliotecas de ambos aunque solo se usara uno: en una máquina sin
-SDL3 (Astra Linux, Kubuntu LTS antiguo, Raspberry Pi OS) `VPA` **no arrancaría
+SDL3 (Kubuntu LTS antiguo, Raspberry Pi OS) `VPA` **no arrancaría
 en absoluto**, ni siquiera en X11. Con plugins, la ausencia de SDL3 solo
 significa que ese `.so` no carga y `auto` se queda en X11. Esto es lo que hace
 que la arquitectura merezca la pena, más allá de la limpieza.
@@ -901,7 +901,7 @@ como aserciones de compilación en los dos ficheros de prueba.
       `Dynlibs`, y la cabecera explica por qué: `Dynlibs.LoadLibrary` abre
       con `RTLD_LAZY`, y con enlace perezoso un plugin al que le falte **un**
       símbolo de su biblioteca gráfica (un `libSDL3` más viejo que el usado
-      al compilar: Astra, Kubuntu LTS) cargaría bien y caería en mitad de la
+      al compilar: Kubuntu LTS) cargaría bien y caería en mitad de la
       partida. Con `RTLD_NOW` el fallo se ve en `dlopen`, con su mensaje, y
       `auto` cae a X11 como debe (D-12).
 - [x] **T3.2** — Resolución de la ruta del plugin, en este orden:
@@ -1879,70 +1879,111 @@ las doradas sin quejas y `VPA_VISUAL_BACKENDS=x11 TESTS/visual/run.sh` con
 
 ### Fase 12 — Empaquetado, documentación y publicación 🔒
 
-- [ ] **T12.1** — `make data` copia también `build/plugins/*.so` al paquete
+- [x] **T12.1** — `make data` copia también `build/plugins/*.so` al paquete
       distribuible, y `VPA` los encuentra al ejecutarse desde el directorio de
-      juego (regla 2 de T3.2).
-- [ ] **T12.2** — Definir la distribución instalada: binario en `bin/`, plugins
-      en `lib/vpa-linux/`. Documentar cómo se ajusta la ruta al compilar.
-- [ ] **T12.3** — Compilación para aarch64 (Raspberry Pi) de los dos plugins, o
-      decisión explícita y documentada de publicar solo el plugin X11 en esa
-      arquitectura si SDL3 no está disponible.
-- [ ] **T12.3b** — **Decidir si el paquete distribuible incluye su propia
-      SDL3.** El problema es real: donde SDL3 no viene en la distribución,
-      tampoco está en sus repositorios, y las tres máquinas que nos importan
-      están en ese grupo (Kubuntu 24.04 LTS —Canonical no va a retroportarla,
-      la 26.04 es la primera LTS que la trae—, Astra Linux, y Raspberry Pi OS
-      sobre bookworm). Pedirle a un jugador que compile SDL3 para abrir VPA no
-      es una opción realista. Como SDL está bajo licencia zlib, se puede
-      **redistribuir `libSDL3.so.0` dentro del paquete**, junto a
-      `libvpagraph-wayland.so`, y darle al plugin un `RPATH` de `$ORIGIN` para
-      que encuentre su propia copia sin tocar el sistema. Tareas concretas:
-      1. comprobar que `$ORIGIN` resuelve bien desde un plugin cargado con
-         `dlopen` (no es lo mismo que desde el ejecutable);
-      2. decidir si se publican dos tarballs (uno con SDL3 incluida y otro
-         sin ella, para quien la tenga del sistema) o uno solo con la copia
-         embebida como respaldo;
-      3. fijar la versión exacta de SDL3 que se embarca (la misma de `T7.1`)
-         y anotarla en las notas de publicación;
-      4. incluir el fichero de licencia de SDL3 en el paquete.
-      Esto es una decisión de empaquetado, no de arquitectura: no cambia nada
-      de las fases 1 a 11.
-- [ ] **T12.4** — Actualizar `BUILD.en.md` y `BUILD.es.md`: dependencias nuevas
-      (SDL3 y sus cabeceras Pascal), objetivos nuevos del `Makefile`, cómo
-      compilar solo un backend.
-- [ ] **T12.5** — Actualizar `HOWTO.en.md` y `HOWTO.es.md`: `VPA_GRAPH_BACKEND`,
-      `VPA_GRAPH_PLUGIN_DIR`, `--graph-info`, y qué hacer si falta SDL3.
-- [ ] **T12.5b** — Documentar en los HOWTO las **tres vías para tener SDL3**, con
-      ejemplos concretos y sin dar por hecho que la primera siempre sirve:
-      1. **desde los repositorios**, donde la distribución la trae —Arch
-         (`sdl3`), Slackware-current (serie `l/`, ya incluye SDL3 3.4.10),
-         Debian testing/unstable y Ubuntu 25.10 en adelante
-         (`libsdl3-0` / `libsdl3-dev`);
-      2. **compilada a mano**, con las instrucciones mínimas de CMake para
-         quien no la tenga en su distribución (es sencillo y SDL respeta la
-         ABI dentro de la serie 3.x, pero es un obstáculo real para un usuario
-         que solo quiere jugar);
-      3. **la copia incluida en el paquete**, si `T12.3b` acaba en que se
-         embarca.
-      Y dejar dicho, con todas las letras, que **si no hay SDL3 por ninguna de
+      juego (regla 2 de T3.2). — `d9bf244`
+      `make data` construye además el plugin Wayland (D-32) y copia los dos
+      plugins y `libSDL3.so.0` a `plugins/`. `make build` sigue construyendo
+      solo el plugin X11: quien quiera el Wayland en su árbol de trabajo usa
+      `make wayland-plugin`, contra la SDL3 del sistema.
+- [x] **T12.2** — ~~Definir la distribución instalada: binario en `bin/`,
+      plugins en `lib/vpa-linux/`.~~ **Descartada (D-33):** VPA-Linux se sigue
+      distribuyendo como hasta ahora, la carpeta `vpa-linux_package` comprimida;
+      no se instala nada en ninguna ruta del sistema y se lanza con `./VPA`
+      desde donde se descomprima. La regla 3 de T3.2 (`/usr/lib/vpa-linux/`) se
+      queda en el cargador como último sitio donde mirar, sin uso.
+- [x] **T12.3** — Compilación para aarch64 (Raspberry Pi) de los dos plugins.
+      — `d9bf244`
+      `make data` es la misma receta en todas las arquitecturas: en una
+      Raspberry Pi produce el mismo paquete, con los dos plugins y la misma
+      SDL3, compilado para ARM. Que Raspberry Pi OS (bookworm) no traiga SDL3
+      deja de importar, porque el paquete compila la suya. *Pendiente de
+      Pablo:* ejecutarlo en la Raspberry real.
+- [x] **T12.3b** — **El paquete distribuible incluye su propia SDL3** (D-30,
+      D-31). — `d9bf244`
+      El problema era real: donde SDL3 no viene en la distribución, tampoco
+      está en sus repositorios (Kubuntu 24.04 LTS —Canonical no va a
+      retroportarla, la 26.04 es la primera LTS que la trae—, Debian 12 y
+      Raspberry Pi OS sobre bookworm), y pedirle a un jugador que compile SDL3
+      para abrir VPA no es una opción realista. SDL está bajo licencia zlib,
+      así que se redistribuye `libSDL3.so.0` dentro del paquete, junto a
+      `libvpagraph-wayland.so`. Resuelto así:
+      1. **`$ORIGIN` resuelve bien desde un plugin cargado con `dlopen`.**
+         El plugin se enlaza siempre con `DT_RUNPATH=$ORIGIN`
+         (`-k--enable-new-dtags -k-rpath -k'$ORIGIN'`). Comprobado con
+         `LD_DEBUG=libs` en los cuatro casos: copia en `plugins/` → se carga
+         esa; copia **y** SDL3 del sistema → la de `plugins/`; sin copia, con
+         SDL3 del sistema → la del sistema; sin ninguna → `--graph-info` dice
+         `libSDL3.so.0: cannot open shared object file` y X11 sigue disponible.
+      2. **Un solo tarball**, el mismo para todos, con la copia dentro. Quien
+         prefiera la SDL3 de su distribución borra `plugins/libSDL3.so.0`.
+      3. **Versión fijada: SDL 3.4.16** (la que Pablo probó en KWin en las
+         fases 8 a 10; por encima del mínimo 3.4.4 de D-20). `make sdl3`
+         descarga el tarball oficial, comprueba su SHA256 (el mismo desde
+         github.com y desde libsdl.org) y lo compila con CMake en
+         `build/sdl3/`, solo con lo que VPA usa: vídeo Wayland, eventos y
+         render; fuera X11, KMS/DRM, audio, cámara, joystick, haptic, sensor y
+         hidapi. Se detiene si SDL queda configurada sin Wayland o sin
+         libdecor (sin libdecor la ventana no tiene barra de título en GNOME).
+         `make clean` conserva `build/sdl3/`.
+      4. La licencia de SDL va en el paquete como `LICENSE.SDL3.txt`.
+
+      *Verificado:* `make wayland-test` pasa contra esta SDL 3.4.16 recortada,
+      y `TESTS/visual/run.sh` con el **binario del paquete** (sin
+      `LD_LIBRARY_PATH`, la SDL3 sale de `plugins/`) da 42 de 42 idénticas a
+      las doradas.
+
+      *Ojo, medido (Ubuntu 24.04):* `VPA` y los plugins piden `GLIBC_2.34`; la
+      SDL3 compilada, `GLIBC_2.38`. Un binario queda atado a la glibc de la
+      máquina donde se enlazó, y si la SDL3 del paquete no carga por eso el
+      enlazador **no** pasa a la del sistema. El paquete que se publique hay
+      que montarlo en la distribución más antigua que se quiera soportar:
+      Debian 12 (glibc 2.36, trae FPC 3.2.2 y libdecor) para x86-64 y Raspberry
+      Pi OS bookworm para aarch64. Slackware 15.0 no vale: no trae libdecor.
+      Está escrito en BUILD §4.1.
+- [x] **T12.4** — Actualizar `BUILD.en.md` y `BUILD.es.md`: dependencias nuevas,
+      objetivos nuevos del `Makefile`, cómo compilar solo un backend. —
+      `06b4f37`
+      Fuera lo que dejó de ser cierto en la Fase 6: X11 en el ejecutable, las
+      units `ptcgraph` del sistema, xvfb para `make hlp` y `cthreads`.
+- [x] **T12.5** — Actualizar `HOWTO.en.md` y `HOWTO.es.md`: la carpeta
+      `plugins/`, `VPA_GRAPH_BACKEND`, `VPA_GRAPH_PLUGIN_DIR`, `--graph-info`, y
+      qué pasa si falta SDL3. — `4853108`
+- [x] **T12.5b** — Documentar en los HOWTO las **tres vías para tener SDL3**:
+      — `4853108`
+      1. **la copia incluida en el paquete**, que es la que se usa por defecto;
+      2. **desde los repositorios**, borrando la copia, donde la distribución
+         la trae —Arch (`sdl3`), Fedora 43 en adelante (`SDL3`, serie 3.4;
+         comprobado en packages.fedoraproject.org), Slackware-current (serie
+         `l/`), Debian testing/unstable y Ubuntu 25.10 en adelante
+         (`libsdl3-0`);
+      3. **compilada a mano**, con las instrucciones mínimas de CMake.
+
+      Y queda dicho, con todas las letras, que **si no hay SDL3 por ninguna de
       las tres vías no pasa nada**: el plugin Wayland no carga, `auto` se queda
-      en X11 y VPA funciona exactamente igual que hoy. Nadie se queda sin jugar
-      por esto.
-- [ ] **T12.6** — Actualizar `README.en.md` y `README.es.md` con la sección de
-      arquitectura gráfica.
-- [ ] **T12.7** — Añadir a `CHANGE.TXT` la entrada correspondiente.
-- [ ] **T12.8** — Subir la versión en `VPA/VPADATA.PAS`. Por el calado del
-      cambio, corresponde `3.68.0`, no `3.67.7`.
+      en X11 y VPA funciona exactamente igual que antes.
+- [x] **T12.6** — Actualizar `README.en.md` y `README.es.md` con la sección de
+      arquitectura gráfica (§8), y la limitación «Ratón en Wayland» como
+      resuelta. — `671c2e1`
+- [x] **T12.7** — Añadir a `CHANGE.TXT` la entrada correspondiente. — `671c2e1`
+- [x] **T12.8** — ~~Subir la versión en `VPA/VPADATA.PAS`.~~ **No se sube
+      (D-34):** sigue siendo la `3.67.6`.
 - [ ] **T12.9** — Notas de publicación bilingües en el formato habitual
       (inglés, separador, español), con el apartado de limitaciones conocidas
-      bien explícito sobre qué está probado en Wayland y qué no.
-- [ ] **T12.10** — Prueba con Alexander en Kubuntu y Astra Linux **antes** de
-      publicar, con atención a si SDL3 está disponible en esas versiones.
+      bien explícito sobre qué está probado en Wayland y qué no, y con la
+      versión de SDL3 que se embarca. *Aplazada por Pablo.*
+- [x] **T12.10** — Fusionar `feature/wayland` en `main` con
+      `git merge --no-ff`, sin perder ningún commit (D-35).
 - [ ] **T12.11** — Crear la rama de versión y la etiqueta según la convención
-      del proyecto.
+      del proyecto, y publicar el tarball, montado donde dice T12.3b.
+      *Aplazada por Pablo.*
 
 **Criterio de aceptación:** un usuario puede descargar el paquete, ejecutarlo en
 una sesión Wayland y jugar, sin compilar nada.
+
+*Cumplido en lo que toca al paquete (2026-09-20):* el `build/vpa-linux_package/`
+de `make data` arranca en Wayland nativo en una máquina sin SDL3 instalada (el
+contenedor) y dibuja las 21 escenas idénticas a las doradas. Falta publicarlo.
 
 ---
 
@@ -2040,7 +2081,7 @@ obligatoria en cada fase.
 | # | Riesgo | Impacto | Mitigación |
 |---|--------|---------|------------|
 | R1 | Dos RTL de FPC en un proceso con heaps y gestores de hilos separados | Cuelgues y corrupciones intermitentes, dificilísimos de depurar | `T5.9` lo investiga y documenta **antes** de construir encima; regla «quien reserva, libera»; `make heaptrc` en cada fase |
-| R2 | *(Confirmado en la Fase 7: Ubuntu 24.04 no trae SDL3 en sus repositorios.)* SDL3 no disponible en distribuciones conservadoras (Astra Linux, Kubuntu 24.04 LTS, Raspberry Pi OS). **Y donde no viene en la distribución, tampoco está en sus repositorios**: la única salida del usuario es compilarla, que para quien solo quiere jugar equivale a no tenerla | Alexander no puede probar Wayland; una parte de los usuarios se queda sin el backend nuevo | Tres capas: (a) el respaldo de fondo —sin SDL3 el `.so` no carga, `auto` se queda en X11 y VPA funciona como hoy—; (b) `T12.3b`, empaquetar `libSDL3.so.0` junto al plugin con `RPATH` `$ORIGIN`, que la licencia zlib de SDL permite; (c) `T12.5b`, documentar las tres vías de obtención. Publicar los plugins por separado |
+| R2 | *(Confirmado en la Fase 7: Ubuntu 24.04 no trae SDL3 en sus repositorios.)* SDL3 no disponible en distribuciones conservadoras (Kubuntu 24.04 LTS, Debian 12, Raspberry Pi OS). **Y donde no viene en la distribución, tampoco está en sus repositorios**: la única salida del usuario es compilarla, que para quien solo quiere jugar equivale a no tenerla | Alexander no puede probar Wayland; una parte de los usuarios se queda sin el backend nuevo | Tres capas: (a) el respaldo de fondo —sin SDL3 el `.so` no carga, `auto` se queda en X11 y VPA funciona como hoy—; (b) `T12.3b`, empaquetar `libSDL3.so.0` junto al plugin con `RPATH` `$ORIGIN`, que la licencia zlib de SDL permite; (c) `T12.5b`, documentar las tres vías de obtención. *Hecho en la Fase 12 (D-30, D-31):* el paquete lleva su propia SDL 3.4.16 en `plugins/` y el plugin la busca ahí antes que en el sistema |
 | R3 | La vía A no converge visualmente | Meses de ajuste fino de trazado y fuentes | La vía B lo elimina de raíz; `T7.4` lo mide antes de comprometerse |
 | R4 | PTCPas está poco mantenido y hay que vendorizar más de lo previsto | Deuda de mantenimiento, obligaciones de LGPL | Ya está vendorizado parcialmente y el precedente de `VENDOR/ptcgraph.pp` muestra cómo marcar las modificaciones |
 | R5 | El texto del mapa se descuadra por métricas de `.CHR` distintas | Rotura visual masiva y difusa | Vía B lo evita; con vía A, `T8A.8` es la tarea más peligrosa del proyecto |
@@ -2089,6 +2130,12 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-27 | 2026-09-20 | `VPA_FULLSCREEN` y `VPA_VIDEO` se **retiran**: la única vía de pantalla completa es `VPA_SCALE=fullscreen` (`full`, `max`). Cierra D-16 | Eran un resto del primer intento de pantalla completa: `bc2c09c` (2026-06-23) añadió `VPA_FULLSCREEN` con un enganche en `VPAINIT.PAS` y `fd515ff`, el mismo día, quitó el enganche; `xfocus.FullscreenRequested` siguió compilando sin llamadores hasta que `xfocus` salió del ejecutable en la Fase 6 (`8aecb96`). Hoy no queda código que las lea. Lo único que aportarían es separar «pantalla completa» de «escala» (`VPA_SCALE=2 VPA_FULLSCREEN=1`), y eso es peor o igual: en X11 la consola de ptc no reescala, así que saldría la imagen al 200 % con bandas por los cuatro lados; en Wayland SDL reescala y se vería como `VPA_SCALE=fullscreen` pasando por una escala intermedia que no es la óptima. Decisión de Pablo |
 | D-28 | 2026-09-20 | La consola SDL3 fija el color de dibujo del renderer a **negro opaco** nada más crearlo | En SDL 3.4 las bandas del letterbox no se pintan aparte: son lo que deja `SDL_RenderClear`, que borra con el color de dibujo, y un renderer nace con (0,0,0,0) porque su estructura sale de `calloc`. Con un búfer de ventana con alfa el compositor mezcla y por las bandas se ve lo de detrás. sway lo tapaba (respeta la región opaca que SDL declara y, a pantalla completa, pinta negro debajo), KWin no. Las pruebas de la sesión anterior miraban el ratón en las bandas, no sus píxeles; ahora también los píxeles |
 | D-29 | 2026-09-20 | La ventana SDL tiene la relación de aspecto **fijada a 4:3** (`SDL_SetWindowAspectRatio`). Decisión de Pablo: la ventana debe verse como en X11, sin bandas | En Wayland el tamaño final lo decide el cliente salvo en maximizada y pantalla completa, y SDL ya aplica la corrección en cada `configure` respetando esa regla (solo encoge; no toca maximizada ni pantalla completa, donde el protocolo exige el tamaño exacto y siguen las bandas negras). Hacerlo a mano con `SDL_SetWindowSize` al recibir `WINDOW_RESIZED` pelearía con el compositor durante un redimensionado interactivo. Efecto en las pruebas: en sway ya no hay bandas en ventana (en mosaico SDL también recorta), así que las pruebas de ratón en las bandas pasan a la sección de pantalla completa y la de píxeles de D-28 se retira (ver T10.2) |
+| D-30 | 2026-09-20 | **El paquete lleva su propia SDL3**, en un solo tarball igual para todos, y el plugin Wayland la busca **primero junto a sí mismo** y después en el sistema (`DT_RUNPATH=$ORIGIN`). Quien quiera la de su distribución borra `plugins/libSDL3.so.0` | Decisión de Pablo. Todo el mundo juega con la misma SDL3, el paquete funciona donde la distribución no la trae, y no hay segundo tarball que mantener. `RUNPATH` y no `RPATH` para que `LD_LIBRARY_PATH` siga mandando en las pruebas |
+| D-31 | 2026-09-20 | La SDL3 del paquete es **3.4.16**, compilada por `make sdl3` desde el tarball oficial (SHA256 fijado en el `Makefile`) y solo con vídeo Wayland, eventos y render | Es la versión que Pablo probó en KWin. Compilarla en `make data`, y no copiar la del sistema, es lo único que da la misma versión en x86-64 y en aarch64 (Raspberry Pi OS no trae ninguna). Recortada, porque VPA no usa lo demás y así las dependencias de compilación son pocas; no enlaza X11, que es lo que pide 6.4 |
+| D-32 | 2026-09-20 | `make data` construye los dos plugins; **`make build` solo el X11**, y `make wayland-plugin` sigue siendo la vía opcional, contra la SDL3 del sistema | Decisión de Pablo. Quien solo quiere compilar y probar no necesita SDL3 ni CMake |
+| D-33 | 2026-09-20 | **No hay distribución instalada** (T12.2 descartada): el paquete es la carpeta `vpa-linux_package` comprimida y se lanza con `./VPA` | Decisión de Pablo: como hasta ahora. La regla 2 de T3.2 (`plugins/` junto al ejecutable) basta |
+| D-34 | 2026-09-20 | La versión **sigue en 3.67.6** (T12.8 descartada) | Decisión de Pablo: la 3.67.6 ya se subió para estas novedades. La 3.68 es otra versión del VPA de DOS que este port no usa, así que el port será siempre 3.67.x |
+| D-35 | 2026-09-20 | `feature/wayland` entra en `main` con **`git merge --no-ff`**, no con rebase | `main` tiene un commit propio (`78d8a07`), y un rebase reescribiría los hashes de más de 120 commits que este documento cita tarea a tarea. El merge los conserva todos |
 
 ---
 
