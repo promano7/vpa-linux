@@ -68,7 +68,7 @@ más fácil es saltárselas:
 | 6 | Migración de VPA-Linux a `VPAGraph` | ☑ cerrada (2026-09-19) |
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☑ cerrada (2026-09-19) — **vía B** |
 | 8 | Motor de dibujo Wayland (vía B) | ☑ cerrada (2026-09-20): 0 diferencias (`make wayland-test`), doradas 20/20 |
-| 9 | Eventos: teclado, ratón y cierre de ventana | ◐ en curso: T9.1–T9.6 hechas y probadas (`make wayland-input-test`, distribuciones us/es/ru); faltan T9.7 y T9.8, que son de prueba manual |
+| 9 | Eventos: teclado, ratón y cierre de ventana | ◐ en curso: T9.2–T9.8 hechas y probadas (`make wayland-input-test` y prueba manual de Pablo en KWin, 2026-09-20); queda abierto en T9.1 el teclado numérico sin BloqNum en KWin (8/4/6/2 no mueven la diana), pendiente de una traza `VPA_KEY_TRACE=1` |
 | 10 | Escalado, HiDPI y pantalla completa | ☐ |
 | 11 | Comparación visual automatizada | ☐ |
 | 12 | Empaquetado, documentación y release | ☐ |
@@ -1599,7 +1599,17 @@ Con la vía B esta fase es pequeña (la consola ya entrega eventos y `ptccrt` /
       cursor), como `XK_KP_1`/`XK_KP_End`. Una tecla sin código PTC se entrega
       con `PTCKEY_UNDEFINED` y su carácter, igual que X11 (el prototipo la
       tiraba).*
-- [ ] **T9.2** — **Entrada de texto para distribuciones no estadounidenses.**
+      ***Abierto** (prueba de Pablo en KWin 6.7.5, VM VirtualBox, 2026-09-20):
+      con BloqNum apagado las teclas 8/4/6/2 del teclado numérico no mueven la
+      diana por el mapa, y con el plugin X11 sí; las flechas normales sí la
+      mueven en Wayland. Con BloqNum encendido los dígitos salen bien, y
+      7/9/1/3 sin BloqNum no hacen nada en ninguno de los dos. En el
+      contenedor (sway + `vkbd.py`) el evento que llega es idéntico al de la
+      flecha, así que la diferencia está en lo que SDL entrega con ese
+      compositor/teclado (scancode o `SDL_KMOD_NUM`). Para verlo se añadió la
+      traza `VPA_KEY_TRACE=1` (una línea por evento de tecla en la salida de
+      error); pendiente de la traza de Pablo.*
+- [x] **T9.2** — **Entrada de texto para distribuciones no estadounidenses.**
       `Ctrl-+` y `Ctrl--` se arreglaron en 3.67.5 comparando el carácter
       Unicode, no el scancode. En SDL3 hay que combinar el evento de tecla con
       el de entrada de texto y rellenar `UnicodeChar` en `TVPAGraphEvent`.
@@ -1630,18 +1640,32 @@ Con la vía B esta fase es pequeña (la consola ya entrega eventos y `ptccrt` /
       hoy `xfocus` con un cursor en blanco.
       *Hecho en la Fase 8 (T8B.2): diana propia de la consola y opciones
       `show cursor`/`hide cursor`.*
-- [ ] **T9.6** — Cierre de ventana: mapearlo al camino existente
+- [x] **T9.6** — Cierre de ventana: mapearlo al camino existente
       (`PTCQuitNoSave` / emulación de `Ctrl-C`) para que el guardado de
       emergencia de `VPA/VPAEXIT.PAS` siga funcionando. **Probar con una partida
       con cambios sin guardar**: es justamente el caso en que un fallo aquí
       duele de verdad.
       *Hecho: `xdg_toplevel.close` llega como `CLOSE` (`wayland-input-test`) y
       de ahí en adelante el camino es el de `ptccrt`, común con X11 ([X] =
-      Alt-X, salir guardando). **Pendiente de Pablo:** cerrar con [X] una
-      partida con cambios sin guardar en KWin y comprobar que guarda.*
-- [ ] **T9.7** — Foco de teclado al abrir y al volver del editor externo
+      Alt-X, salir guardando). Probado por Pablo en KWin 6.7.5 (2026-09-20):
+      cambia un código de amistad, cierra con [X] y al volver a abrir el
+      cambio está guardado y hay un TRN nuevo.*
+- [x] **T9.7** — Foco de teclado al abrir y al volver del editor externo
       (`$VISUAL`/`$EDITOR`, arreglado en 3.67.5).
-- [ ] **T9.8** — Repetición de teclas y latencia comparadas con X11.
+      *Probado por Pablo en KWin 6.7.5 (2026-09-20): VPA responde a la primera
+      tecla nada más abrir (F1, F3) y recupera el foco al volver de «Edit
+      file» (Ctrl-O). De paso: al pasar la diana al fondo del escritorio ya
+      sale el puntero del sistema sin tener que pasar por otra ventana (el
+      cosmético anotado en la Fase 8, resuelto por D-24).*
+- [x] **T9.8** — Repetición de teclas y latencia comparadas con X11.
+      *Probado por Pablo en KWin 6.7.5 (2026-09-20): con una flecha mantenida
+      la diana se mueve bien y se para en seco al soltar; Tab/Ctrl-Tab, F11,
+      Ctrl-+/Ctrl-- (fila principal y teclado numérico, distribución
+      española real) y los caracteres `@~/().` en un mensaje, sin diferencias
+      con X11.*
+      *De la revisión del camino de las flechas: `MoveMouseTo` apuntaba al
+      borde del píxel de consola y con escala no entera el `wl_fixed` del
+      compositor lo devolvía en el píxel anterior; ahora apunta al centro.*
 
 **Criterio de aceptación:** se puede jugar un turno completo en Wayland solo con
 teclado y ratón, sin diferencias perceptibles respecto a X11.
