@@ -26,6 +26,72 @@ begin
   Result := SDLInputState;
 end;
 
+{ Tamano de la pantalla (WAYLAND.md, Fase 10, T10.1). VPA lo necesita ANTES
+  de abrir la ventana, para que VPA_SCALE no pida una ventana que no cabe y
+  para que 'fullscreen' sepa cual es el mayor 4:3. Un cliente Wayland si lo
+  sabe sin ventana: los wl_output se anuncian al conectar, y SDL los tiene
+  listos al volver de SDL_InitSubSystem.
+
+  Dos caminos, y en ninguno llama a SDL el hilo de quien pregunta (R11):
+    - con la consola abierta, el valor que ella publico al abrir
+      (SDLScreenSize, una palabra de 32 bits como SDLInputState);
+    - sin consola, un hilo auxiliar que inicia el video de SDL, pregunta y lo
+      cierra. SDL define "hilo de video" como el que inicia el subsistema, y
+      lo redefine en cada inicio, asi que el Open posterior, en el hilo de la
+      consola, no hereda nada de este. Cuesta unos milisegundos y solo se
+      pregunta una vez por InitGraph.
+
+  Es la pantalla PRIMARIA, en unidades logicas (las de los tamanos de
+  ventana: con el compositor a x2, una pantalla de 2560x1440 mide 1280x720).
+  Wayland no deja saber en que pantalla caera la ventana. }
+var
+  SDLScreenSize: LongWord = 0;   { ancho shl 16 or alto; 0 = desconocido }
+
+function SDLPrimaryDisplaySize: LongWord;
+var
+  r: TSDL_Rect;
+begin
+  Result := 0;
+  if SDL_GetDisplayBounds(SDL_GetPrimaryDisplay, @r) and
+     (r.w > 0) and (r.w < 65536) and (r.h > 0) and (r.h < 65536) then
+    Result := (LongWord(r.w) shl 16) or LongWord(r.h);
+end;
+
+function SDLScreenSizeThread(AParam: Pointer): PtrInt;
+begin
+  Result := 0;
+  { Como en Open: Mesa y compania cuentan con las excepciones enmascaradas.
+    La mascara es del hilo y este se acaba aqui. }
+  SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide,
+                    exOverflow, exUnderflow, exPrecision]);
+  SDL_SetHint(SDL_HINT_VIDEO_DRIVER, 'wayland');
+  SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, '1');
+  if not SDL_InitSubSystem(SDL_INIT_VIDEO) then
+    exit;
+  PLongWord(AParam)^ := SDLPrimaryDisplaySize;
+  SDL_QuitSubSystem(SDL_INIT_VIDEO);
+end;
+
+function PTCSDLScreenSize(out AWidth, AHeight: Integer): Boolean;
+var
+  sz: LongWord;
+  tid: TThreadID;
+begin
+  sz := SDLScreenSize;
+  if sz = 0 then
+  begin
+    tid := BeginThread(@SDLScreenSizeThread, @sz);
+    if tid <> TThreadID(0) then
+    begin
+      WaitForThreadTerminate(tid, 0);
+      CloseThread(tid);
+    end;
+  end;
+  AWidth := sz shr 16;
+  AHeight := sz and $FFFF;
+  Result := sz <> 0;
+end;
+
 constructor TSDLConsole.Create;
 begin
   inherited Create;
@@ -110,6 +176,7 @@ begin
   if not SDL_InitSubSystem(SDL_INIT_VIDEO) then
     raise TPTCError.Create('SDL_Init(video, wayland): ' + SDL_GetError);
   FOpen := True;
+  SDLScreenSize := SDLPrimaryDisplaySize;
   flags := SDL_WINDOW_RESIZABLE;
   if FFullscreen then
     flags := flags or SDL_WINDOW_FULLSCREEN;
@@ -212,6 +279,7 @@ begin
   SetLength(FPixels, 0);
   FOpen := False;
   SDLInputState := 0;
+  SDLScreenSize := 0;
 end;
 
 procedure TSDLConsole.InternalResize(AWidth, AHeight: Integer);

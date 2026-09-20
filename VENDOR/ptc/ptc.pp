@@ -143,6 +143,10 @@ const
   PTC_SDL_INPUT_POINTER_INSIDE = 8;
 
 function PTCSDLInputState: LongWord;
+
+{ Fase 10, T10.1: tamano de la pantalla primaria en unidades logicas, con o
+  sin consola abierta. False si no hay compositor. Ver sdl/sdlconsolei.inc. }
+function PTCSDLScreenSize(out AWidth, AHeight: Integer): Boolean;
 {$ENDIF SDL3CONSOLE}
 
 implementation

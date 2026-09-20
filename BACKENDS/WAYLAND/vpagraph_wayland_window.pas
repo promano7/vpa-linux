@@ -18,10 +18,12 @@
     - No hay foco que pedir: Wayland no deja a un cliente quitarselo a otro;
       el compositor se lo da a la ventana nueva. WindowAttach solo rehace la
       pantalla completa, que ptcgraph pierde en cada Open ('windowed output').
-    - Un cliente Wayland no sabe el tamano de la pantalla hasta tener
-      ventana, y GetScreenSize se llama antes de Init. Devuelve
-      VPAG_ERR_UNSUPPORTED, caso que el nucleo ya contempla (no recorta la
-      escala). El tamano real y VPA_SCALE=fullscreen son de la Fase 10.
+    - GetScreenSize se llama antes de Init, sin ventana y sin hilo de
+      consola. Lo contesta ptc.PTCSDLScreenSize (Fase 10, T10.1): la pantalla
+      primaria en unidades logicas, preguntada a SDL desde un hilo auxiliar
+      (o la que publico la consola, si esta abierta). Si no hay compositor
+      devuelve VPAG_ERR_UNSUPPORTED, caso que el nucleo ya contempla (no
+      recorta la escala); el Init que viene detras dara el error de verdad.
 
   PointerInsideWindow y CurrentModifiers (Fase 9, D-24) leen el estado que la
   consola SDL3 publica desde su hilo (ptc.PTCSDLInputState): no llaman a SDL
@@ -115,10 +117,31 @@ begin
 end;
 
 function X11GetScreenSize(Width, Height: PVPAGraphInt32): TVPAGraphInt32; cdecl;
+var
+  W, H: Integer;
 begin
-  SetError(VPAG_ERR_UNSUPPORTED,
-    'GetScreenSize: a Wayland client cannot know the screen size before it has a window');
-  Result := VPAG_ERR_UNSUPPORTED;
+  try
+    if (Width = nil) or (Height = nil) then
+    begin
+      SetError(VPAG_ERR_INVALID_PARAM, 'GetScreenSize: nil pointer');
+      Exit(VPAG_ERR_INVALID_PARAM);
+    end;
+    if not PTCSDLScreenSize(W, H) then
+    begin
+      SetError(VPAG_ERR_UNSUPPORTED,
+        'GetScreenSize: no Wayland compositor, or it announced no output');
+      Exit(VPAG_ERR_UNSUPPORTED);
+    end;
+    Width^ := W;
+    Height^ := H;
+    Result := VPAG_OK;
+  except
+    on E: Exception do
+    begin
+      InternalError('GetScreenSize', E);
+      Result := VPAG_ERR_INTERNAL;
+    end;
+  end;
 end;
 
 function X11SetFullscreen(Enable: TVPAGraphBool): TVPAGraphInt32; cdecl;

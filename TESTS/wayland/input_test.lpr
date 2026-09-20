@@ -136,6 +136,7 @@ var
   R      : TVPAGraphInt32;
   Ev     : TVPAGraphEvent;
   MX, MY : TVPAGraphInt32;
+  ScrW, ScrH : TVPAGraphInt32;
   Btn    : TVPAGraphUInt32;
   Inside : TVPAGraphUInt8;
   Ok     : Boolean;
@@ -198,6 +199,19 @@ begin
   Check(R = VPAG_OK, 'VPAGraph_GetInterface -> ' + IntToStr(R));
   if R <> VPAG_OK then Exit(1);
 
+  { --- Fase 10, T10.1: tamano de pantalla ANTES de Init, sin ventana --- }
+  ScrW := 0; ScrH := 0;
+  R := Iface.GetScreenSize(@ScrW, @ScrH);
+  Check((R = VPAG_OK) and (ScrW = 1600) and (ScrH = 1200),
+    'GetScreenSize before Init -> ' + IntToStr(R) + ', ' + IntToStr(ScrW) + 'x' + IntToStr(ScrH));
+  { con el compositor a x2 la pantalla mide la mitad, en unidades logicas }
+  Sh('swaymsg -q output HEADLESS-1 scale 2');
+  ScrW := 0; ScrH := 0;
+  R := Iface.GetScreenSize(@ScrW, @ScrH);
+  Check((R = VPAG_OK) and (ScrW = 800) and (ScrH = 600),
+    'GetScreenSize before Init, output scale 2 -> ' + IntToStr(R) + ', ' + IntToStr(ScrW) + 'x' + IntToStr(ScrH));
+  Sh('swaymsg -q output HEADLESS-1 scale 1');
+
   FillChar(Params, SizeOf(Params), 0);
   Params.StructSize := SizeOf(Params);
   Params.Width := 640;
@@ -209,6 +223,11 @@ begin
   if R <> VPAG_OK then Exit(1);
   SleepMs(800);
   Drain;
+  { con la consola abierta contesta ella (valor publicado al abrir) }
+  ScrW := 0; ScrH := 0;
+  R := Iface.GetScreenSize(@ScrW, @ScrH);
+  Check((R = VPAG_OK) and (ScrW = 1600) and (ScrH = 1200),
+    'GetScreenSize with the window open -> ' + IntToStr(R) + ', ' + IntToStr(ScrW) + 'x' + IntToStr(ScrH));
 
   { --- raton: movimiento y clic, escalados a superficie --- }
   MoveTo(10, 10);
