@@ -615,11 +615,44 @@ begin
   FEventQueue.AddEvent(TPTCKeyEvent.Create(code, uni, m, AEvent.down));
 end;
 
+{ Raton en (AX, AY), coordenadas de superficie con decimales, ya convertidas
+  por SDL. Fase 10, T10.2: con la ventana mas ancha o mas alta que 4:3 la
+  imagen va centrada entre bandas negras, y las bandas no son de VPA. Igual
+  que la consola X11 (HandleMotion en x11windowdisplayi.inc): fuera de la
+  imagen no se entrega NADA, ni movimiento ni botones, y lo que cambio en los
+  botones mientras tanto (FRealButtons, lo que dice SDL, frente a FButtons,
+  lo ya contado a VPA) se entrega al volver a entrar, en el punto de entrada.
+  Antes un clic en la banda llegaba con X negativa y VPA lo veia como un clic
+  en la columna 0 del mapa.
+  La comparacion se hace con el valor real y no con Trunc, que redondea
+  hacia cero y metia en la columna 0 la ultima fraccion de pixel de la banda. }
+procedure TSDLConsole.MouseAt(AX, AY: Single; AMoved: Boolean);
+var
+  x, y: Integer;
+  b: TPTCMouseButton;
+begin
+  if (AX < 0) or (AY < 0) then exit;
+  x := Trunc(AX); y := Trunc(AY);
+  if (x >= FWidth) or (y >= FHeight) then exit;
+  if FLastX < 0 then begin FLastX := x; FLastY := y; end;
+  if AMoved or (x <> FLastX) or (y <> FLastY) then
+    FEventQueue.AddEvent(TPTCMouseEvent.Create(x, y, x - FLastX,
+                                               y - FLastY, FButtons));
+  FLastX := x; FLastY := y;
+  for b := PTCMouseButton1 to PTCMouseButton3 do
+    if (b in FRealButtons) <> (b in FButtons) then
+    begin
+      if b in FRealButtons then Include(FButtons, b)
+                           else Exclude(FButtons, b);
+      FEventQueue.AddEvent(TPTCMouseButtonEvent.Create(x, y, 0, 0, FButtons,
+                                                       b in FButtons, b));
+    end;
+end;
+
 procedure TSDLConsole.PumpEvents(AWait: Boolean);
 var
   ev: TSDL_Event;
   got: Boolean;
-  x, y: Integer;
   b: TPTCMouseButton;
 begin
   CheckOpen;
@@ -644,19 +677,11 @@ begin
       SDL_EVENT_MOUSE_MOTION:
         begin
           SDL_ConvertEventToRenderCoordinates(FRenderer, @ev);
-          x := Trunc(ev.motion.x); y := Trunc(ev.motion.y);
-          if (x >= 0) and (y >= 0) and (x < FWidth) and (y < FHeight) then
-          begin
-            if FLastX < 0 then begin FLastX := x; FLastY := y; end;
-            FEventQueue.AddEvent(TPTCMouseEvent.Create(x, y, x - FLastX,
-                                                       y - FLastY, FButtons));
-            FLastX := x; FLastY := y;
-          end;
+          MouseAt(ev.motion.x, ev.motion.y, True);
         end;
       SDL_EVENT_MOUSE_BUTTON_DOWN, SDL_EVENT_MOUSE_BUTTON_UP:
         begin
           SDL_ConvertEventToRenderCoordinates(FRenderer, @ev);
-          x := Trunc(ev.button.x); y := Trunc(ev.button.y);
           case ev.button.button of
             1: b := PTCMouseButton1;   { SDL: 1 izq, 2 centro, 3 dcho }
             2: b := PTCMouseButton3;
@@ -666,10 +691,9 @@ begin
           end;
           if b <> PTCMouseButton10 then
           begin
-            if ev.button.down then Include(FButtons, b)
-                              else Exclude(FButtons, b);
-            FEventQueue.AddEvent(TPTCMouseButtonEvent.Create(x, y, 0, 0,
-                                   FButtons, ev.button.down, b));
+            if ev.button.down then Include(FRealButtons, b)
+                              else Exclude(FRealButtons, b);
+            MouseAt(ev.button.x, ev.button.y, False);
           end;
         end;
     end;

@@ -383,6 +383,41 @@ begin
         IntToStr(Bad) + ' of 639 off' + FirstBad);
   Drain;
 
+  { --- Fase 10, T10.2/T10.3: letterbox. Ventana de 1600x600: la imagen 4:3
+        mide 800x600 y queda centrada, con bandas de 400 px a los lados. Las
+        bandas no son de VPA: como en la consola X11 en pantalla completa, de
+        ahi no sale ningun evento, y un boton pulsado en la banda se entrega
+        cuando el puntero entra en la imagen (ver TSDLConsole.MouseAt). --- }
+  Sh('swaymsg -q resize set 1600 600');
+  Sh('swaymsg -q move absolute position 0 0');   { resize conserva el centro }
+  SleepMs(500);
+  MoveTo(800, 300);
+  Drain;
+  MoveTo(1000, 450);
+  Ok := WaitEvent(VPAG_EVENT_MOUSE_MOVE, Ev) and (Ev.MouseX = 480) and (Ev.MouseY = 360);
+  Check(Ok, 'letterbox: (1000,450) window -> (480,360) surface: ' + EvText(Ev));
+  Drain;
+  MoveTo(100, 300);
+  Sh('swaymsg -q seat seat0 cursor press button1');
+  Sh('swaymsg -q seat seat0 cursor release button1');
+  Ok := not WaitEvent(VPAG_EVENT_MOUSE_DOWN, Ev);
+  Check(Ok, 'letterbox: a click in the side band reaches nobody: ' + EvText(Ev));
+  Drain;
+  { Un clic normal dentro de la imagen sigue llegando, y en su sitio. }
+  MoveTo(600, 300);
+  Drain;
+  Sh('swaymsg -q seat seat0 cursor press button1');
+  Ok := WaitEvent(VPAG_EVENT_MOUSE_DOWN, Ev) and (Ev.MouseButton = VPAG_MB_LEFT) and
+        (Ev.MouseX = 160) and (Ev.MouseY = 240);
+  Check(Ok, 'letterbox: click inside the image at (600,300) -> (160,240): ' + EvText(Ev));
+  Sh('swaymsg -q seat seat0 cursor release button1');
+  Ok := WaitEvent(VPAG_EVENT_MOUSE_UP, Ev);
+  Check(Ok, 'letterbox: and its release: ' + EvText(Ev));
+  Drain;
+  { No se prueba aqui el boton pulsado en la banda que entra en la imagen: el
+    sway 1.9 del contenedor no entrega los 'cursor set' mientras hay un boton
+    pulsado (visto con WAYLAND_DEBUG: el motion no llega hasta soltar). }
+
   { --- cursor del sistema --- }
   Iface.ShowMouse(VPAG_FALSE);
   Iface.ShowMouse(VPAG_TRUE);
