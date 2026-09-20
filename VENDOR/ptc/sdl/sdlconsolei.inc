@@ -648,7 +648,13 @@ begin
   Result := False;
   if not FOpen or (X < 0) or (Y < 0) or (X >= FWidth) or (Y >= FHeight) then
     exit;
-  if not SDL_RenderCoordinatesToWindow(FRenderer, X, Y, @wx, @wy) then
+  { Se apunta al CENTRO del pixel de consola (X+0.5), no a su borde: con la
+    ventana a escala no entera el borde X*escala no es representable en el
+    wl_fixed (1/256, truncado hacia abajo) con que viaja el warp y vuelve el
+    movimiento, y al deshacer la cuenta caia en el pixel X-1: las flechas del
+    mapa (MoveMouseTo(MouseX+1, ...)) no avanzaban. El centro deja media
+    escala de margen a cada lado. }
+  if not SDL_RenderCoordinatesToWindow(FRenderer, X + 0.5, Y + 0.5, @wx, @wy) then
     exit;
   SDL_ClearError;
   SDL_WarpMouseInWindow(FWindow, wx, wy);

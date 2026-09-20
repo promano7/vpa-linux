@@ -139,6 +139,8 @@ var
   Btn    : TVPAGraphUInt32;
   Inside : TVPAGraphUInt8;
   Ok     : Boolean;
+  I, Bad : Integer;
+  FirstBad: AnsiString;
   VKbd   : AnsiString;
 
 type
@@ -325,6 +327,41 @@ begin
   Iface.GetMouseState(@MX, @MY, @Btn, @Inside);
   Check((MX = 100) and (MY = 100), 'GetMouseState right after SetMousePos -> (' +
         IntToStr(MX) + ',' + IntToStr(MY) + ')');
+  Drain;
+
+  { --- SetMousePos con escala NO entera: ida y vuelta exacta ---
+    Las flechas del mapa hacen MoveMouseTo(MouseX+-1, ...) y leen MouseX del
+    evento de movimiento que vuelve: tiene que volver el mismo pixel.
+    OJO: aqui solo se prueba la cuenta en coma flotante de SDL (el sway 1.9
+    del contenedor no aplica el warp; ver la cabecera). La otra mitad -el
+    wl_fixed de 1/256 con que un compositor con wp_pointer_warp_v1 devuelve
+    la posicion, truncando hacia abajo- no se puede ejercitar aqui: por eso
+    TSDLConsole.MoveMouseTo apunta al CENTRO del pixel y no a su borde. }
+  Sh('swaymsg -q resize set 1087 816');
+  SleepMs(500);
+  Drain;
+  MoveTo(1000, 700);
+  Ok := WaitEvent(VPAG_EVENT_MOUSE_MOVE, Ev) and (Ev.MouseX <> 500);
+  Check(Ok, 'window resized, scale no longer 2: (1000,700) -> ' + EvText(Ev));
+  Drain;
+  Bad := 0;
+  FirstBad := '';
+  I := 1;
+  while I < 640 do
+  begin
+    Iface.SetMousePos(I, (I * 3) div 4);
+    if not (WaitEvent(VPAG_EVENT_MOUSE_MOVE, Ev) and (Ev.MouseX = I) and
+            (Ev.MouseY = (I * 3) div 4)) then
+    begin
+      if Bad = 0 then
+        FirstBad := ' first: asked (' + IntToStr(I) + ',' + IntToStr((I * 3) div 4) +
+                    ') got ' + EvText(Ev);
+      Inc(Bad);
+    end;
+    Inc(I, 1);
+  end;
+  Check(Bad = 0, 'SetMousePos round trip at a non-integer scale: ' +
+        IntToStr(Bad) + ' of 639 off' + FirstBad);
   Drain;
 
   { --- cursor del sistema --- }
