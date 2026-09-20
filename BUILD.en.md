@@ -246,6 +246,22 @@ Debian 12 for x86-64 and Raspberry Pi OS (bookworm) for aarch64. Check it with:
 for f in VPA plugins/*.so*; do printf '%-36s' $f; objdump -T build/vpa-linux_package/$f | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1; done
 ```
 
+**Doing it with the scripts in `tools/`.** On an Arch host,
+`tools/vpa-chroot-bookworm-amd64.sh` and `tools/vpa-chroot-bookworm-arm64.sh`
+create a Debian 12 chroot once (with `debootstrap`; the arm64 one runs emulated by
+`qemu-user-static`), reuse it afterwards, and build the package inside it under
+the release naming, `vpa-linux-<version>-<arch>.tar.gz`, reading the version from
+`VPA/VPADATA.PAS`:
+```sh
+sudo pacman -S debootstrap debian-archive-keyring
+sudo pacman -S qemu-user-static qemu-user-static-binfmt      # arm64 only
+
+sudo tools/vpa-chroot-bookworm-amd64.sh                       # main -> ./vpa-linux-3.67.6-x86_64.tar.gz
+sudo tools/vpa-chroot-bookworm-arm64.sh build feature/wayland # another branch, tag or commit
+tools/vpa-chroot-bookworm-amd64.sh help                       # the other commands and variables (in Spanish)
+```
+Measured in that chroot: `VPA`, both plugins and SDL3 all ask for `GLIBC_2.34`.
+
 The folder is rebuilt from scratch on every run (it is removed first), so it
 always matches the current state of the sources. From there you can copy it to
 your game folder or pack it for publishing:

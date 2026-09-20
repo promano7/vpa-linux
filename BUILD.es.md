@@ -246,6 +246,22 @@ x86-64 y Raspberry Pi OS (bookworm) para aarch64. Se comprueba con:
 for f in VPA plugins/*.so*; do printf '%-36s' $f; objdump -T build/vpa-linux_package/$f | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1; done
 ```
 
+**Hacerlo con los scripts de `tools/`.** En un anfitrión Arch,
+`tools/vpa-chroot-bookworm-amd64.sh` y `tools/vpa-chroot-bookworm-arm64.sh` crean
+una vez un chroot de Debian 12 (con `debootstrap`; el de arm64 corre emulado con
+`qemu-user-static`), lo reutilizan después, y construyen dentro el paquete con el
+nombre de las publicaciones, `vpa-linux-<versión>-<arch>.tar.gz`, leyendo la
+versión de `VPA/VPADATA.PAS`:
+```sh
+sudo pacman -S debootstrap debian-archive-keyring
+sudo pacman -S qemu-user-static qemu-user-static-binfmt      # solo para arm64
+
+sudo tools/vpa-chroot-bookworm-amd64.sh                       # main -> ./vpa-linux-3.67.6-x86_64.tar.gz
+sudo tools/vpa-chroot-bookworm-arm64.sh build feature/wayland # otra rama, etiqueta o commit
+tools/vpa-chroot-bookworm-amd64.sh help                       # el resto de órdenes y variables
+```
+Medido en ese chroot: `VPA`, los dos plugins y la SDL3 piden todos `GLIBC_2.34`.
+
 La carpeta se rehace desde cero en cada ejecución (se borra antes), así que siempre
 corresponde al estado actual de los fuentes. Desde ahí puedes copiarla a tu carpeta
 de partida o empaquetarla para publicarla:

@@ -1975,7 +1975,11 @@ las doradas sin quejas y `VPA_VISUAL_BACKENDS=x11 TESTS/visual/run.sh` con
 - [x] **T12.10** — Fusionar `feature/wayland` en `main` con
       `git merge --no-ff`, sin perder ningún commit (D-35).
 - [ ] **T12.11** — Crear la rama de versión y la etiqueta según la convención
-      del proyecto, y publicar el tarball, montado donde dice T12.3b.
+      del proyecto, y publicar el tarball, montado donde dice T12.3b: con
+      `tools/vpa-chroot-bookworm-amd64.sh` y `-arm64.sh` (chroot de Debian 12
+      en Arch; nombran el paquete `vpa-linux-<versión>-<arch>.tar.gz`). Medido
+      en ese chroot, amd64: todos los binarios, SDL3 incluida, piden
+      `GLIBC_2.34`.
       *Aplazada por Pablo.*
 
 **Criterio de aceptación:** un usuario puede descargar el paquete, ejecutarlo en
