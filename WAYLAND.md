@@ -69,7 +69,7 @@ más fácil es saltárselas:
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☑ cerrada (2026-09-19) — **vía B** |
 | 8 | Motor de dibujo Wayland (vía B) | ☑ cerrada (2026-09-20): 0 diferencias (`make wayland-test`), doradas 20/20 |
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☑ cerrada (2026-09-20): T9.1–T9.8 hechas y probadas (`make wayland-input-test` y pruebas manuales de Pablo en KWin 6.7.5); el teclado numérico sin BloqNum resultó ser el ratón absoluto de la VM (R12), no VPA |
-| 10 | Escalado, HiDPI y pantalla completa | ☐ |
+| 10 | Escalado, HiDPI y pantalla completa | ◐ en curso: T10.1 hecha (D-25) |
 | 11 | Comparación visual automatizada | ☐ |
 | 12 | Empaquetado, documentación y release | ☐ |
 
@@ -1678,9 +1678,20 @@ teclado y ratón, sin diferencias perceptibles respecto a X11.
 
 ### Fase 10 — Escalado, HiDPI y pantalla completa 🔒
 
-- [ ] **T10.1** — Implementar `ResolveScale` para Wayland respetando la
+- [x] **T10.1** — Implementar `ResolveScale` para Wayland respetando la
       semántica completa de `VPA_SCALE` (sección 2.3.10), obteniendo el tamaño
       de pantalla de SDL3 en lugar de Xlib.
+      *Hecho (D-25). `ResolveScale` ya era del núcleo (`GRAPH/vpagraph.pas`) y
+      común a los dos backends; lo que faltaba era que el plugin Wayland
+      contestase `GetScreenSize`, que se llama **antes** de `Init`. Sin ese
+      dato `VPA_SCALE=fullscreen` pedía el 800 % (una consola de 5120×3840
+      que SDL luego reducía) y un `VPA_SCALE` grande no se recortaba. Ahora
+      `ptc.PTCSDLScreenSize` da la pantalla primaria en unidades lógicas.
+      Probado en `make wayland-input-test` (sway sin pantalla, salida de
+      1600×1200): 1600×1200 antes de `Init`, 800×600 con la salida a ×2, y
+      1600×1200 con la ventana abierta; y por el núcleo, con
+      `VPA_GRAPH_DEBUG=1`: `VPA_SCALE=9` y `fullscreen` → 250 %, `2` y sin
+      definir → 200 %. Falta verlo en una pantalla real (T10.7).*
 - [ ] **T10.2** — Presentación lógica de 640×480 con relación de aspecto
       preservada y bandas laterales cuando haga falta.
 - [ ] **T10.3** — Transformación de coordenadas del ratón de ventana física a
@@ -1929,6 +1940,7 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-22 | 2026-09-19 | El plugin Wayland **no** expone la ventana (`PSDL_Window`) al adaptador: todo lo que toca la ventana (pantalla completa hoy; cursor, puntero y modificadores en la Fase 9) se pide a la consola con `PTCWrapperObject.Option`, que `ptcwrapper` ya ejecuta en el hilo de la consola. `GetScreenSize` devuelve `VPAG_ERR_UNSUPPORTED` | No es simetría con D-18 porque el protocolo no es simétrico: en X11 una segunda conexión puede manipular una ventana por su XID; en Wayland una superficie solo existe en la conexión que la creó, y R11 prohíbe llamar a SDL fuera del hilo de la consola. Un puntero a la ventana en manos del adaptador sería una invitación a violarlo. `ptcwrapper` queda sin tocar. El tamaño de pantalla no se conoce antes de tener ventana; el núcleo ya contempla ese caso y lo demás es de la Fase 10 |
 | D-23 | 2026-09-20 | El carácter Unicode del evento de tecla (D-09) sale del **mapa de teclas de SDL** (`SDL_GetKeyFromScancode(scancode, mod, False)`), **no** de `SDL_EVENT_TEXT_INPUT` | `TEXT_INPUT` es un evento aparte que habría que casar con el de tecla y, sobre todo, SDL no lo emite con Ctrl pulsado: justo el caso de Ctrl-+/Ctrl-- que D-09 protege. El mapa de SDL en Wayland se construye del keymap xkb del compositor, con Shift, AltGr y BloqMayús, y es síncrono con la tecla. Es además lo mismo que hace la consola X11, que saca el carácter del keysym y no del texto compuesto, y evita activar la entrada de texto (y el IME) en un juego que no la usa. Corrige lo que pedía T9.2 |
 | D-24 | 2026-09-20 | La consola SDL3 **publica** su estado de entrada vivo (modificadores, puntero dentro de la ventana) en una palabra de 32 bits que escribe solo su hilo tras cada `PumpEvents`; el plugin la lee con `ptc.PTCSDLInputState` | Matiza D-22: lo que *toca* la ventana sigue yendo por `Option`, pero una *consulta* por `Option` cuesta una vuelta del bucle de `ptcwrapper` (`Sleep(10)`), y el adaptador pregunta los modificadores en cada evento de ratón y el `Inside` en cada `GetMouseState`. Leer una palabra no llama a SDL (R11) ni necesita cerrojo. `ptcwrapper` sigue sin tocar |
+| D-25 | 2026-09-20 | El plugin Wayland **sí** contesta `GetScreenSize` antes de `Init` (corrige la última frase de D-22): `ptc.PTCSDLScreenSize` pregunta a SDL la pantalla **primaria**, en **unidades lógicas**, desde un **hilo auxiliar** que inicia el vídeo de SDL, pregunta y lo cierra; con la consola abierta devuelve el valor que ella publicó al abrir (una palabra de 32 bits, como D-24) | D-22 daba por hecho que un cliente Wayland no sabe el tamaño de la pantalla sin ventana, y no es así: los `wl_output` se anuncian al conectar y SDL los tiene al volver de `SDL_InitSubSystem`. El hilo auxiliar mantiene R11 al pie de la letra (SDL nunca corre en el hilo de VPA ni le toca la máscara de coma flotante) y no deja rastro: SDL define el «hilo de vídeo» como el que inicia el subsistema y lo redefine en cada inicio (`SDL.c`), así que el `Open` posterior en el hilo de la consola empieza limpio. Unidades lógicas porque son las de los tamaños de ventana: con el compositor a ×2, una pantalla de 2560×1440 mide 1280×720 y la escala se recorta al 150 % (lo que pase con la nitidez es de T10.5). La primaria, porque Wayland no deja saber en qué pantalla caerá la ventana. Si no hay compositor devuelve `VPAG_ERR_UNSUPPORTED`, el núcleo no recorta y el error de verdad lo da `Init` |
 
 ---
 
