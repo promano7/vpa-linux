@@ -68,7 +68,7 @@ más fácil es saltárselas:
 | 6 | Migración de VPA-Linux a `VPAGraph` | ☑ cerrada (2026-09-19) |
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☑ cerrada (2026-09-19) — **vía B** |
 | 8 | Motor de dibujo Wayland (vía B) | ☑ cerrada (2026-09-20): 0 diferencias (`make wayland-test`), doradas 20/20 |
-| 9 | Eventos: teclado, ratón y cierre de ventana | ◐ en curso: T9.2–T9.8 hechas y probadas (`make wayland-input-test` y prueba manual de Pablo en KWin, 2026-09-20); queda abierto en T9.1 el teclado numérico sin BloqNum en KWin (8/4/6/2 no mueven la diana), pendiente de una traza `VPA_KEY_TRACE=1` |
+| 9 | Eventos: teclado, ratón y cierre de ventana | ☑ cerrada (2026-09-20): T9.1–T9.8 hechas y probadas (`make wayland-input-test` y pruebas manuales de Pablo en KWin 6.7.5); el teclado numérico sin BloqNum resultó ser el ratón absoluto de la VM (R12), no VPA |
 | 10 | Escalado, HiDPI y pantalla completa | ☐ |
 | 11 | Comparación visual automatizada | ☐ |
 | 12 | Empaquetado, documentación y release | ☐ |
@@ -1599,16 +1599,20 @@ Con la vía B esta fase es pequeña (la consola ya entrega eventos y `ptccrt` /
       cursor), como `XK_KP_1`/`XK_KP_End`. Una tecla sin código PTC se entrega
       con `PTCKEY_UNDEFINED` y su carácter, igual que X11 (el prototipo la
       tiraba).*
-      ***Abierto** (prueba de Pablo en KWin 6.7.5, VM VirtualBox, 2026-09-20):
-      con BloqNum apagado las teclas 8/4/6/2 del teclado numérico no mueven la
-      diana por el mapa, y con el plugin X11 sí; las flechas normales sí la
-      mueven en Wayland. Con BloqNum encendido los dígitos salen bien, y
-      7/9/1/3 sin BloqNum no hacen nada en ninguno de los dos. En el
-      contenedor (sway + `vkbd.py`) el evento que llega es idéntico al de la
-      flecha, así que la diferencia está en lo que SDL entrega con ese
-      compositor/teclado (scancode o `SDL_KMOD_NUM`). Para verlo se añadió la
-      traza `VPA_KEY_TRACE=1` (una línea por evento de tecla en la salida de
-      error); pendiente de la traza de Pablo.*
+      *Teclado numérico sin BloqNum en KWin (2026-09-20), **cerrado, no era de
+      VPA**: en la primera prueba de Pablo (KWin 6.7.5, VM VirtualBox) 8/4/6/2
+      con BloqNum apagado no movían la diana y con el plugin X11 sí. Su traza
+      `VPA_KEY_TRACE=1` muestra que SDL entrega lo correcto: el 8 del teclado
+      numérico (scancode 96, `mod=$0000`) sale como `code=38` (`PTCKEY_UP`),
+      `uni=0`, igual que la flecha (scancode 82) salvo `numpad=TRUE`, y
+      4/6/2 como 37/39/40; con BloqNum encendido (`mod=$1000`) el 8 sale
+      `code=104 uni=56`. `ptccrt` convierte las dos en el mismo `#0#72`. La
+      diferencia era otra vez el ratón absoluto de la VM (R12): esas teclas
+      mueven la diana con un warp, y con la integración del ratón de
+      VirtualBox el anfitrión lo deshace. Con la VM capturando el ratón
+      (puntero relativo) 8/4/6/2 mueven la diana píxel a píxel, y el foco y
+      el imán siguen bien. La traza `VPA_KEY_TRACE=1` se queda como ayuda de
+      diagnóstico.*
 - [x] **T9.2** — **Entrada de texto para distribuciones no estadounidenses.**
       `Ctrl-+` y `Ctrl--` se arreglaron en 3.67.5 comparando el carácter
       Unicode, no el scancode. En SDL3 hay que combinar el evento de tecla con
