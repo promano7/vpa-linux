@@ -449,6 +449,21 @@ begin
   MoveTo(100, 540);
   Ok := not WaitEvent(VPAG_EVENT_MOUSE_MOVE, Ev);
   Check(Ok, 'fullscreen 1920x1080: nothing from the side band: ' + EvText(Ev));
+  { En la banda el puntero esta FUERA para VPA. Entrando por la derecha la
+    ultima posicion entregada es del panel (MouseX>471) y con Inside = 1 el
+    auto-scroll del mapa no paraba nunca (visto por Pablo en KWin). }
+  MoveTo(960, 540);
+  MoveTo(1600, 540);             { ultima columna de la imagen: 1680 - 1 }
+  MoveTo(1800, 540);             { banda derecha }
+  SleepMs(100);
+  Iface.GetMouseState(@MX, @MY, @Btn, @Inside);
+  Check((Inside = VPAG_FALSE) and (MX > 471),
+    'fullscreen 1920x1080: Inside = 0 in the right band, last X = ' + IntToStr(MX));
+  MoveTo(960, 540);
+  SleepMs(100);
+  Iface.GetMouseState(@MX, @MY, @Btn, @Inside);
+  Check(Inside = VPAG_TRUE, 'fullscreen 1920x1080: Inside = 1 back in the image');
+  Drain;
   Check(Iface.SetFullscreen(VPAG_FALSE) = VPAG_OK, 'SetFullscreen(0)');
   SleepMs(800);
   Sh('swaymsg -q output HEADLESS-1 mode 1600x1200');

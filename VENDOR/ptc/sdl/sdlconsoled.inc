@@ -24,6 +24,7 @@ type
     FFullscreen, FInterceptClose: Boolean;
     FButtons: TPTCMouseButtonState;       { lo ya contado a VPA }
     FRealButtons: TPTCMouseButtonState;   { lo que dice SDL (ver MouseAt) }
+    FInBand: Boolean;                     { puntero en una banda del letterbox (ver MouseAt) }
     FLastX, FLastY: Integer;
     FPresentedPrefix: string;      { VPA_GRAPH_PRESENTED, leido en Open }
     FPresentedFrame: Integer;

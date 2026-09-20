@@ -644,9 +644,17 @@ var
   x, y: Integer;
   b: TPTCMouseButton;
 begin
+  { FInBand: en una banda el puntero esta FUERA para VPA (PublishInputState).
+    VPA se queda con la ultima posicion entregada, y su auto-scroll
+    (VPA2.PAS: MouseX<8, MouseX>471, MouseY<8 o MouseY>477, con el puntero
+    dentro de la ventana) no paraba nunca. Por la derecha pasaba siempre,
+    porque todo el panel (472..639) cumple MouseX>471: visto por Pablo en KWin
+    a pantalla completa. Con X11 en ventana, salir por el borde lo para igual. }
+  FInBand := True;
   if (AX < 0) or (AY < 0) then exit;
   x := Trunc(AX); y := Trunc(AY);
   if (x >= FWidth) or (y >= FHeight) then exit;
+  FInBand := False;
   if FLastX < 0 then begin FLastX := x; FLastY := y; end;
   if AMoved or (x <> FLastX) or (y <> FLastY) then
     FEventQueue.AddEvent(TPTCMouseEvent.Create(x, y, x - FLastX,
@@ -725,7 +733,8 @@ begin
   if (md and SDL_KMOD_SHIFT) <> 0 then st := st or PTC_SDL_INPUT_SHIFT;
   if (md and SDL_KMOD_CTRL) <> 0 then st := st or PTC_SDL_INPUT_CONTROL;
   if (md and SDL_KMOD_ALT) <> 0 then st := st or PTC_SDL_INPUT_ALT;
-  if SDL_GetMouseFocus = FWindow then st := st or PTC_SDL_INPUT_POINTER_INSIDE;
+  if (SDL_GetMouseFocus = FWindow) and not FInBand then
+    st := st or PTC_SDL_INPUT_POINTER_INSIDE;
   SDLInputState := st;
 end;
 
