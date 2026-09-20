@@ -69,7 +69,7 @@ más fácil es saltárselas:
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☑ cerrada (2026-09-19) — **vía B** |
 | 8 | Motor de dibujo Wayland (vía B) | ☑ cerrada (2026-09-20): 0 diferencias (`make wayland-test`), doradas 20/20 |
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☑ cerrada (2026-09-20): T9.1–T9.8 hechas y probadas (`make wayland-input-test` y pruebas manuales de Pablo en KWin 6.7.5); el teclado numérico sin BloqNum resultó ser el ratón absoluto de la VM (R12), no VPA |
-| 10 | Escalado, HiDPI y pantalla completa | ◐ en curso: T10.1–T10.6 hechas en el contenedor (D-25, D-26, D-27); faltan las pruebas manuales de Pablo en KWin (T10.4, T10.5) y T10.7 |
+| 10 | Escalado, HiDPI y pantalla completa | ◐ hecha: probada por Pablo en KWin (VM Slackware) a 800×600, 1920×1080 y 2048×1152, con KDE al 100 %, 150 % y 200 % (D-25 a D-29). Para cerrarla falta que Pablo confirme en KWin los dos últimos arreglos: el scroll en la banda derecha (T10.2) y la ventana 4:3 (T10.8) |
 | 11 | Comparación visual automatizada | ☐ |
 | 12 | Empaquetado, documentación y release | ☐ |
 
@@ -1708,10 +1708,24 @@ teclado y ratón, sin diferencias perceptibles respecto a X11.
       *Segundo fallo, visto por Pablo en KWin (VM Slackware, 1920×1080, KDE al
       100 %, 150 % y 200 %): **las bandas eran transparentes**, en ventana y a
       pantalla completa se veía el escritorio por ellas. Causa en D-28.
-      Corregido y cubierto en `wayland-input-test` con un fondo magenta
-      (`swaybg`) detrás de la ventana de 1600×600 y
-      `TESTS/wayland/pixel-check.py` sobre la captura de `grim`: antes del
-      arreglo la banda salía `ff00ff`, ahora `000000`.*
+      Corregido y **verificado por Pablo en KWin** (bandas negras en ventana
+      y a pantalla completa). La prueba automática que lo cubría (fondo
+      magenta de `swaybg` detrás de una ventana de 1600×600 y el píxel de la
+      banda en la captura de `grim`: `ff00ff` antes, `000000` después) se
+      retiró con D-29: la ventana flotante ya no tiene bandas, en mosaico SDL
+      también la recorta, y a pantalla completa sway pinta negro debajo, de
+      modo que en el contenedor una banda transparente no se distingue.*
+      *Tercer fallo, también de Pablo en KWin: **al meter el puntero en la
+      banda derecha el mapa hacía scroll sin parar**. El auto-scroll de VPA
+      (`VPA2.PAS`) salta con `MouseX<8`, `MouseX>471`, `MouseY<8` o
+      `MouseY>477` si el puntero está dentro de la ventana; en la banda VPA
+      conserva la última posición entregada y `POINTER_INSIDE` solo miraba el
+      foco de ratón de SDL. Por la derecha pasaba siempre (todo el panel,
+      472..639, cumple `MouseX>471`); por la izquierda casi nunca. Ahora en
+      una banda el puntero está **fuera** (`FInBand`), como al salir por el
+      borde de la ventana en X11. Probado en `wayland-input-test` a pantalla
+      completa (falla sin el arreglo). El scroll con el puntero parado en el
+      panel derecho es de VPA (código de DOS, común a X11) y no se toca.*
 - [x] **T10.3** — Transformación de coordenadas del ratón de ventana física a
       superficie lógica (equivalentes de `MapMouseToSurface` y
       `MapSurfaceToWindow`), delegando en la conversión que ofrece SDL3 en lugar
@@ -1721,7 +1735,7 @@ teclado y ratón, sin diferencias perceptibles respecto a X11.
       vuelta). Probado en `wayland-input-test`: escala ×2, escala no entera
       (ida y vuelta de los 639 píxeles), letterbox lateral ((1000,450) →
       (480,360)), pantalla completa 16:9 y salida a ×2.*
-- [ ] **T10.4** — Pantalla completa: ~~`VPA_FULLSCREEN`, `VPA_VIDEO=fullscreen` y~~
+- [x] **T10.4** — Pantalla completa: ~~`VPA_FULLSCREEN`, `VPA_VIDEO=fullscreen` y~~
       `VPA_SCALE=fullscreen`, con las tres rutas que hoy llaman a
       `RequestFullscreen`/`ReleaseFullscreen`.
       *`VPA_FULLSCREEN` y `VPA_VIDEO` retiradas de la tarea (D-27).
@@ -1734,6 +1748,11 @@ teclado y ratón, sin diferencias perceptibles respecto a X11.
       y esquina exactos, nada desde las bandas, y vuelta a ventana. Las «tres
       rutas» son hoy `Params.Fullscreen` en `Init`, la reaplicación en
       `Resume` y `SetFullscreen` de la ABI.*
+      *Probado por Pablo en KWin con KDE al 100 %, 150 % y 200 %: la imagen
+      ocupa el mayor 4:3 (1440×1080 físicos en 1920×1080), los clics caen en
+      su sitio y los de las bandas no hacen nada. Los dos fallos que salieron
+      (bandas transparentes, scroll sin fin en la banda derecha) están en
+      T10.2.*
 - [x] **T10.5** — HiDPI: comprobar el comportamiento con factor de escala del
       compositor ≠ 1. Es el caso en el que Wayland difiere más de X11 y donde es
       más probable que el ratón se descuadre.
@@ -1746,14 +1765,32 @@ teclado y ratón, sin diferencias perceptibles respecto a X11.
       **A mirar en T10.7:** con el compositor a ×2 en 2560×1440 la pantalla
       lógica es 1280×720 y `VPA_SCALE` se recorta al 150 %, una escala no
       entera de ptc (columnas desiguales) que SDL luego dobla.*
+      *Visto por Pablo en KWin (1920×1080) con KDE al 150 % y 200 %: nítido,
+      sin interpolación, y el ratón marca los planetas correctos. El recorte
+      da 150 % y 112 %, pero en píxeles físicos la imagen es la misma que al
+      100 % (1440×1080, ×2,25): la escala de KDE no cambia el resultado, y
+      las columnas desiguales de ×2,25 vienen de 1080/480, no de HiDPI.*
 - [x] **T10.6** — Redimensionado de ventana en caliente sin perder el contenido.
       *Hecho desde la Fase 8: la textura es de la consola y SDL la vuelve a
       presentar en `WINDOW_EXPOSED`; la diana se rehace en `WINDOW_RESIZED`.
       `wayland-input-test` redimensiona cuatro veces (1087×816, 1600×600,
       640×480, 320×240) y sigue leyendo ratón e imagen correctos. Pablo ya
       lo vio en KWin en la Fase 8 (la diana se redimensiona con la ventana).*
-- [ ] **T10.7** — Probar en 2560×1440 (máquina de desarrollo) y en resoluciones
+- [x] **T10.7** — Probar en 2560×1440 (máquina de desarrollo) y en resoluciones
       pequeñas donde el escalado tenga que recortarse.
+      *Hecho por Pablo en la VM de KWin cambiando su resolución (la máquina
+      de desarrollo solo tiene X11, y a VPA le da igual de quién sea la
+      pantalla): 2048×1152, la mayor que ofrecía la VM, y 800×600, donde
+      `VPA_SCALE=2` se recorta. En las dos los clics caen en su sitio.
+      2560×1440 exactos quedan sin ver; no hay nada en el camino que dependa
+      de esa cifra.*
+- [x] **T10.8** — (añadida) La ventana flotante es siempre 4:3 (D-29). Pablo
+      vio que `VPA_SCALE=9` en ventana dejaba bandas de 50 px: `ResolveScale`
+      recorta contra la pantalla entera (Wayland no da el área útil) y KWin
+      encoge la ventana para que quepan la barra de título y el panel
+      (1440×1004). Con `SDL_SetWindowAspectRatio` SDL recorta el lado que
+      sobra. Probado en `wayland-input-test`: a una ventana flotante se le
+      conceden 1600×600 y se queda en 800×600, ratón exacto.
 
 **Criterio de aceptación:** sin distorsión, ratón exacto en todas las escalas,
 y comportamiento estable con HiDPI.
@@ -1991,6 +2028,7 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-26 | 2026-09-20 | La ventana SDL se crea con `SDL_WINDOW_HIGH_PIXEL_DENSITY` | Con factor de escala del compositor ≠ 1, sin la bandera SDL dibuja a resolución lógica y amplía el compositor con su filtro (suavizado en KWin): VPA borroso y detalles de 1 px perdidos (medido). Con ella el renderer trabaja en píxeles físicos y la única ampliación es la nuestra, vecino más próximo. Tamaños de ventana, ratón y `GetScreenSize` (D-25) siguen en unidades lógicas, que es la convención de Wayland: `VPA_SCALE=2` ocupa lo mismo en pantalla que cualquier otra aplicación a esa escala |
 | D-27 | 2026-09-20 | `VPA_FULLSCREEN` y `VPA_VIDEO` se **retiran**: la única vía de pantalla completa es `VPA_SCALE=fullscreen` (`full`, `max`). Cierra D-16 | Eran un resto del primer intento de pantalla completa: `bc2c09c` (2026-06-23) añadió `VPA_FULLSCREEN` con un enganche en `VPAINIT.PAS` y `fd515ff`, el mismo día, quitó el enganche; `xfocus.FullscreenRequested` siguió compilando sin llamadores hasta que `xfocus` salió del ejecutable en la Fase 6 (`8aecb96`). Hoy no queda código que las lea. Lo único que aportarían es separar «pantalla completa» de «escala» (`VPA_SCALE=2 VPA_FULLSCREEN=1`), y eso es peor o igual: en X11 la consola de ptc no reescala, así que saldría la imagen al 200 % con bandas por los cuatro lados; en Wayland SDL reescala y se vería como `VPA_SCALE=fullscreen` pasando por una escala intermedia que no es la óptima. Decisión de Pablo |
 | D-28 | 2026-09-20 | La consola SDL3 fija el color de dibujo del renderer a **negro opaco** nada más crearlo | En SDL 3.4 las bandas del letterbox no se pintan aparte: son lo que deja `SDL_RenderClear`, que borra con el color de dibujo, y un renderer nace con (0,0,0,0) porque su estructura sale de `calloc`. Con un búfer de ventana con alfa el compositor mezcla y por las bandas se ve lo de detrás. sway lo tapaba (respeta la región opaca que SDL declara y, a pantalla completa, pinta negro debajo), KWin no. Las pruebas de la sesión anterior miraban el ratón en las bandas, no sus píxeles; ahora también los píxeles |
+| D-29 | 2026-09-20 | La ventana SDL tiene la relación de aspecto **fijada a 4:3** (`SDL_SetWindowAspectRatio`). Decisión de Pablo: la ventana debe verse como en X11, sin bandas | En Wayland el tamaño final lo decide el cliente salvo en maximizada y pantalla completa, y SDL ya aplica la corrección en cada `configure` respetando esa regla (solo encoge; no toca maximizada ni pantalla completa, donde el protocolo exige el tamaño exacto y siguen las bandas negras). Hacerlo a mano con `SDL_SetWindowSize` al recibir `WINDOW_RESIZED` pelearía con el compositor durante un redimensionado interactivo. Efecto en las pruebas: en sway ya no hay bandas en ventana (en mosaico SDL también recorta), así que las pruebas de ratón en las bandas pasan a la sección de pantalla completa y la de píxeles de D-28 se retira (ver T10.2) |
 
 ---
 
