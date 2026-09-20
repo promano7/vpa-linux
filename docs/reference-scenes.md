@@ -118,7 +118,7 @@ colaboradores son partidas reales, no comparaciones de píxeles.
 La consecuencia práctica: **la copia local es la única que hay**. Conviene
 guardarla fuera del árbol de trabajo, porque un `git clean -xfd` se la lleva
 por delante sin preguntar. Si aun así se pierde, no es una catástrofe: se
-prepara una partida nueva siguiendo 2.3, se vuelven a capturar las veinte
+prepara una partida nueva siguiendo 2.3, se vuelven a capturar todas las
 escenas y ese juego pasa a ser la referencia, con el procedimiento de
 regeneración de T11.5. Lo que se pierde es la continuidad con lo capturado
 antes, no la capacidad de seguir trabajando.
@@ -194,6 +194,7 @@ escena, para que al fallar una comparación se sepa por dónde empezar a mirar.
 | E18 | Ficha de campo de minas | `1` | Objeto 1 del mismo punto que el planeta actual: campo de minas 7, centrado en Carillon. Panel con la tabla de equivalencias y probabilidades |
 | E19 | Leyenda del mapa | `F1` `space` `l` | Página 2 del sistema de ayuda (solo se llega desde la ayuda general): muestrario de todos los símbolos y colores del mapa |
 | E20 | Créditos | `F1` `space` `c` | Página 1 del sistema de ayuda: texto centrado en varios colores y los adornos de línea |
+| E21 | Simulador de combate con nave y planeta | `F5` `Right` `space` `Left` `Return` `Return` | `PutImage` de las imágenes de casco que el simulador construye a mano a partir de `RESOURCE.PLN` (`LoadPicture` en `VPA/VCS.PAS`, los mismos buffers que usa el visor de `VPA/TCOMBAT.PAS`), una nave a la izquierda y un planeta con base a la derecha. Añadida en T11.4 |
 
 ### 3.1 Notas por escena
 
@@ -244,6 +245,13 @@ escena, para que al fallar una comparación se sepa por dónde empezar a mirar.
   porque la goma elástica termina en el puntero. Es la única escena con el
   puntero en otro sitio, y por eso su línea de coordenadas del panel derecho
   será distinta de las demás: es correcto.
+- **E21.** Completa a E11, que se queda en el formulario vacío. `Right` pasa
+  al lado derecho y `space` acepta ahí el planeta actual (Carillon, con base:
+  `AcceptPln`); `Left` vuelve al izquierdo, donde `Return` sobre un lado sin
+  nave abre la lista de cascos (`ModShip`) y el segundo `Return` acepta el
+  primero, el ALDERAAN DESTROYER. No se pulsa `s`: el combate no es dorable
+  (3.2). Las dos imágenes salen de `RESOURCE.PLN`, así que con uno ficticio
+  esta escena difiere, igual que E14 y E16.
 - **E18.** `1` es «select another object at the same spot»: en Carillon el
   objeto 1 es el campo de minas 7, con centro en el propio planeta, así que el
   puntero aparcado sigue sobre él y el panel no se suelta.
@@ -255,6 +263,21 @@ escena, para que al fallar una comparación se sepa por dónde empezar a mirar.
   píxel y no entra en `TESTS/golden/`. Se comprueba de otra manera: en T6.14 y
   en la Fase 9, que aparece al vencer `ScreenSaverTime` y que cualquier tecla
   lo quita sin dejar restos.
+- **Visor de combate animado** (`s` en el simulador, o un combate de
+  `VCR9.DAT`). Descartado en T11.4 tras mirarlo: no es reproducible. VPA llama
+  a `Randomize` al arrancar (`VPA/VPADATA.PAS`) y de ahí salen la semilla del
+  combate simulado (`RR:=Random(118)+1` en `VPA/VCS.PAS`), la imagen del
+  planeta (`d.plnpic:=Random(49)+1`), la textura del disco del planeta y el
+  rayo que dispara (`VPA/TCOMBAT.PAS`); además es una animación con `Delay`, y
+  el volcado pillaría el fotograma que tocase. Fijarlo pediría un gancho de
+  semilla dentro de VPA solo para las pruebas, que es justo el segundo camino
+  de código que prohíbe la regla 2 de `WAYLAND.md`. Lo que el visor le pide al
+  backend sí está cubierto: sus imágenes de casco, por E21 (el formulario las
+  pinta con los mismos buffers y el mismo `PutImage`), y `PutImage` con
+  `NormalPut`, `XORPut` y `OrPut`, recortado y fuera de pantalla, por la
+  escena 4 de `TESTS/x11/scene_test.lpr`, que `make wayland-test` compara byte
+  a byte entre los dos backends. La partida de referencia, además, no trae
+  combates (`VCR9.DAT` vacío).
 - **Diálogos que piden entrada** (`F7` buscar planeta, `Alt-C` calculadora,
   `N` renombrar): dependen de lo que se teclee y no aportan primitivas que no
   cubran E04–E15. Si en la Fase 11 aparece un fallo en uno de ellos, se añade
@@ -296,6 +319,12 @@ es:
 python3 TESTS/compare.py TESTS/golden /tmp/cur
 ```
 
+Desde la Fase 11 eso mismo, para los dos backends y con informe, es
+`make visual-test` (`TESTS/visual/run.sh`): captura el catálogo con el plugin
+X11 y con el Wayland, compara cada captura con las doradas con umbral cero y
+deja `build/visual/informe.md`. Cuándo y cómo se regeneran las doradas está en
+`TESTS/golden/README.md`.
+
 ---
 
 ## 5. Estado de validación
@@ -327,6 +356,7 @@ produce lo que dice la tabla, se marca aquí:
 | E18 | ✔ | La secuencia original (`Return`) no hacía nada: captura idéntica a E01. Ahora campo de minas 7 |
 | E19 | ✔ | La secuencia original (`l`) no hacía nada: captura idéntica a E01. Ahora vía ayuda general |
 | E20 | ✔ | La secuencia original (`F1 c`) se quedaba en la ayuda de planeta: captura idéntica a E04. Ahora vía ayuda general |
+| E21 | ✔ | Añadida el 2026-09-20 (T11.4): ALDERAAN DESTROYER contra Carillon; tres pasadas idénticas (dos en X11, una en Wayland) antes de dorarla |
 
 Validación hecha el 2026-09-13 mirando una a una las 20 capturas de la máquina
 de desarrollo (secuencias originales) y, para las seis corregidas, las del
