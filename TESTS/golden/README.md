@@ -63,6 +63,9 @@ de la misma rama:
   en la máquina de desarrollo contra estas doradas da **20 de 20 idénticas, 0
   fallos**. Es decir, una diferencia frente a las doradas es del backend, no
   del entorno, y la comparación se puede correr en cualquiera de las dos.
+- **E21**, dorada en el contenedor el 2026-09-20, también: ese mismo día una
+  pasada completa de `TESTS/visual/run.sh` en la máquina de desarrollo
+  (`VPA_VISUAL_BACKENDS=x11`, allí no hay Wayland) da **21 de 21 idénticas**.
 - Con un `RESOURCE.PLN` ficticio (basta para que VPA arranque), **E14 y E16**
   difieren solo en las imágenes de casco: cajas (28,54)-(74,401) y
   (38,22)-(64,69). Es esperable, no un fallo del backend. E21 (2026-09-20)

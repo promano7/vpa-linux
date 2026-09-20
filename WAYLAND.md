@@ -1869,7 +1869,11 @@ capturadas en X11 con la partida y el `RESOURCE.PLN` de Pablo dan los hashes de
 `SHA256SUMS` del 2026-09-13, o sea que las doradas locales son las de entonces.
 `TESTS/visual/run.sh` y, aparte, `make visual-test` completo: las dos pasadas
 dan **42 de 42 idénticas** (21 escenas, X11 y Wayland); unos 3 minutos y medio
-por pasada.
+por pasada. Después, `make wayland-test` entero pasa con el `Makefile` nuevo.
+
+**Verificado por Pablo (2026-09-20, `pc-arch`, solo X11):** `sha256sum -c` de
+las doradas sin quejas y `VPA_VISUAL_BACKENDS=x11 TESTS/visual/run.sh` con
+**21 de 21 idénticas**: E21, dorada en el contenedor, sale igual en Arch.
 
 ---
 
