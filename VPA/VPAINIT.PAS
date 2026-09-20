@@ -129,8 +129,9 @@ procedure Parameters;
   { Ayuda propia de VPA-Linux (T4.5 de WAYLAND.md): todo lo que dice /? mas las
     variables de entorno, que hasta ahora no estaban documentadas en ningun
     sitio del programa. /? se conserva tal cual porque es lo que el usuario
-    conoce, y solo remite aqui. VPA_FULLSCREEN y VPA_VIDEO no se listan: hoy no
-    las lee nadie (entran con T10.4). }
+    conoce, y solo remite aqui. VPA_FULLSCREEN y VPA_VIDEO no se listan porque
+    no existen: la unica via de pantalla completa es VPA_SCALE=fullscreen
+    (WAYLAND.md, D-27). }
   procedure WriteLinuxHelp;
   begin
     Writeln('Use: VPA race [dir] [/B] [/K] [/M] [/O] [/P] [/PW:pwd] [/R] [/S] [/REP:frm,rep]');

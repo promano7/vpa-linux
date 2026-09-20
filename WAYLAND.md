@@ -69,7 +69,7 @@ más fácil es saltárselas:
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☑ cerrada (2026-09-19) — **vía B** |
 | 8 | Motor de dibujo Wayland (vía B) | ☑ cerrada (2026-09-20): 0 diferencias (`make wayland-test`), doradas 20/20 |
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☑ cerrada (2026-09-20): T9.1–T9.8 hechas y probadas (`make wayland-input-test` y pruebas manuales de Pablo en KWin 6.7.5); el teclado numérico sin BloqNum resultó ser el ratón absoluto de la VM (R12), no VPA |
-| 10 | Escalado, HiDPI y pantalla completa | ◐ en curso: T10.1–T10.3, T10.5 y T10.6 hechas en el contenedor (D-25, D-26); T10.4 a falta de decidir `VPA_FULLSCREEN`/`VPA_VIDEO`; T10.7 y las pruebas manuales, de Pablo |
+| 10 | Escalado, HiDPI y pantalla completa | ◐ en curso: T10.1–T10.6 hechas en el contenedor (D-25, D-26, D-27); faltan las pruebas manuales de Pablo en KWin (T10.4, T10.5) y T10.7 |
 | 11 | Comparación visual automatizada | ☐ |
 | 12 | Empaquetado, documentación y release | ☐ |
 
@@ -1040,6 +1040,7 @@ ahí.
       `--help`. **`VPA_FULLSCREEN` y `VPA_VIDEO` quedan fuera**: hoy no las
       lee nadie (`xfocus.FullscreenRequested` no tiene llamadores) y
       documentarlas sería prometer algo que no ocurre hasta T10.4 (D-16).
+      *2026-09-20: retiradas del todo (D-27).*
       Documentado en `HOWTO.es.md` y `HOWTO.en.md` (§2).
 - [x] **T4.6** — Pruebas: los seis casos de la matriz
       (`auto`/`x11`/`wayland`) × (sesión X11 / sesión Wayland). — `af7bad7`
@@ -1713,19 +1714,19 @@ teclado y ratón, sin diferencias perceptibles respecto a X11.
       vuelta). Probado en `wayland-input-test`: escala ×2, escala no entera
       (ida y vuelta de los 639 píxeles), letterbox lateral ((1000,450) →
       (480,360)), pantalla completa 16:9 y salida a ×2.*
-- [ ] **T10.4** — Pantalla completa: `VPA_FULLSCREEN`, `VPA_VIDEO=fullscreen` y
+- [ ] **T10.4** — Pantalla completa: ~~`VPA_FULLSCREEN`, `VPA_VIDEO=fullscreen` y~~
       `VPA_SCALE=fullscreen`, con las tres rutas que hoy llaman a
       `RequestFullscreen`/`ReleaseFullscreen`.
-      *Parcial. `VPA_SCALE=fullscreen` funciona: el núcleo pone
+      *`VPA_FULLSCREEN` y `VPA_VIDEO` retiradas de la tarea (D-27).
+      Hecho en el contenedor, falta la prueba manual en KWin.
+      `VPA_SCALE=fullscreen` funciona: el núcleo pone
       `Params.Fullscreen`, el plugin lo pide a la consola con `Option` (D-22) y
       lo rehace en cada `Resume` («Edit file»); con T10.1 la consola ya nace
       con el mayor 4:3 que cabe y no al 800 %. Probado en
       `wayland-input-test`: `SetFullscreen` en una salida de 1920×1080, centro
-      y esquina exactos, nada desde las bandas, y vuelta a ventana.
-      **Pendiente de decidir con Pablo:** `VPA_FULLSCREEN` y `VPA_VIDEO` siguen
-      sin que nadie las lea en ningún backend (D-16); o se implementan en el
-      núcleo (valdrían también para X11) o se retiran de esta tarea. Falta la
-      prueba manual en KWin.*
+      y esquina exactos, nada desde las bandas, y vuelta a ventana. Las «tres
+      rutas» son hoy `Params.Fullscreen` en `Init`, la reaplicación en
+      `Resume` y `SetFullscreen` de la ABI.*
 - [x] **T10.5** — HiDPI: comprobar el comportamiento con factor de escala del
       compositor ≠ 1. Es el caso en el que Wayland difiere más de X11 y donde es
       más probable que el ratón se descuadre.
@@ -1981,6 +1982,7 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-24 | 2026-09-20 | La consola SDL3 **publica** su estado de entrada vivo (modificadores, puntero dentro de la ventana) en una palabra de 32 bits que escribe solo su hilo tras cada `PumpEvents`; el plugin la lee con `ptc.PTCSDLInputState` | Matiza D-22: lo que *toca* la ventana sigue yendo por `Option`, pero una *consulta* por `Option` cuesta una vuelta del bucle de `ptcwrapper` (`Sleep(10)`), y el adaptador pregunta los modificadores en cada evento de ratón y el `Inside` en cada `GetMouseState`. Leer una palabra no llama a SDL (R11) ni necesita cerrojo. `ptcwrapper` sigue sin tocar |
 | D-25 | 2026-09-20 | El plugin Wayland **sí** contesta `GetScreenSize` antes de `Init` (corrige la última frase de D-22): `ptc.PTCSDLScreenSize` pregunta a SDL la pantalla **primaria**, en **unidades lógicas**, desde un **hilo auxiliar** que inicia el vídeo de SDL, pregunta y lo cierra; con la consola abierta devuelve el valor que ella publicó al abrir (una palabra de 32 bits, como D-24) | D-22 daba por hecho que un cliente Wayland no sabe el tamaño de la pantalla sin ventana, y no es así: los `wl_output` se anuncian al conectar y SDL los tiene al volver de `SDL_InitSubSystem`. El hilo auxiliar mantiene R11 al pie de la letra (SDL nunca corre en el hilo de VPA ni le toca la máscara de coma flotante) y no deja rastro: SDL define el «hilo de vídeo» como el que inicia el subsistema y lo redefine en cada inicio (`SDL.c`), así que el `Open` posterior en el hilo de la consola empieza limpio. Unidades lógicas porque son las de los tamaños de ventana: con el compositor a ×2, una pantalla de 2560×1440 mide 1280×720 y la escala se recorta al 150 % (lo que pase con la nitidez es de T10.5). La primaria, porque Wayland no deja saber en qué pantalla caerá la ventana. Si no hay compositor devuelve `VPAG_ERR_UNSUPPORTED`, el núcleo no recorta y el error de verdad lo da `Init` |
 | D-26 | 2026-09-20 | La ventana SDL se crea con `SDL_WINDOW_HIGH_PIXEL_DENSITY` | Con factor de escala del compositor ≠ 1, sin la bandera SDL dibuja a resolución lógica y amplía el compositor con su filtro (suavizado en KWin): VPA borroso y detalles de 1 px perdidos (medido). Con ella el renderer trabaja en píxeles físicos y la única ampliación es la nuestra, vecino más próximo. Tamaños de ventana, ratón y `GetScreenSize` (D-25) siguen en unidades lógicas, que es la convención de Wayland: `VPA_SCALE=2` ocupa lo mismo en pantalla que cualquier otra aplicación a esa escala |
+| D-27 | 2026-09-20 | `VPA_FULLSCREEN` y `VPA_VIDEO` se **retiran**: la única vía de pantalla completa es `VPA_SCALE=fullscreen` (`full`, `max`). Cierra D-16 | Eran un resto del primer intento de pantalla completa: `bc2c09c` (2026-06-23) añadió `VPA_FULLSCREEN` con un enganche en `VPAINIT.PAS` y `fd515ff`, el mismo día, quitó el enganche; `xfocus.FullscreenRequested` siguió compilando sin llamadores hasta que `xfocus` salió del ejecutable en la Fase 6 (`8aecb96`). Hoy no queda código que las lea. Lo único que aportarían es separar «pantalla completa» de «escala» (`VPA_SCALE=2 VPA_FULLSCREEN=1`), y eso es peor o igual: en X11 la consola de ptc no reescala, así que saldría la imagen al 200 % con bandas por los cuatro lados; en Wayland SDL reescala y se vería como `VPA_SCALE=fullscreen` pasando por una escala intermedia que no es la óptima. Decisión de Pablo |
 
 ---
 
