@@ -53,6 +53,25 @@ WLOBJ     = $(PLUGDIR)/wayland
 SDL3SRC   = VENDOR/sdl3
 SDL3LIB   = $(if $(SDL3_LIBDIR),-Fl$(SDL3_LIBDIR))
 WLPTCFLAGS = -O2 -dPTC_SDL3 -Fi$(PTCSRC) -Fi$(PTCSRC)/core -Fi$(PTCSRC)/sdl -Fu$(PTCSRC) -Fu$(SDL3SRC) -Fi$(SDL3SRC)
+# SDL3 shipped inside the package (WAYLAND.md, T12.3b, D-30): 'make sdl3' builds
+# this EXACT release from the official tarball (checked against its SHA256) into
+# build/sdl3/, and 'make data' links the Wayland plugin against it and copies
+# libSDL3.so.0 next to the plugin. Every package, x86-64 or aarch64, carries the
+# same SDL3. Only what VPA uses is built (Wayland video, events, render): X11,
+# KMS/DRM, audio, camera, joystick, haptic, sensor and hidapi are left out.
+# 'make clean' does NOT remove build/sdl3/ (the download and ~2 minutes of
+# compiling): rm -rf build/sdl3.
+SDL3VER    = 3.4.16
+SDL3SHA256 = 7322236cd12090c3eb40b9728be4d49c76f66ad17d04369584d4ecad5cf77c68
+SDL3URL    = https://github.com/libsdl-org/SDL/releases/download/release-$(SDL3VER)/SDL3-$(SDL3VER).tar.gz
+SDL3DIR    = build/sdl3
+SDL3TAR    = $(SDL3DIR)/SDL3-$(SDL3VER).tar.gz
+SDL3PREFIX = $(SDL3DIR)/prefix
+SDL3SO     = $(SDL3PREFIX)/lib/libSDL3.so.0
+SDL3CFG    = $(SDL3DIR)/build/include-config-release/build_config/SDL_build_config.h
+# The plugin looks for libSDL3.so.0 in ITS OWN directory first and in the system
+# afterwards (DT_RUNPATH = $ORIGIN). With no copy next to it, the system's is used.
+WLRUNPATH  = -k--enable-new-dtags -k-rpath -k'$$ORIGIN'
 WLTESTS   = build/wayland
 WESTON    = TESTS/wayland/con-weston.sh
 SWAY      = TESTS/wayland/con-sway.sh
@@ -69,7 +88,7 @@ FPCCORE   = $(FPC) -Mtp -Ci- -Cr- -Co- -Ct- -vwn
 
 .PHONY: all build clean run help hlp data ptc debug heaptrc abi-plugins loader-test detect-test \
         plugin-units x11-plugin wayland-units wayland-plugin wayland-test wayland-input-test plugins threads-test nodisplay-test window-test input-test scene-test deps-test \
-        graphapi-test initgraph-test coreinput-test direct-units visual-test
+        graphapi-test initgraph-test coreinput-test direct-units visual-test sdl3
 
 # 'data' runs 'build' and 'hlp', and both drive fpc over the same build/
 # directory: never run them concurrently, even with 'make -jN'.
@@ -172,7 +191,7 @@ $(WLUNITS)/ptcgraph.ppu: VENDOR/ptcgraph.pp $(wildcard VENDOR/*.inc) $(PTCSRC)/p
 ##                  build/plugins/libvpagraph-wayland.so (needs libSDL3)
 wayland-plugin: wayland-units
 	@mkdir -p $(WLOBJ)
-	$(FPC) @$(PLUGCFG) -dVPAG_WAYLAND -FuBACKENDS/X11 -Fu$(WLUNITS) -FU$(WLOBJ) $(SDL3LIB) -o$(WLPLUGIN) BACKENDS/WAYLAND/vpagraph_wayland.lpr
+	$(FPC) @$(PLUGCFG) -dVPAG_WAYLAND -FuBACKENDS/X11 -Fu$(WLUNITS) -FU$(WLOBJ) $(SDL3LIB) $(WLRUNPATH) -o$(WLPLUGIN) BACKENDS/WAYLAND/vpagraph_wayland.lpr
 	@echo ">> Done: $(WLPLUGIN)"
 
 ## wayland-test : the Phase 8 acceptance tests of the Wayland plugin, under a
@@ -511,25 +530,63 @@ hlp:
 	@echo ">> Generated build/VPA.HLP and build/VPA_RUS.HLP — copy them to your game folder:"
 	@echo "   cp build/VPA.HLP build/VPA_RUS.HLP ~/PLANETS/"
 
-## data : build the VPA binary AND both help files, and assemble the
-##        ready-to-ship package in build/vpa-linux_package/ : the freshly
-##        compiled VPA, its plugins/ folder (the graphics backends: VPA does
-##        not start without it), VPA.HLP and VPA_RUS.HLP, the EXAMPLES/ folder, and
-##        DISTTABL.DAT, HOWTO.en.md, HOWTO.es.md, LICENSE.md, LITT_VPA.CHR,
-##        MPL-2.0.txt and VPA.MSG.
-data: build hlp
+## sdl3 : download the official SDL $(SDL3VER) tarball, check its SHA256 and build
+##        the libSDL3.so.0 that 'make data' ships inside the package, into
+##        build/sdl3/prefix/ (needs curl, cmake, a C compiler and the Wayland,
+##        xkbcommon, EGL and libdecor headers; see BUILD). Done once: 'make clean'
+##        keeps build/sdl3/.
+sdl3: $(SDL3SO)
+$(SDL3TAR):
+	@mkdir -p $(SDL3DIR)
+	curl -fL --retry 3 -o $@.part $(SDL3URL)
+	@echo "$(SDL3SHA256)  $@.part" | sha256sum -c - || { echo ">> SHA256 mismatch: $@.part is NOT the official SDL $(SDL3VER) tarball."; rm -f $@.part; exit 1; }
+	@mv -f $@.part $@
+$(SDL3SO): $(SDL3TAR)
+	@echo "$(SDL3SHA256)  $(SDL3TAR)" | sha256sum -c -
+	@rm -rf $(SDL3DIR)/SDL3-$(SDL3VER) $(SDL3DIR)/build $(SDL3PREFIX)
+	tar -xzf $(SDL3TAR) -C $(SDL3DIR)
+	cmake -S $(SDL3DIR)/SDL3-$(SDL3VER) -B $(SDL3DIR)/build \
+	      -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$(CURDIR)/$(SDL3PREFIX) \
+	      -DCMAKE_INSTALL_LIBDIR=lib \
+	      -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF \
+	      -DSDL_EXAMPLES=OFF -DSDL_INSTALL_DOCS=OFF \
+	      -DSDL_WAYLAND=ON -DSDL_WAYLAND_SHARED=ON -DSDL_WAYLAND_LIBDECOR=ON \
+	      -DSDL_X11=OFF -DSDL_KMSDRM=OFF \
+	      -DSDL_AUDIO=OFF -DSDL_CAMERA=OFF -DSDL_JOYSTICK=OFF -DSDL_HAPTIC=OFF \
+	      -DSDL_SENSOR=OFF -DSDL_HIDAPI=OFF
+	@grep -q '^#define SDL_VIDEO_DRIVER_WAYLAND 1' $(SDL3CFG) || { echo ">> SDL3 was configured WITHOUT Wayland: install the Wayland, xkbcommon and EGL development packages (see BUILD) and run 'make sdl3' again."; exit 1; }
+	@grep -q '^#define HAVE_LIBDECOR_H 1' $(SDL3CFG) || { echo ">> SDL3 was configured WITHOUT libdecor: on GNOME the window would have no title bar. Install the libdecor development package (see BUILD) and run 'make sdl3' again."; exit 1; }
+	cmake --build $(SDL3DIR)/build --parallel
+	cmake --install $(SDL3DIR)/build
+	@test -f $(SDL3SO)
+	@echo ">> Done: $(SDL3SO) (SDL $(SDL3VER))"
+
+## data : build the VPA binary, BOTH graphics plugins, the bundled SDL3 and both
+##        help files, and assemble the ready-to-ship package in
+##        build/vpa-linux_package/ : the freshly compiled VPA, its plugins/
+##        folder (libvpagraph-x11.so, libvpagraph-wayland.so and the
+##        libSDL3.so.0 of 'make sdl3', which the Wayland plugin finds through
+##        its $$ORIGIN runpath before the system's), VPA.HLP and VPA_RUS.HLP,
+##        the EXAMPLES/ folder, and DISTTABL.DAT, HOWTO.en.md, HOWTO.es.md,
+##        LICENSE.md, LICENSE.SDL3.txt, LITT_VPA.CHR, MPL-2.0.txt and VPA.MSG.
+##        The same on every architecture (x86-64, aarch64).
+data: build hlp sdl3
+	@$(MAKE) --no-print-directory wayland-plugin SDL3_LIBDIR=$(SDL3PREFIX)/lib
 	@cp -f LITT_VPA.CHR build/ 2>/dev/null || true
 	@rm -rf $(PKGDIR)
 	@mkdir -p $(PKGDIR)
 	@cp -f $(BIN) $(PKGDIR)/
 	@mkdir -p $(PKGDIR)/plugins
-	@cp -f $(PLUGDIR)/libvpagraph-*.so $(PKGDIR)/plugins/
+	@cp -f $(X11PLUGIN) $(WLPLUGIN) $(PKGDIR)/plugins/
+	@cp -fL $(SDL3SO) $(PKGDIR)/plugins/libSDL3.so.0
+	@strip --strip-unneeded $(PKGDIR)/plugins/libSDL3.so.0
+	@cp -f $(SDL3DIR)/SDL3-$(SDL3VER)/LICENSE.txt $(PKGDIR)/LICENSE.SDL3.txt
 	@cp -f build/VPA.HLP build/VPA_RUS.HLP $(PKGDIR)/
 	@cp -a EXAMPLES $(PKGDIR)/
 	@cp -f $(PKGFILES) $(PKGDIR)/
 	@echo ""
 	@echo ">> Package ready in $(PKGDIR)/ :"
-	@echo "   VPA  plugins/  VPA.HLP  VPA_RUS.HLP  EXAMPLES/  $(PKGFILES)"
+	@echo "   VPA  plugins/ (x11, wayland, SDL $(SDL3VER))  VPA.HLP  VPA_RUS.HLP  EXAMPLES/  $(PKGFILES) LICENSE.SDL3.txt"
 	@echo ">> Copy its contents to your game folder, e.g.:  cp -a $(PKGDIR)/. ~/PLANETS/"
 
 ## help : list the targets
