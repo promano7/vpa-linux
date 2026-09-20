@@ -69,7 +69,7 @@ más fácil es saltárselas:
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☑ cerrada (2026-09-19) — **vía B** |
 | 8 | Motor de dibujo Wayland (vía B) | ☑ cerrada (2026-09-20): 0 diferencias (`make wayland-test`), doradas 20/20 |
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☑ cerrada (2026-09-20): T9.1–T9.8 hechas y probadas (`make wayland-input-test` y pruebas manuales de Pablo en KWin 6.7.5); el teclado numérico sin BloqNum resultó ser el ratón absoluto de la VM (R12), no VPA |
-| 10 | Escalado, HiDPI y pantalla completa | ◐ hecha: probada por Pablo en KWin (VM Slackware) a 800×600, 1920×1080 y 2048×1152, con KDE al 100 %, 150 % y 200 % (D-25 a D-29). Para cerrarla falta que Pablo confirme en KWin los dos últimos arreglos: el scroll en la banda derecha (T10.2) y la ventana 4:3 (T10.8) |
+| 10 | Escalado, HiDPI y pantalla completa | ✅ cerrada (2026-09-20): probada por Pablo en KWin (VM Slackware) a 800×600, 1920×1080 y 2048×1152, con KDE al 100 %, 150 % y 200 % (D-25 a D-29) |
 | 11 | Comparación visual automatizada | ☐ |
 | 12 | Empaquetado, documentación y release | ☐ |
 
@@ -1725,7 +1725,9 @@ teclado y ratón, sin diferencias perceptibles respecto a X11.
       una banda el puntero está **fuera** (`FInBand`), como al salir por el
       borde de la ventana en X11. Probado en `wayland-input-test` a pantalla
       completa (falla sin el arreglo). El scroll con el puntero parado en el
-      panel derecho es de VPA (código de DOS, común a X11) y no se toca.*
+      panel derecho es de VPA (código de DOS, común a X11) y no se toca.
+      **Confirmado por Pablo en KWin:** el mapa se para al entrar en
+      cualquiera de las dos bandas.*
 - [x] **T10.3** — Transformación de coordenadas del ratón de ventana física a
       superficie lógica (equivalentes de `MapMouseToSurface` y
       `MapSurfaceToWindow`), delegando en la conversión que ofrece SDL3 en lugar
@@ -1782,6 +1784,8 @@ teclado y ratón, sin diferencias perceptibles respecto a X11.
       de desarrollo solo tiene X11, y a VPA le da igual de quién sea la
       pantalla): 2048×1152, la mayor que ofrecía la VM, y 800×600, donde
       `VPA_SCALE=2` se recorta. En las dos los clics caen en su sitio.
+      Los logs dan lo calculado: 240 % en 2048×1152 (1152/480) y 125 % en
+      800×600, tanto con `fullscreen` como con `VPA_SCALE=2` recortado.
       2560×1440 exactos quedan sin ver; no hay nada en el camino que dependa
       de esa cifra.*
 - [x] **T10.8** — (añadida) La ventana flotante es siempre 4:3 (D-29). Pablo
@@ -1791,9 +1795,23 @@ teclado y ratón, sin diferencias perceptibles respecto a X11.
       (1440×1004). Con `SDL_SetWindowAspectRatio` SDL recorta el lado que
       sobra. Probado en `wayland-input-test`: a una ventana flotante se le
       conceden 1600×600 y se queda en 800×600, ratón exacto.
+      **Confirmado por Pablo en KWin** (1920×1080, `VPA_SCALE=9`): la ventana
+      sale sin franjas, mantiene 4:3 al estirar de un borde o de una esquina
+      (lo que sway no dejaba probar), maximizada tiene bandas negras y al
+      restaurar vuelve a 4:3.
+      *Nota para quien lea un log con `VPA_GRAPH_DEBUG=1` en una VM sin 3D:
+      los avisos `VMware: No 3D enabled` y `MESA-EGL: failed to create dri2
+      screen` son de Mesa, que escribe en `stderr` al cargarse la biblioteca
+      (por eso parten la línea `trying ...`). SDL dibuja entonces por
+      software; no es un fallo.*
 
 **Criterio de aceptación:** sin distorsión, ratón exacto en todas las escalas,
 y comportamiento estable con HiDPI.
+*Cumplido (2026-09-20). Sin distorsión: 4:3 siempre, en ventana por D-29 y
+con bandas negras opacas en maximizada y pantalla completa (D-28). Ratón
+exacto del 112 % al 240 %, en `wayland-input-test` y a mano en KWin. HiDPI:
+KDE al 150 % y 200 %, nítido y sin descuadre (D-26). Queda sin ver una
+pantalla de 2560×1440 exactos (T10.7).*
 
 ---
 
