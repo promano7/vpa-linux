@@ -189,6 +189,12 @@ begin
     flags := flags or SDL_WINDOW_FULLSCREEN;
   FWindow := SDL_CreateWindow(PAnsiChar(ATitle), AWidth, AHeight, flags);
   if FWindow = nil then Fail('SDL_CreateWindow');
+  { La ventana flotante es siempre 4:3, como la de X11. Cuando el compositor
+    concede otra forma (KWin encoge lo que no cabe entre la barra de titulo y
+    el panel; el usuario estira de un borde), SDL recorta el lado que sobra
+    en vez de dejar bandas. No afecta a la ventana maximizada ni a la
+    pantalla completa, cuyo tamano manda el protocolo: ahi siguen las bandas. }
+  SDL_SetWindowAspectRatio(FWindow, AWidth / AHeight, AWidth / AHeight);
   FRenderer := SDL_CreateRenderer(FWindow, nil);
   if FRenderer = nil then Fail('SDL_CreateRenderer');
   { Las bandas del letterbox son lo que deja SDL_RenderClear, y el color de
