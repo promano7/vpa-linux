@@ -177,7 +177,14 @@ begin
     raise TPTCError.Create('SDL_Init(video, wayland): ' + SDL_GetError);
   FOpen := True;
   SDLScreenSize := SDLPrimaryDisplaySize;
-  flags := SDL_WINDOW_RESIZABLE;
+  { HiDPI (Fase 10, T10.5): sin esta bandera SDL dibuja a la resolucion
+    LOGICA de la ventana y es el compositor quien amplia, con su filtro (en
+    KWin, suavizado): con la salida a x2 VPA se veria borroso y los detalles
+    de 1 px se perderian (medido en input_test). Con ella el renderer trabaja
+    en pixeles fisicos y la ampliacion es la nuestra, vecino mas proximo. El
+    raton no cambia: SDL_ConvertEventToRenderCoordinates y
+    SDL_RenderCoordinatesToWindow ya cuentan con la densidad. }
+  flags := SDL_WINDOW_RESIZABLE or SDL_WINDOW_HIGH_PIXEL_DENSITY;
   if FFullscreen then
     flags := flags or SDL_WINDOW_FULLSCREEN;
   FWindow := SDL_CreateWindow(PAnsiChar(ATitle), AWidth, AHeight, flags);

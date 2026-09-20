@@ -229,11 +229,13 @@ wayland-test: wayland-plugin scene-test threads-test nodisplay-test graphapi-tes
 	@$(MAKE) --no-print-directory wayland-input-test
 	@echo ">> wayland-test passed"
 
-## wayland-input-test : Phase 9: the T2.11 keyboard/mouse block of the Wayland
-##                plugin under a headless sway (needs sway, swaymsg, wtype,
-##                python3): real xkb layouts (us, es, ru) through a virtual
-##                keyboard, Ctrl-+/Ctrl-- by character, keypad, live modifiers,
-##                pointer inside/outside, buttons, window close. No leaks.
+## wayland-input-test : Phases 9 and 10: the T2.11 keyboard/mouse block of the
+##                Wayland plugin under a headless sway (needs sway, swaymsg,
+##                wtype, grim, python3): real xkb layouts (us, es, ru) through
+##                a virtual keyboard, Ctrl-+/Ctrl-- by character, keypad, live
+##                modifiers, pointer inside/outside, buttons, window close;
+##                screen size before Init, letterbox bands, fullscreen on a
+##                16:9 output, HiDPI (output scale 2) sharpness. No leaks.
 wayland-input-test: wayland-plugin
 	@mkdir -p $(WLTESTS)/input
 	$(FPC) -MOBJFPC -gl -gh -FiGRAPH -FU$(WLTESTS)/input -o$(WLTESTS)/input_test TESTS/wayland/input_test.lpr

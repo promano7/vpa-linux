@@ -418,6 +418,67 @@ begin
     sway 1.9 del contenedor no entrega los 'cursor set' mientras hay un boton
     pulsado (visto con WAYLAND_DEBUG: el motion no llega hasta soltar). }
 
+  { --- Fase 10, T10.4: pantalla completa en una salida 16:9. La imagen 4:3
+        mide 1440x1080 y queda centrada, con bandas de 240 px. --- }
+  Sh('swaymsg -q output HEADLESS-1 mode 1920x1080');
+  Check(Iface.SetFullscreen(VPAG_TRUE) = VPAG_OK, 'SetFullscreen(1)');
+  SleepMs(800);
+  MoveTo(500, 500);
+  Drain;
+  MoveTo(960, 540);
+  Ok := WaitEvent(VPAG_EVENT_MOUSE_MOVE, Ev) and (Ev.MouseX = 320) and (Ev.MouseY = 240);
+  Check(Ok, 'fullscreen 1920x1080: (960,540) -> (320,240): ' + EvText(Ev));
+  MoveTo(1679, 1079);
+  Ok := WaitEvent(VPAG_EVENT_MOUSE_MOVE, Ev) and (Ev.MouseX = 639) and (Ev.MouseY = 479);
+  Check(Ok, 'fullscreen 1920x1080: (1679,1079) -> (639,479): ' + EvText(Ev));
+  Drain;
+  MoveTo(100, 540);
+  Ok := not WaitEvent(VPAG_EVENT_MOUSE_MOVE, Ev);
+  Check(Ok, 'fullscreen 1920x1080: nothing from the side band: ' + EvText(Ev));
+  Check(Iface.SetFullscreen(VPAG_FALSE) = VPAG_OK, 'SetFullscreen(0)');
+  SleepMs(800);
+  Sh('swaymsg -q output HEADLESS-1 mode 1600x1200');
+
+  { --- Fase 10, T10.5: HiDPI. Salida a x2 y ventana de 640x480 logicos, o
+        sea 1280x960 fisicos, que es justo la consola al 200 %: cada pixel de
+        VPA son 2x2 fisicos exactos. Rayas verticales de dos colores y una
+        captura del compositor: no puede haber colores intermedios. --- }
+  Sh('swaymsg -q resize set 640 480');
+  Sh('swaymsg -q move absolute position 0 0');
+  Sh('swaymsg -q output HEADLESS-1 scale 2');
+  Iface.SetColor(15);
+  I := 0;
+  while I < 100 do
+  begin
+    Iface.Line(I, 0, I, 99);
+    Inc(I, 2);
+  end;
+  SleepMs(800);
+  MoveTo(10, 10);
+  Drain;
+  MoveTo(320, 240);
+  Ok := WaitEvent(VPAG_EVENT_MOUSE_MOVE, Ev) and (Ev.MouseX = 320) and (Ev.MouseY = 240);
+  Check(Ok, 'HiDPI x2: (320,240) logical -> (320,240) surface: ' + EvText(Ev));
+  MoveTo(639, 479);
+  Ok := WaitEvent(VPAG_EVENT_MOUSE_MOVE, Ev) and (Ev.MouseX = 639) and (Ev.MouseY = 479);
+  Check(Ok, 'HiDPI x2: (639,479) logical -> (639,479) surface: ' + EvText(Ev));
+  Drain;
+  Sh('grim -t ppm /tmp/input_test_hidpi.ppm');
+  Check(fpSystem(ExtractFilePath(VKbd) + 'blur-check.py /tmp/input_test_hidpi.ppm 0 0 400 200') = 0,
+    'HiDPI x2: the image reaches the screen without interpolation (blur-check.py)');
+  { Y con la ventana a 320x240 logicos (640x480 fisicos) cada pixel de VPA
+    es UN pixel fisico: las rayas de 1 px solo sobreviven si SDL dibuja a la
+    resolucion fisica (SDL_WINDOW_HIGH_PIXEL_DENSITY). Si dibujara a la
+    logica y el compositor ampliara, se perderia la mitad de las columnas. }
+  Sh('swaymsg -q resize set 320 240');
+  Sh('swaymsg -q move absolute position 0 0');
+  SleepMs(800);
+  Sh('grim -t ppm /tmp/input_test_hidpi.ppm');
+  Check(fpSystem(ExtractFilePath(VKbd) + 'blur-check.py /tmp/input_test_hidpi.ppm 0 0 100 100 1') = 0,
+    'HiDPI x2: drawn at the physical resolution, 1 px stripes survive (blur-check.py)');
+  DeleteFile('/tmp/input_test_hidpi.ppm');
+  Sh('swaymsg -q output HEADLESS-1 scale 1');
+
   { --- cursor del sistema --- }
   Iface.ShowMouse(VPAG_FALSE);
   Iface.ShowMouse(VPAG_TRUE);
