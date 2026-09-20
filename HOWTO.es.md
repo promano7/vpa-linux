@@ -17,8 +17,11 @@ fiel a Linux del programa original de DOS — mismo aspecto, mismas teclas.
 
 ## 1. Qué necesitas
 
-- Un sistema **Linux x86 de 64 bits** con sesión gráfica (X11 o Wayland).
-- El **binario `VPA`** (incluido en este paquete), más los ficheros de apoyo que
+- Un sistema **Linux de 64 bits** (x86-64, o aarch64 como la Raspberry Pi; cada
+  arquitectura tiene su paquete) con sesión gráfica, **X11 o Wayland**.
+- El **binario `VPA`** (incluido en este paquete) y, **junto a él, la carpeta
+  `plugins/`** con los backends gráficos (ver «Backends gráficos» más abajo):
+  VPA **no arranca** sin ella. Además, los ficheros de apoyo que
   se distribuyen con él: **`DISTTABL.DAT`** (obligatorio — una tabla de
   distancias que VPA necesita para arrancar), **`VPA.HLP`** (obligatorio — el
   fichero de ayuda; VPA **no arranca** sin él), **`VPA.MSG`** (plantillas de
@@ -32,28 +35,84 @@ fiel a Linux del programa original de DOS — mismo aspecto, mismas teclas.
   `PLANETS.EXE`, las `*SPEC.DAT`…), que no se distribuyen con VPA-Linux —
   ver «Ficheros ajenos a VPA-Linux» en §2.
 
+### Backends gráficos: X11 y Wayland
+
+El binario `VPA` no dibuja por sí mismo: al arrancar carga un **plugin gráfico**
+de la carpeta **`plugins/`**, que tiene que estar **junto al binario** (no en el
+directorio de la partida). El paquete trae los dos:
+
+| Fichero de `plugins/` | Para qué |
+|---|---|
+| `libvpagraph-x11.so` | Sesiones **X11**. |
+| `libvpagraph-wayland.so` | Sesiones **Wayland**, de forma **nativa** (sin XWayland). Dibuja con SDL3. |
+| `libSDL3.so.0` | La **SDL3** que usa el plugin Wayland, incluida en el paquete (ver más abajo). |
+
+No hay nada que configurar: VPA mira la sesión en la que se ejecuta y elige el
+backend que corresponde; si ese falla, prueba el otro. Se puede forzar uno con
+`VPA_GRAPH_BACKEND`, y `./VPA --graph-info` cuenta cuál se elige y por qué
+(ver §2). En pantalla los dos backends dibujan exactamente lo mismo.
+
 ### Librerías en tiempo de ejecución
-El binario usa un puñado de librerías X11 estándar que ya están presentes en
-prácticamente cualquier escritorio Linux. Si se queja de algún `lib….so` que
-falta, instálalas:
+El binario `VPA` solo necesita la libc. Las librerías del sistema gráfico las
+usan los plugins, y ya están presentes en prácticamente cualquier escritorio
+Linux. Si `--graph-info` dice que a un plugin le falta algún `lib….so`:
 
-- **Arch:** `sudo pacman -S libx11 libxext libxfixes libxi libxrandr libxxf86vm`
-- **Debian/Ubuntu:** `sudo apt install libx11-6 libxext6 libxfixes3 libxi6 libxrandr2 libxxf86vm1`
-- **Fedora:** `sudo dnf install libX11 libXext libXfixes libXi libXrandr libXxf86vm`
+- **Plugin X11**
+  - **Arch:** `sudo pacman -S libx11 libxext libxfixes libxi libxrandr libxxf86vm`
+  - **Debian/Ubuntu:** `sudo apt install libx11-6 libxext6 libxfixes3 libxi6 libxrandr2 libxxf86vm1`
+  - **Fedora:** `sudo dnf install libX11 libXext libXfixes libXi libXrandr libXxf86vm`
+- **Plugin Wayland** (las librerías cliente de Wayland; las trae cualquier
+  escritorio Wayland)
+  - **Arch:** `sudo pacman -S wayland libxkbcommon libdecor`
+  - **Debian/Ubuntu:** `sudo apt install libwayland-client0 libwayland-cursor0 libwayland-egl1 libxkbcommon0 libdecor-0-0`
+  - **Fedora:** `sudo dnf install libwayland-client libwayland-cursor libwayland-egl libxkbcommon libdecor`
 
-> **Wayland:** funciona a través de **XWayland** (presente en casi todos los
-> escritorios), sin nada que configurar, **con una salvedad conocida**: el
-> puntero del ratón se captura al entrar en la ventana de VPA pero **no se
-> libera** al salir, así que queda atrapado. Como apaño puedes abrir una
-> pantalla que suelte el cursor (F1 o F10), pero si vas a jugar a menudo lo
-> cómodo es **elegir la sesión X11** en la pantalla de inicio de sesión de tu
-> escritorio: es el mismo entorno y ahí funciona correctamente.
->
-> El motivo es que toda la gestión del puntero de VPA-Linux es código X11
-> ejecutándose sobre XWayland, y Wayland no permite deliberadamente que un
-> cliente capture y suelte el puntero como sí hace X11. La solución real —
-> un backend gráfico nativo de Wayland — está prevista pero es un trabajo
-> largo. Ver «Limitaciones conocidas» en el README.
+### La SDL3 incluida, y cómo usar la de tu distribución
+
+El plugin Wayland dibuja con **SDL3**. Para que todo el mundo juegue con la
+misma versión, y porque muchas distribuciones todavía no la traen, el paquete
+incluye su propia copia: **`plugins/libSDL3.so.0`** (SDL 3.4.16, compilada solo
+con lo que VPA usa; su licencia está en `LICENSE.SDL3.txt`). No se instala nada
+en el sistema y ningún otro programa la ve.
+
+El plugin busca SDL3 en este orden:
+
+1. **la copia del paquete**, `plugins/libSDL3.so.0`, junto al propio plugin;
+2. si no está, **la SDL3 del sistema**.
+
+Así que, si prefieres la SDL3 de tu distribución, basta con **borrar la copia**:
+
+```sh
+rm plugins/libSDL3.so.0
+```
+
+Tiene que ser una SDL **3.4.4 o posterior**; con una más vieja el plugin se niega
+a arrancar y dice por qué. Dónde hay SDL3 en los repositorios:
+
+- **Arch:** `sudo pacman -S sdl3`
+- **Fedora** (43 en adelante): `sudo dnf install SDL3`
+- **Debian** testing/unstable y **Ubuntu** 25.10 en adelante: `sudo apt install libsdl3-0`
+- **Slackware-current:** ya viene, en la serie `l/`.
+
+Donde la distribución no la trae (Ubuntu 24.04 LTS y derivadas, Debian 12,
+Raspberry Pi OS sobre bookworm…) se puede compilar a mano con CMake:
+
+```sh
+tar xf SDL3-3.4.16.tar.gz && cd SDL3-3.4.16
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+sudo cmake --install build && sudo ldconfig
+```
+
+Y **si no hay SDL3 por ninguna vía no pasa nada**: el plugin Wayland no carga,
+VPA se queda con el backend X11 (a través de XWayland en una sesión Wayland) y
+funciona como siempre. Nadie se queda sin jugar por esto.
+
+> **XWayland:** si en una sesión Wayland fuerzas `VPA_GRAPH_BACKEND=x11`, o el
+> plugin Wayland no puede cargarse, VPA corre sobre XWayland, con una salvedad
+> conocida: el puntero del ratón se captura al entrar en la ventana de VPA pero
+> **no se libera** al salir (como apaño, F1 o F10 sueltan el cursor). Con el
+> backend Wayland nativo eso no ocurre.
 
 ---
 
@@ -83,7 +142,7 @@ Ejemplo (jugando la raza 3, partida en `~/PLANETS/mipartida`):
 Ejecútalo sin argumentos para ver el banner y confirmar que arranca:
 ```
 $ ./VPA
--= VGA Planets Assistant 3.67.3  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
+-= VGA Planets Assistant 3.67.6  (c) 1993-98 Alex V. Ivlev, 2002-14 VPA Team  (c) 2026 VPA-Linux Pablo Romano =-
 Use: VPA race [dir] ...
 ```
 
@@ -111,14 +170,12 @@ del backend) o, si ninguno vale, **todos los motivos**, uno por cada sitio
 donde se buscó. No abre ninguna ventana. Si la ventana no se abre o se ve mal,
 adjunta su salida al informe. Sale con código 0 si ha elegido backend y 1 si no.
 
-> Mientras el backend X11 siga integrado en el ejecutable (hasta que termine
-> la migración descrita en `WAYLAND.md`), `--graph-info` informará de que no
-> encuentra `libvpagraph-x11.so`: es la respuesta correcta, todavía no existe
-> ningún plugin. Y, como `/?`, necesita una sesión gráfica para arrancar.
+> `--help` y `--graph-info` no abren ninguna ventana ni necesitan sesión gráfica:
+> sirven también por SSH o en una consola.
 
 ### Ficheros de apoyo
 Mantén estos ficheros donde ejecutes VPA — en tu directorio de partida o junto al
-binario:
+binario (la carpeta `plugins/`, en cambio, va **siempre junto al binario**):
 
 - **`DISTTABL.DAT`** — una tabla de distancias precalculada. **Obligatorio:** VPA
   se niega a arrancar (y sale) si falta o está dañado. Distribúyelo tal cual, no
@@ -320,6 +377,10 @@ equipo de VPA; incluye lógica de combate derivada de **PCC2ng** de **Stefan
 Reuther**. Este port nativo a Linux conserva todos los avisos de copyright
 originales. El programa está basado en la obra original publicada en
 SourceForge bajo la licencia **MPL**.
+
+El paquete incluye **SDL 3.4.16** (`plugins/libSDL3.so.0`), compilada desde sus
+fuentes oficiales sin modificar, © Sam Lantinga, bajo la licencia **zlib**: ver
+`LICENSE.SDL3.txt`.
 
 Si te encuentras con un problema específico de esta compilación de Linux,
 anota tu distribución y qué estabas haciendo cuando ocurrió.
