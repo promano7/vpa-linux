@@ -69,7 +69,7 @@ más fácil es saltárselas:
 | 7 | Decisión: motor de dibujo del plugin Wayland | ☑ cerrada (2026-09-19) — **vía B** |
 | 8 | Motor de dibujo Wayland (vía B) | ☑ cerrada (2026-09-20): 0 diferencias (`make wayland-test`), doradas 20/20 |
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☑ cerrada (2026-09-20): T9.1–T9.8 hechas y probadas (`make wayland-input-test` y pruebas manuales de Pablo en KWin 6.7.5); el teclado numérico sin BloqNum resultó ser el ratón absoluto de la VM (R12), no VPA |
-| 10 | Escalado, HiDPI y pantalla completa | ◐ en curso: T10.1 hecha (D-25) |
+| 10 | Escalado, HiDPI y pantalla completa | ◐ en curso: T10.1–T10.3, T10.5 y T10.6 hechas en el contenedor (D-25, D-26); T10.4 a falta de decidir `VPA_FULLSCREEN`/`VPA_VIDEO`; T10.7 y las pruebas manuales, de Pablo |
 | 11 | Comparación visual automatizada | ☐ |
 | 12 | Empaquetado, documentación y release | ☐ |
 
@@ -1692,19 +1692,58 @@ teclado y ratón, sin diferencias perceptibles respecto a X11.
       1600×1200 con la ventana abierta; y por el núcleo, con
       `VPA_GRAPH_DEBUG=1`: `VPA_SCALE=9` y `fullscreen` → 250 %, `2` y sin
       definir → 200 %. Falta verlo en una pantalla real (T10.7).*
-- [ ] **T10.2** — Presentación lógica de 640×480 con relación de aspecto
+- [x] **T10.2** — Presentación lógica de 640×480 con relación de aspecto
       preservada y bandas laterales cuando haga falta.
-- [ ] **T10.3** — Transformación de coordenadas del ratón de ventana física a
+      *La presentación ya estaba desde la Fase 8
+      (`SDL_SetRenderLogicalPresentation`, LETTERBOX, vecino más próximo).
+      **Fallo encontrado y corregido:** un clic en una banda negra llegaba a
+      VPA con X negativa y se veía como un clic en la columna 0 del mapa.
+      Ahora `TSDLConsole.MouseAt` hace lo que la consola X11 en pantalla
+      completa: de las bandas no sale nada, ni movimiento ni botones, y lo
+      que cambie en los botones se entrega al volver a la imagen. Probado en
+      `wayland-input-test` con una ventana de 1600×600. No se puede probar en
+      el contenedor el botón mantenido que entra desde la banda (sway 1.9 no
+      entrega `cursor set` con un botón pulsado).*
+- [x] **T10.3** — Transformación de coordenadas del ratón de ventana física a
       superficie lógica (equivalentes de `MapMouseToSurface` y
       `MapSurfaceToWindow`), delegando en la conversión que ofrece SDL3 en lugar
       de repetir la aritmética a mano.
+      *Hecho desde las fases 8 y 9 (`SDL_ConvertEventToRenderCoordinates` a
+      la ida, `SDL_RenderCoordinatesToWindow` al centro del píxel a la
+      vuelta). Probado en `wayland-input-test`: escala ×2, escala no entera
+      (ida y vuelta de los 639 píxeles), letterbox lateral ((1000,450) →
+      (480,360)), pantalla completa 16:9 y salida a ×2.*
 - [ ] **T10.4** — Pantalla completa: `VPA_FULLSCREEN`, `VPA_VIDEO=fullscreen` y
       `VPA_SCALE=fullscreen`, con las tres rutas que hoy llaman a
       `RequestFullscreen`/`ReleaseFullscreen`.
-- [ ] **T10.5** — HiDPI: comprobar el comportamiento con factor de escala del
+      *Parcial. `VPA_SCALE=fullscreen` funciona: el núcleo pone
+      `Params.Fullscreen`, el plugin lo pide a la consola con `Option` (D-22) y
+      lo rehace en cada `Resume` («Edit file»); con T10.1 la consola ya nace
+      con el mayor 4:3 que cabe y no al 800 %. Probado en
+      `wayland-input-test`: `SetFullscreen` en una salida de 1920×1080, centro
+      y esquina exactos, nada desde las bandas, y vuelta a ventana.
+      **Pendiente de decidir con Pablo:** `VPA_FULLSCREEN` y `VPA_VIDEO` siguen
+      sin que nadie las lea en ningún backend (D-16); o se implementan en el
+      núcleo (valdrían también para X11) o se retiran de esta tarea. Falta la
+      prueba manual en KWin.*
+- [x] **T10.5** — HiDPI: comprobar el comportamiento con factor de escala del
       compositor ≠ 1. Es el caso en el que Wayland difiere más de X11 y donde es
       más probable que el ratón se descuadre.
-- [ ] **T10.6** — Redimensionado de ventana en caliente sin perder el contenido.
+      *Hecho en el contenedor (D-26), falta verlo en una pantalla real. El
+      ratón no se descuadra (SDL ya cuenta con la densidad). Lo que fallaba
+      era la nitidez: sin `SDL_WINDOW_HIGH_PIXEL_DENSITY` SDL dibujaba a la
+      resolución lógica y ampliaba el compositor; con rayas de 1 px y la
+      salida a ×2 la captura de `grim` salía de un solo color. Con la bandera,
+      las rayas sobreviven píxel a píxel (`TESTS/wayland/blur-check.py`).
+      **A mirar en T10.7:** con el compositor a ×2 en 2560×1440 la pantalla
+      lógica es 1280×720 y `VPA_SCALE` se recorta al 150 %, una escala no
+      entera de ptc (columnas desiguales) que SDL luego dobla.*
+- [x] **T10.6** — Redimensionado de ventana en caliente sin perder el contenido.
+      *Hecho desde la Fase 8: la textura es de la consola y SDL la vuelve a
+      presentar en `WINDOW_EXPOSED`; la diana se rehace en `WINDOW_RESIZED`.
+      `wayland-input-test` redimensiona cuatro veces (1087×816, 1600×600,
+      640×480, 320×240) y sigue leyendo ratón e imagen correctos. Pablo ya
+      lo vio en KWin en la Fase 8 (la diana se redimensiona con la ventana).*
 - [ ] **T10.7** — Probar en 2560×1440 (máquina de desarrollo) y en resoluciones
       pequeñas donde el escalado tenga que recortarse.
 
@@ -1941,6 +1980,7 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-23 | 2026-09-20 | El carácter Unicode del evento de tecla (D-09) sale del **mapa de teclas de SDL** (`SDL_GetKeyFromScancode(scancode, mod, False)`), **no** de `SDL_EVENT_TEXT_INPUT` | `TEXT_INPUT` es un evento aparte que habría que casar con el de tecla y, sobre todo, SDL no lo emite con Ctrl pulsado: justo el caso de Ctrl-+/Ctrl-- que D-09 protege. El mapa de SDL en Wayland se construye del keymap xkb del compositor, con Shift, AltGr y BloqMayús, y es síncrono con la tecla. Es además lo mismo que hace la consola X11, que saca el carácter del keysym y no del texto compuesto, y evita activar la entrada de texto (y el IME) en un juego que no la usa. Corrige lo que pedía T9.2 |
 | D-24 | 2026-09-20 | La consola SDL3 **publica** su estado de entrada vivo (modificadores, puntero dentro de la ventana) en una palabra de 32 bits que escribe solo su hilo tras cada `PumpEvents`; el plugin la lee con `ptc.PTCSDLInputState` | Matiza D-22: lo que *toca* la ventana sigue yendo por `Option`, pero una *consulta* por `Option` cuesta una vuelta del bucle de `ptcwrapper` (`Sleep(10)`), y el adaptador pregunta los modificadores en cada evento de ratón y el `Inside` en cada `GetMouseState`. Leer una palabra no llama a SDL (R11) ni necesita cerrojo. `ptcwrapper` sigue sin tocar |
 | D-25 | 2026-09-20 | El plugin Wayland **sí** contesta `GetScreenSize` antes de `Init` (corrige la última frase de D-22): `ptc.PTCSDLScreenSize` pregunta a SDL la pantalla **primaria**, en **unidades lógicas**, desde un **hilo auxiliar** que inicia el vídeo de SDL, pregunta y lo cierra; con la consola abierta devuelve el valor que ella publicó al abrir (una palabra de 32 bits, como D-24) | D-22 daba por hecho que un cliente Wayland no sabe el tamaño de la pantalla sin ventana, y no es así: los `wl_output` se anuncian al conectar y SDL los tiene al volver de `SDL_InitSubSystem`. El hilo auxiliar mantiene R11 al pie de la letra (SDL nunca corre en el hilo de VPA ni le toca la máscara de coma flotante) y no deja rastro: SDL define el «hilo de vídeo» como el que inicia el subsistema y lo redefine en cada inicio (`SDL.c`), así que el `Open` posterior en el hilo de la consola empieza limpio. Unidades lógicas porque son las de los tamaños de ventana: con el compositor a ×2, una pantalla de 2560×1440 mide 1280×720 y la escala se recorta al 150 % (lo que pase con la nitidez es de T10.5). La primaria, porque Wayland no deja saber en qué pantalla caerá la ventana. Si no hay compositor devuelve `VPAG_ERR_UNSUPPORTED`, el núcleo no recorta y el error de verdad lo da `Init` |
+| D-26 | 2026-09-20 | La ventana SDL se crea con `SDL_WINDOW_HIGH_PIXEL_DENSITY` | Con factor de escala del compositor ≠ 1, sin la bandera SDL dibuja a resolución lógica y amplía el compositor con su filtro (suavizado en KWin): VPA borroso y detalles de 1 px perdidos (medido). Con ella el renderer trabaja en píxeles físicos y la única ampliación es la nuestra, vecino más próximo. Tamaños de ventana, ratón y `GetScreenSize` (D-25) siguen en unidades lógicas, que es la convención de Wayland: `VPA_SCALE=2` ocupa lo mismo en pantalla que cualquier otra aplicación a esa escala |
 
 ---
 
