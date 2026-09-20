@@ -70,7 +70,7 @@ más fácil es saltárselas:
 | 8 | Motor de dibujo Wayland (vía B) | ☑ cerrada (2026-09-20): 0 diferencias (`make wayland-test`), doradas 20/20 |
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☑ cerrada (2026-09-20): T9.1–T9.8 hechas y probadas (`make wayland-input-test` y pruebas manuales de Pablo en KWin 6.7.5); el teclado numérico sin BloqNum resultó ser el ratón absoluto de la VM (R12), no VPA |
 | 10 | Escalado, HiDPI y pantalla completa | ✅ cerrada (2026-09-20): probada por Pablo en KWin (VM Slackware) a 800×600, 1920×1080 y 2048×1152, con KDE al 100 %, 150 % y 200 % (D-25 a D-29) |
-| 11 | Comparación visual automatizada | ☐ |
+| 11 | Comparación visual automatizada | ☑ cerrada (2026-09-20): `make visual-test`, 21 escenas × 2 backends = 42 de 42 idénticas a las doradas, umbral cero |
 | 12 | Empaquetado, documentación y release | ☐ |
 
 ---
@@ -1817,25 +1817,59 @@ pantalla de 2560×1440 exactos (T10.7).*
 
 ### Fase 11 — Comparación visual automatizada ⚡
 
-- [ ] **T11.1** — `TESTS/visual/run.sh`: ejecuta el catálogo de escenas de T0.5
-      en los dos backends y vuelca los framebuffers.
-- [ ] **T11.2** — Comparar contra las imágenes doradas y generar un informe
-      (píxeles distintos, mapa de diferencias, veredicto).
-- [ ] **T11.3** — Fijar el umbral de tolerancia. Con la vía B debería ser
+- [x] **T11.1** — `TESTS/visual/run.sh`: ejecuta el catálogo de escenas de T0.5
+      en los dos backends y vuelca los framebuffers. — 3d5a2a2
+      Dirige lo que ya existía (`TESTS/capture.sh` con `VPA_CAPTURE=x11` y
+      `wayland`); `make visual-test` compila lo necesario y lo lanza. No entra
+      en `wayland-test` porque necesita la partida, las doradas y el
+      `RESOURCE.PLN` real, que no están en el repositorio.
+- [x] **T11.2** — Comparar contra las imágenes doradas y generar un informe
+      (píxeles distintos, mapa de diferencias, veredicto). — 3d5a2a2
+      `build/visual/informe.md` (procedencia, una fila por escena y backend,
+      veredicto) más `diff-x11/` y `diff-wayland/` con el PNG de cada escena
+      que no coincida. El guion se niega a comparar si las doradas locales no
+      son las de `SHA256SUMS`. Probado también en negativo: con una dorada
+      alterada en 50 píxeles da la caja exacta, el mapa y veredicto FALLA.
+- [x] **T11.3** — Fijar el umbral de tolerancia. Con la vía B debería ser
       **cero**. Con la vía A, definir y **justificar por escrito** cada
-      diferencia tolerada.
-- [ ] **T11.4** — Añadir escenas específicas para lo que sabemos que es frágil:
+      diferencia tolerada. — 3d5a2a2
+      Es **cero**, y `run.sh` no tiene opción para subirlo. La única válvula es
+      la lista de cajas por escena de `TESTS/excepciones.txt`, que sigue vacía.
+- [x] **T11.4** — Añadir escenas específicas para lo que sabemos que es frágil:
       `XORPut` de las gomas elásticas, texto con `LittFont` en el mapa,
       `GetImage`/`PutImage` del visor de combate, viewport del panel derecho
       (el del desplazamiento de 32 píxeles de 3.67.5), paleta del gráfico de
-      estadísticas (el del azul ilegible de 3.67.5).
-- [ ] **T11.5** — Documentar cómo regenerar las imágenes doradas cuando un
+      estadísticas (el del azul ilegible de 3.67.5). — 75071fc
+      Cuatro de las cinco ya tenían escena desde T0.6: E17 (`XORPut`), E01–E03
+      (`LittFont`), E14 (viewport) y E13 (paleta de estadísticas); `GetImage`/
+      `PutImage` de fondo de menú, E10. Faltaba el combate: **E21** nueva, el
+      simulador con nave y planeta, que pinta con `PutImage` las imágenes de
+      casco construidas a mano (los mismos buffers que el visor). El **visor
+      animado** queda descartado por escrito (`docs/reference-scenes.md`, 3.2):
+      sale de `Randomize` (semilla del combate, imagen y textura del planeta,
+      rayo que dispara) y es una animación con `Delay`; fijarlo pediría un
+      gancho de semilla solo para pruebas, que es lo que prohíbe la regla 2.
+      Sus modos de `PutImage` (`NormalPut`, `XORPut`, `OrPut`, recortado) ya
+      los compara byte a byte `make wayland-test` (escena 4 de `scene_test`).
+- [x] **T11.5** — Documentar cómo regenerar las imágenes doradas cuando un
       cambio *deliberado* las invalide, y la norma de que regenerarlas siempre
       es una decisión consciente que se anota, nunca un paso automático para
-      que las pruebas dejen de quejarse.
+      que las pruebas dejen de quejarse. — de5873b
+      En `TESTS/golden/README.md`: motivos legítimos y los que no lo son,
+      procedimiento (dos pasadas idénticas, mirar el mapa de diferencias,
+      siempre con X11, comprobar que en `SHA256SUMS` solo cambian las líneas
+      esperadas), qué debe decir el commit y un registro de regeneraciones.
+      Ningún guion ni objetivo del `Makefile` escribe en `TESTS/golden/`.
 
 **Criterio de aceptación:** las pruebas visuales pasan en los dos backends y el
 informe es reproducible.
+
+**Verificado (2026-09-20, contenedor):** antes de tocar nada, las 20 escenas
+capturadas en X11 con la partida y el `RESOURCE.PLN` de Pablo dan los hashes de
+`SHA256SUMS` del 2026-09-13, o sea que las doradas locales son las de entonces.
+`TESTS/visual/run.sh` y, aparte, `make visual-test` completo: las dos pasadas
+dan **42 de 42 idénticas** (21 escenas, X11 y Wayland); unos 3 minutos y medio
+por pasada.
 
 ---
 
@@ -1977,9 +2011,13 @@ VPA_GRAPH_BACKEND=auto ./build/VPA          # debe elegir el del entorno
 ### 6.6 Regresión visual
 
 ```bash
-VPA_GRAPH_DUMP=/tmp/cur xvfb-run -a ./build/VPA 3 EXAMPLES/...
-python3 TESTS/compare.py TESTS/golden /tmp/cur
+make visual-test            # los dos backends; informe en build/visual/informe.md
+VPA_VISUAL_BACKENDS=x11 TESTS/visual/run.sh E17 E21     # un backend, escenas sueltas
 ```
+
+Necesita la partida de `TESTS/fixture/` y las doradas de `TESTS/golden/`, que
+no están en el repositorio (`docs/reference-scenes.md`, 2.1), y el
+`RESOURCE.PLN` real (`VPA_RESOURCE`). Umbral: cero píxeles.
 
 ### 6.7 Memoria
 
