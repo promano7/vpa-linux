@@ -27,6 +27,10 @@ sustitución de la BGI de Borland.
 > compila y enlaza programas `ptcgraph`, y el binario resultante depende de **libX11**
 > (será una app X11; en Wayland funciona vía XWayland). Detalles en
 > [§5 Entorno de desarrollo](#5-entorno-de-desarrollo-verificado).
+>
+> **Desde la migración a Wayland** (`WAYLAND.md`) eso ya no es así: el ejecutable no
+> enlaza ninguna librería gráfica y carga en ejecución un plugin **X11** o **Wayland
+> nativo**. Ver [§8 Arquitectura gráfica](#8-arquitectura-gráfica-ejecutable--plugins-x11-y-wayland).
 
 ---
 
@@ -382,9 +386,9 @@ Comprobado de forma efectiva sobre FPC **3.2.2** en Ubuntu 24.04 (x86_64).
   En **Arch Linux** estas units vienen **dentro del propio paquete `fpc`** (no hay
   paquete aparte), en `/usr/lib/fpc/<versión>/units/x86_64-linux/graph/`; basta
   `sudo pacman -S --needed fpc libx11`.
-- En tiempo de ejecución el binario depende de **libX11** (aplicación X11; en Wayland
-  funciona vía XWayland, normalmente ya presente — con la salvedad del ratón descrita
-  en [Limitaciones conocidas](#limitaciones-conocidas)).
+- En tiempo de ejecución el **ejecutable solo depende de la libc**; las librerías
+  gráficas las enlazan los plugins: **libX11** y compañía el plugin X11, **SDL3**
+  el plugin Wayland (ver [§8](#8-arquitectura-gráfica-ejecutable--plugins-x11-y-wayland)).
 - **Dependencias de enlazado (X) y `gcc`:** al enlazar, FPC pasa `-lX11 -lXext -lXfixes
   -lXi -lXrandr -lXxf86vm` (ya **no** `-lXxf86dga`, ver el aviso de Arch más abajo) y
   necesita los objetos `crt*.o` de **gcc**. En distros minimalistas (Arch) hay que
@@ -870,7 +874,7 @@ hacían parecer que el programa estaba "congelado":
 | Tema | Estado | Detalle |
 |---|---|---|
 | Decimales del combate | 🔒 Por diseño (asumido) | El visor muestra escudo/daño/tripa con un decimal (como `PVCR.EXE`) y la **parte entera coincide** (p. ej. escudo 9.8). El primer decimal puede diferir ~±0.5: `PVCR.EXE` acumula la fracción sub-unidad distinto a PCC2ng (coinciden en los cruces enteros — de ahí la bit-exactitud del **resultado** — pero no en la fracción). Igualar el decimal exacto exigiría abandonar el algoritmo fiel a PCC2ng, así que **se deja así a propósito**: se prioriza respetar al 100% el código portado y se muestra el valor correcto del algoritmo. |
-| Ratón en Wayland | ⏳ Pendiente (backend nativo) | Bajo Wayland el cursor **se captura pero no se libera** al salir de la ventana. Toda la gestión del puntero es código X11 (`XGrabPointer`/`XWarpPointer` en `xfocus.pas`) ejecutándose a través de **XWayland**: Wayland no permite deliberadamente que un cliente capture y suelte el puntero como hace X11, y ofrece en su lugar protocolos propios (`pointer-constraints-unstable-v1`, `relative-pointer-unstable-v1`). Ningún ajuste dentro del módulo actual puede suplirlo. **Solución mientras tanto:** elegir la sesión **X11** en la pantalla de inicio de sesión, donde funciona correctamente. **Solución de fondo prevista:** dos backends gráficos (X11 y Wayland nativo) tras una API interna común. |
+| Ratón en Wayland | ✅ Resuelto (backend Wayland nativo) | Con el backend X11 sobre **XWayland** el cursor se captura pero no se libera al salir de la ventana: toda la gestión del puntero era código X11 (`XGrabPointer`/`XWarpPointer`), y Wayland no permite deliberadamente que un cliente capture y suelte el puntero así. **Solución de fondo, hecha:** dos backends gráficos (X11 y **Wayland nativo**, sobre SDL3) tras una API interna común, cargados como plugins (§8). En una sesión Wayland VPA elige solo el backend nativo y el ratón se comporta como en X11. El problema solo reaparece si se fuerza `VPA_GRAPH_BACKEND=x11` dentro de una sesión Wayland. |
 
 ### Fuentes de mapa de bits (`.FNT`)
 
@@ -879,3 +883,51 @@ de mapa de bits **8×16** (256 caracteres × 16 bytes = 4096 bytes) en su buffer
 `StandardFont` (la que usa `WriteXY`). La distribución oficial incluye `LATIN1.FNT` (Latin-1,
 ideal para Linux), `SANSERIF.FNT`, `THIN.FNT` y varias *code pages* DOS. **Ojo:** esto **no**
 afecta a los nombres de planeta del mapa, que usan la fuente vectorial (`OutTextXY`).
+
+---
+
+## 8. Arquitectura gráfica: ejecutable + plugins (X11 y Wayland)
+
+> Resumen. El diseño completo, fase a fase, con sus decisiones y pruebas, está en
+> [`WAYLAND.md`](WAYLAND.md); el motor del plugin Wayland, en
+> [`docs/adr-001-motor-wayland.md`](docs/adr-001-motor-wayland.md).
+
+Antes de la migración a Wayland `VPA` enlazaba `ptcgraph`/`ptccrt` y, con ellos, siete librerías
+de X11: era una aplicación X11 y en Wayland solo corría sobre XWayland. Ahora el
+dibujo está detrás de una frontera:
+
+```
+  VPA (ejecutable, -Mtp)          solo libc
+   └─ GRAPH/  núcleo VPAGraph     la API BGI que usa VPA + teclado + ratón,
+        │                         y el cargador dinámico (dlopen)
+        │   ABI v1: una tabla de punteros a función (GRAPH/vpagraph_abi.inc)
+        ├─ plugins/libvpagraph-x11.so       ptcgraph sobre la consola X11 de PTC
+        └─ plugins/libvpagraph-wayland.so   el MISMO ptcgraph sobre una consola
+                                            PTC escrita con SDL3 (Wayland nativo)
+                └─ plugins/libSDL3.so.0     SDL 3.4.16 incluida (RUNPATH $ORIGIN;
+                                            si se borra, la del sistema)
+```
+
+- **El ejecutable no enlaza ninguna librería gráfica** (`ldd build/VPA`: solo libc)
+  ni `cthreads`. Las ~2.400 llamadas BGI de VPA no han cambiado: `uses ptcgraph`
+  pasó a ser `uses vpagraph`, y el núcleo las reenvía al plugin cargado.
+- **Plugins y no compilación condicional:** un solo binario sirve en X11 y en
+  Wayland, y donde falta SDL3 el plugin Wayland simplemente no carga y VPA sigue
+  con X11; enlazada en el ejecutable, la falta de SDL3 le impediría arrancar.
+- **Los dos plugins dibujan con el mismo `ptcgraph`** (vendorizado en `VENDOR/`);
+  solo cambia la «consola» de PTC que pone los píxeles en pantalla. Por eso la
+  imagen es **idéntica byte a byte** en los dos backends, y se comprueba:
+  `make visual-test` captura 21 escenas de una partida real en X11 y en Wayland
+  y las compara con las doradas de `TESTS/golden/` con umbral cero.
+- **Selección del backend:** `VPA_GRAPH_BACKEND=auto` (por defecto) mira
+  `WAYLAND_DISPLAY`, `DISPLAY` y `XDG_SESSION_TYPE`, prueba el backend de la sesión
+  y, si falla, el otro. Forzar `x11` o `wayland` nunca degrada en silencio: si
+  falla, VPA se detiene y dice por qué. `./VPA --graph-info` lo explica todo sin
+  abrir ventana.
+- **Dónde se buscan los plugins:** `$VPA_GRAPH_PLUGIN_DIR` (ruta absoluta), después
+  `plugins/` **junto al ejecutable**; nunca el directorio de trabajo. Antes de
+  aceptar un `.so` se valida la versión de ABI, el tamaño de la tabla y que todas
+  las funciones obligatorias estén asignadas.
+- **Compilación:** `make` construye `VPA` y el plugin X11; `make wayland-plugin`,
+  el plugin Wayland contra la SDL3 del sistema; `make data`, el paquete completo
+  con los dos plugins y su propia SDL3. Detalles en [`BUILD.es.md`](BUILD.es.md).

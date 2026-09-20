@@ -981,6 +981,24 @@ $Id: change.txt,v 1.155 2013/12/29 06:41:02 sfplanets Exp $
 ! Bugfix in GetshipsOverPlanet, only under XP/DOS
 ! GetShipsOverPlanet improved/recalculated, if ships Mission or Fuel is manipulated
 
+2026-09-20  		VPA-Linux 3.67.6 (Pablo Romano) - native Wayland
++ graphics backends are now plugins loaded at run time from plugins/, next
+  to the executable: libvpagraph-x11.so and libvpagraph-wayland.so. The VPA
+  executable links no graphics library any more (libc only)
++ native Wayland backend (no XWayland), drawing with SDL3; pixel-identical
+  to the X11 backend. VPA detects the session and picks the backend by
+  itself; VPA_GRAPH_BACKEND=auto|x11|wayland forces one, and forcing never
+  falls back silently
++ VPA --graph-info tells which backend would be used and why, without
+  opening a window; VPA --help lists the VPA-Linux environment variables
+  (VPA_SCALE, VPA_GRAPH_BACKEND, VPA_GRAPH_PLUGIN_DIR, VPA_GRAPH_DEBUG)
++ the package ships its own SDL 3.4.16 (plugins/libSDL3.so.0, zlib licence
+  in LICENSE.SDL3.txt). The Wayland plugin uses it first and the system's
+  SDL3 if it is deleted; without any SDL3, VPA keeps working on X11
+! under Wayland the mouse pointer is no longer trapped inside the window
+- VPA_FULLSCREEN and VPA_VIDEO are gone: VPA_SCALE=fullscreen is the only
+  way to go fullscreen, on both backends
+
 TODO:
 · Enlarge Data-Field of Common Mistakes, and give better names
 · Read Allies from Messages with VPA.MSG
