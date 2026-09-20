@@ -191,6 +191,12 @@ begin
   if FWindow = nil then Fail('SDL_CreateWindow');
   FRenderer := SDL_CreateRenderer(FWindow, nil);
   if FRenderer = nil then Fail('SDL_CreateRenderer');
+  { Las bandas del letterbox son lo que deja SDL_RenderClear, y el color de
+    dibujo con el que nace un renderer de SDL3 es (0,0,0,0): negro
+    TRANSPARENTE. Si el bufer de la ventana tiene alfa, el compositor mezcla
+    y por las bandas se ve el escritorio (visto en KWin, en ventana y a
+    pantalla completa; sway lo tapaba). Negro opaco, y no se toca mas. }
+  SDL_SetRenderDrawColor(FRenderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
   FTexture := SDL_CreateTexture(FRenderer, SDL_PIXELFORMAT_XRGB8888,
                                 SDL_TEXTUREACCESS_STREAMING, AWidth, AHeight);
   if FTexture = nil then Fail('SDL_CreateTexture');

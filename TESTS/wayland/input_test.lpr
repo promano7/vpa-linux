@@ -414,6 +414,20 @@ begin
   Ok := WaitEvent(VPAG_EVENT_MOUSE_UP, Ev);
   Check(Ok, 'letterbox: and its release: ' + EvText(Ev));
   Drain;
+  { Las bandas son NEGRAS OPACAS. El color de dibujo inicial de un renderer
+    de SDL es (0,0,0,0) y las bandas son lo que deja SDL_RenderClear: si el
+    bufer de la ventana tiene alfa, el compositor mezcla y por las bandas se
+    ve lo que hay detras (visto en KWin, en ventana y a pantalla completa).
+    Con un fondo magenta detras, la banda tiene que seguir siendo negra. }
+  Sh('swaybg -c "#ff00ff" >/dev/null 2>&1 &');
+  SleepMs(1000);
+  MoveTo(800, 300);              { re-presentar no hace falta; el raton, fuera de la banda }
+  Sh('grim -t ppm /tmp/input_test_bands.ppm');
+  Check(fpSystem(ExtractFilePath(VKbd) + 'pixel-check.py /tmp/input_test_bands.ppm 100 300 000000') = 0,
+    'letterbox: the side band is opaque black over a magenta background (pixel-check.py)');
+  Check(fpSystem(ExtractFilePath(VKbd) + 'pixel-check.py /tmp/input_test_bands.ppm 800 900 ff00ff') = 0,
+    'letterbox: (control) the magenta background is there, below the window');
+  Sh('pkill swaybg');
   { No se prueba aqui el boton pulsado en la banda que entra en la imagen: el
     sway 1.9 del contenedor no entrega los 'cursor set' mientras hay un boton
     pulsado (visto con WAYLAND_DEBUG: el motion no llega hasta soltar). }
