@@ -1995,8 +1995,22 @@ las doradas sin quejas y `VPA_VISUAL_BACKENDS=x11 TESTS/visual/run.sh` con
       con lo que todo el panel cumple `MouseX>471`. Arreglo (`b871678`):
       `Mouse.PointerInsideRange`; fuera del rango no hay auto-scroll, igual que
       fuera de la ventana. A la derecha solo desplaza la franja 472..479, como
-      en los otros tres lados. Compilado, sin probar con partida en el
-      contenedor:* **pendiente de confirmar por Pablo.**
+      en los otros tres lados.*
+      *Medido en el contenedor el mismo día, con la partida de referencia y
+      capturas de pantalla del mapa a 0, 1,5 y 3 s: con el puntero en
+      (560,240) el mapa se desplaza sin parar en X11 (Xvfb) con el binario de
+      `e93c65a` **y con la 3.67.5 publicada**, y en Wayland (sway) con el de
+      `e93c65a`; con el arreglo no se mueve en ninguno de los dos. En
+      (476,240), la franja del borde, sigue desplazándose en todos, que es lo
+      que se quiere. Escena nueva **E22** para que no vuelva (puntero sobre el
+      panel; sin el arreglo no vuelca). Doradas recapturadas: 42 de 42 contra
+      `SHA256SUMS`, y `run.sh` en Wayland 21 de 21.*
+      *Dato de Pablo: jugando en X11 en `pc-arch` (Cinnamon) nunca lo ha
+      visto, y en KWin (VM, puntero integrado) sí. En el contenedor X11 lo
+      reproduce, así que la diferencia está en su máquina y queda* **por
+      aclarar** *(primera sospecha: `AutoScroll = Off` en el `VPA.INI` de su
+      directorio de juego o de la partida).* **Pendiente de confirmar por
+      Pablo el arreglo en KWin.**
       *Debian 13 (trixie) trae SDL 3.2.10 (`apt policy libsdl3-0` en la
       Raspberry de Pablo), por debajo del mínimo 3.4.4: dicho en HOWTO y BUILD
       (`6b6befc`).*
