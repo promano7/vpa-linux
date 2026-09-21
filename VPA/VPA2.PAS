@@ -4075,7 +4075,7 @@ begin
       mEv0:=mEvent; mEvent:=0;
       if AutoScroll and
         ((MouseX<8) or (MouseX>471) or (MouseY<8) or (MouseY>477))
-         and Mouse.PointerInsideWindow then
+         and Mouse.PointerInsideWindow and Mouse.PointerInsideRange then
         begin
                 mEv0:=EvRtPress;
                 mEvent:=EvRtPress

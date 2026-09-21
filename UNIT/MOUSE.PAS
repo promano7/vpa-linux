@@ -57,6 +57,7 @@ procedure SaveMouseStatus;
 procedure RestoreMouseStatus;
 procedure PollMouse;   { Linux: el bucle principal debe llamar a esto }
 function PointerInsideWindow : boolean;   { False si el puntero salio de la ventana (auto-scroll) }
+function PointerInsideRange : boolean;    { False si el puntero real esta fuera del rango de SetMouseRange }
 
 
 Implementation
@@ -76,6 +77,7 @@ var
   prevButtons  : word;
   rangeSet     : boolean;
   rX1, rY1, rX2, rY2 : integer;   { rango permitido del cursor (clamp por software) }
+  outOfRange   : boolean;   { el ultimo PollMouse tuvo que recortar la posicion real }
 
 { indice 0..6 del primer bit activo del evento (1,2,4,...,$40) }
 function EventIndex(evbit: word): integer;
@@ -176,8 +178,10 @@ procedure PollMouse;
     if MouseDisabled or (not MouseHandlerInstalled) then Exit;
     VPAGetMouseState(lx, ly, lb);
     mx := lx; my := ly; btns := word(lb) and $07;
+    outOfRange := False;
     if rangeSet then
     begin
+      outOfRange := (mx < rX1) or (mx > rX2) or (my < rY1) or (my > rY2);
       if mx < rX1 then mx := rX1 else if mx > rX2 then mx := rX2;
       if my < rY1 then my := rY1 else if my > rY2 then my := rY2;
       { sin warp del puntero fisico: VPA dibuja su propia diana, y el warp
@@ -202,8 +206,20 @@ function PointerInsideWindow : boolean;
     PointerInsideWindow := VPAMouseInside;
   end;
 
+{ En DOS el driver paraba el puntero en el borde del rango (el mapa, 0..479):
+  para hacer auto-scroll a la derecha habia que empujar contra x=479. Aqui el
+  puntero real sigue hasta el panel derecho y PollMouse solo recorta MouseX a
+  479, asi que todo el panel cumplia MouseX>471 y el mapa no paraba de moverse.
+  El bucle principal pregunta esto para tratar el panel como el exterior de la
+  ventana: alli no hay auto-scroll. }
+function PointerInsideRange : boolean;
+  begin
+    PointerInsideRange := not outOfRange;
+  end;
+
 var i: integer;
 begin
   for i := 0 to 6 do HandlerTable[i] := NullHandler;
   rangeSet := False;
+  outOfRange := False;
 end.

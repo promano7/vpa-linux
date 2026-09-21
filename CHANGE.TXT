@@ -996,6 +996,9 @@ $Id: change.txt,v 1.155 2013/12/29 06:41:02 sfplanets Exp $
   in LICENSE.SDL3.txt). The Wayland plugin uses it first and the system's
   SDL3 if it is deleted; without any SDL3, VPA keeps working on X11
 ! under Wayland the mouse pointer is no longer trapped inside the window
+! the map no longer auto-scrolls while the pointer rests on the right-hand
+  panel: only the 8-pixel strip at the map's edge scrolls, as on the other
+  three sides (both backends)
 - VPA_FULLSCREEN and VPA_VIDEO are gone: VPA_SCALE=fullscreen is the only
   way to go fullscreen, on both backends
 
