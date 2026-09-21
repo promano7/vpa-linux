@@ -116,6 +116,7 @@ E18|1|park
 E19|F1 space l|park
 E20|F1 space c|park
 E21|F5 Right space Left Return Return|park
+E22||560,240
 '
 
 die()  { echo "capture.sh: $*" >&2; exit 2; }

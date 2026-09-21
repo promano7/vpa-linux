@@ -195,6 +195,7 @@ escena, para que al fallar una comparación se sepa por dónde empezar a mirar.
 | E19 | Leyenda del mapa | `F1` `space` `l` | Página 2 del sistema de ayuda (solo se llega desde la ayuda general): muestrario de todos los símbolos y colores del mapa |
 | E20 | Créditos | `F1` `space` `c` | Página 1 del sistema de ayuda: texto centrado en varios colores y los adornos de línea |
 | E21 | Simulador de combate con nave y planeta | `F5` `Right` `space` `Left` `Return` `Return` | `PutImage` de las imágenes de casco que el simulador construye a mano a partir de `RESOURCE.PLN` (`LoadPicture` en `VPA/VCS.PAS`, los mismos buffers que usa el visor de `VPA/TCOMBAT.PAS`), una nave a la izquierda y un planeta con base a la derecha. Añadida en T11.4 |
+| E22 | Puntero sobre el panel derecho | *(ninguna; mover puntero a (560,240))* | No prueba una primitiva sino el bucle principal: con el puntero real sobre el panel el mapa **no** debe hacer auto-scroll (`Mouse.PointerInsideRange`). Si lo hace, VPA no lee el teclado, `Ctrl-F12` no llega y la escena falla por falta de volcado. La diana queda recortada en x=479. Añadida el 2026-09-21 |
 
 ### 3.1 Notas por escena
 
@@ -245,6 +246,13 @@ escena, para que al fallar una comparación se sepa por dónde empezar a mirar.
   porque la goma elástica termina en el puntero. Es la única escena con el
   puntero en otro sitio, y por eso su línea de coordenadas del panel derecho
   será distinta de las demás: es correcto.
+- **E22.** Sin teclas: el puntero va de su aparcamiento a (560,240), en mitad
+  del panel derecho, y se captura ahí. `PollMouse` recorta `MouseX` a 479
+  (`SetMouseRange(0,0,479,479)`), que cumple `MouseX>471`: hasta `b871678` eso
+  disparaba el auto-scroll mientras el puntero siguiera sobre el panel, y
+  durante el auto-scroll VPA no lee el teclado (ver T0.5 en `WAYLAND.md`), de
+  modo que la escena no puede volcar. Que vuelque ya es la prueba; que además
+  sea idéntica a la dorada garantiza que el mapa no se ha movido ni un paso.
 - **E21.** Completa a E11, que se queda en el formulario vacío. `Right` pasa
   al lado derecho y `space` acepta ahí el planeta actual (Carillon, con base:
   `AcceptPln`); `Left` vuelve al izquierdo, donde `Return` sobre un lado sin
@@ -357,6 +365,7 @@ produce lo que dice la tabla, se marca aquí:
 | E19 | ✔ | La secuencia original (`l`) no hacía nada: captura idéntica a E01. Ahora vía ayuda general |
 | E20 | ✔ | La secuencia original (`F1 c`) se quedaba en la ayuda de planeta: captura idéntica a E04. Ahora vía ayuda general |
 | E21 | ✔ | Añadida el 2026-09-20 (T11.4): ALDERAAN DESTROYER contra Carillon; tres pasadas idénticas (dos en X11, una en Wayland) antes de dorarla |
+| E22 | ✔ | Añadida el 2026-09-21: sin el arreglo `b871678` no vuelca (comprobado con el binario de `e93c65a` y con la 3.67.5); con él, tres pasadas idénticas (dos en X11, una en Wayland) antes de dorarla |
 
 Validación hecha el 2026-09-13 mirando una a una las 20 capturas de la máquina
 de desarrollo (secuencias originales) y, para las seis corregidas, las del

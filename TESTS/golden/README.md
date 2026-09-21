@@ -17,7 +17,7 @@ doró y permiten comprobar que unas doradas regeneradas son las mismas.
 | Máquina | Contenedor de desarrollo (Ubuntu 24.04 x86_64), bajo el `Xvfb` propio del guion, sin gestor de ventanas. Comprobadas idénticas píxel a píxel a las de la máquina de desarrollo (`pc-arch`, Arch Linux x86_64, Cinnamon) en las escenas capturadas allí; ver abajo |
 | `RESOURCE.PLN` | El real del juego (el mismo de `~/PLANETS/RESOURCE.PLN` de la máquina de desarrollo); ver abajo por qué importa |
 | Guion | `TESTS/capture.sh`, con las condiciones de `docs/reference-scenes.md`, sección 1 |
-| Fecha | 2026-09-13 (E01–E20); 2026-09-20 (E21, añadida en T11.4 sin tocar las otras veinte: sus hashes son los del 13) |
+| Fecha | 2026-09-13 (E01–E20); 2026-09-20 (E21, añadida en T11.4 sin tocar las otras veinte: sus hashes son los del 13); 2026-09-21 (E22, igual) |
 
 ## Cómo se hicieron
 
@@ -133,3 +133,4 @@ Registro de regeneraciones:
 |---|---|---|
 | 2026-09-13 | E01–E20 | Doradas iniciales (T0.6) |
 | 2026-09-20 | E21 | Escena nueva (T11.4): simulador de combate con nave y planeta |
+| 2026-09-21 | E22 | Escena nueva: puntero sobre el panel derecho, el mapa no hace auto-scroll. Las otras veintiuna no se tocan (sus hashes son los de antes; recapturadas el mismo día con el arreglo, 42 de 42) |
