@@ -90,6 +90,8 @@ and says why. Where SDL3 is in the repositories:
 - **Arch:** `sudo pacman -S sdl3`
 - **Fedora** (43 onwards): `sudo dnf install SDL3`
 - **Debian** testing/unstable and **Ubuntu** 25.10 onwards: `sudo apt install libsdl3-0`
+  Debian 13 (trixie) ships SDL 3.2.10, which is
+  **too old**: keep the bundled one there.
 - **Slackware-current:** already there, in the `l/` series.
 
 Where the distribution does not ship it (Ubuntu 24.04 LTS and derivatives,

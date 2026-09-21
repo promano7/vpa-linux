@@ -92,6 +92,8 @@ a arrancar y dice por qué. Dónde hay SDL3 en los repositorios:
 - **Arch:** `sudo pacman -S sdl3`
 - **Fedora** (43 en adelante): `sudo dnf install SDL3`
 - **Debian** testing/unstable y **Ubuntu** 25.10 en adelante: `sudo apt install libsdl3-0`
+  Debian 13 (trixie) trae SDL 3.2.10, que es
+  **demasiado vieja**: ahí hay que quedarse con la incluida.
 - **Slackware-current:** ya viene, en la serie `l/`.
 
 Donde la distribución no la trae (Ubuntu 24.04 LTS y derivadas, Debian 12,

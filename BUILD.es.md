@@ -358,6 +358,8 @@ lo que añade `make data` (compilar la SDL3 del paquete). **Ninguna necesita
   Ubuntu 24.04 LTS, Debian 12 y Raspberry Pi OS (bookworm) no traen SDL3: ahí
   `make wayland-plugin` no es posible sin compilar SDL3 a mano, pero **`make data`
   sí funciona**, porque compila la suya.
+  Lo mismo vale para Debian 13 (trixie): su `libsdl3-dev` es la 3.2.10, por
+  debajo del mínimo 3.4.4.
 
 - **Fedora:**
   ```sh
