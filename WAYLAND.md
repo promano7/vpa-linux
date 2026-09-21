@@ -2005,11 +2005,11 @@ las doradas sin quejas y `VPA_VISUAL_BACKENDS=x11 TESTS/visual/run.sh` con
       que se quiere. Escena nueva **E22** para que no vuelva (puntero sobre el
       panel; sin el arreglo no vuelca). Doradas recapturadas: 42 de 42 contra
       `SHA256SUMS`, y `run.sh` en Wayland 21 de 21.*
-      *Dato de Pablo: jugando en X11 en `pc-arch` (Cinnamon) nunca lo ha
-      visto, y en KWin (VM, puntero integrado) sí. En el contenedor X11 lo
-      reproduce, así que la diferencia está en su máquina y queda* **por
-      aclarar** *(primera sospecha: `AutoScroll = Off` en el `VPA.INI` de su
-      directorio de juego o de la partida).* **Pendiente de confirmar por
+      *Pablo creía no haberlo visto nunca jugando en X11 en `pc-arch`
+      (Cinnamon); comprobado por él el mismo día: **allí también pasa**, con
+      `AutoScroll = On`. No lo había notado porque nunca deja el puntero sobre
+      el panel. No hay diferencia entre su X11 y el contenedor.*
+      **Pendiente de confirmar por
       Pablo el arreglo en KWin.**
       *Debian 13 (trixie) trae SDL 3.2.10 (`apt policy libsdl3-0` en la
       Raspberry de Pablo), por debajo del mínimo 3.4.4: dicho en HOWTO y BUILD
