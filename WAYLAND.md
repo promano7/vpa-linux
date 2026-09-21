@@ -1981,6 +1981,28 @@ las doradas sin quejas y `VPA_VISUAL_BACKENDS=x11 TESTS/visual/run.sh` con
       en ese chroot, amd64: todos los binarios, SDL3 incluida, piden
       `GLIBC_2.34`.
       *Aplazada por Pablo.*
+- [x] **T12.12** — (añadida, 2026-09-21) Pruebas de Pablo con los paquetes.
+      Los dos scripts de `tools/` funcionan en `pc-arch` con `systemd-nspawn`
+      de verdad, y el de arm64 emulado con QEMU: salen
+      `vpa-linux-3.67.6-x86_64.tar.gz` y `-aarch64.tar.gz`, con todos los
+      binarios pidiendo `GLIBC_2.34` en las dos arquitecturas.
+      *Fallo encontrado con el paquete x86_64: con el puntero sobre el panel
+      derecho el mapa hace auto-scroll sin parar. No es del paquete ni de
+      Wayland: viene de las primeras versiones del port y es común a X11 (en
+      T10.2 se anotó como «de VPA» y se dejó). En DOS el driver paraba el
+      puntero en el borde del rango `SetMouseRange(0,0,479,479)`; aquí el
+      puntero real entra en el panel y `PollMouse` solo recorta `MouseX` a 479,
+      con lo que todo el panel cumple `MouseX>471`. Arreglo (`b871678`):
+      `Mouse.PointerInsideRange`; fuera del rango no hay auto-scroll, igual que
+      fuera de la ventana. A la derecha solo desplaza la franja 472..479, como
+      en los otros tres lados. Compilado, sin probar con partida en el
+      contenedor:* **pendiente de confirmar por Pablo.**
+      *Debian 13 (trixie) trae SDL 3.2.10 (`apt policy libsdl3-0` en la
+      Raspberry de Pablo), por debajo del mínimo 3.4.4: dicho en HOWTO y BUILD
+      (`6b6befc`).*
+      *Decisiones de Pablo: la consola `VENDOR/ptc/sdl/` se queda como LGPL
+      con excepción; el historial no se reescribe; no se publica hasta que
+      esté todo resuelto.*
 
 **Criterio de aceptación:** un usuario puede descargar el paquete, ejecutarlo en
 una sesión Wayland y jugar, sin compilar nada.
