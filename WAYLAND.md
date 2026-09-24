@@ -573,7 +573,7 @@ actual**, porque después ya no habrá «actual» con el que comparar.
   Y la causa real del fallo de las 19 escenas, que no era ninguna de las
   anteriores: **el puntero aparcado en (600,300)**. En `VPA/VPA2.PAS`, el bucle
   interno del `main` (`while mEvent<>0`) se rearma solo mientras el puntero
-  este fuera de `8..471 x 8..477`, porque ahi VPA hace auto-scroll del mapa; y
+  este fuera de `8..471 x 8..471`, porque ahi VPA hace auto-scroll del mapa; y
   mientras hace auto-scroll **no vuelve a leer el teclado**. En una ventana de
   640 px, x=600 esta en el panel derecho, pasado el umbral. E17 era la unica
   escena que terminaba con el puntero dentro del mapa (300,200), y por eso era
@@ -2009,8 +2009,21 @@ las doradas sin quejas y `VPA_VISUAL_BACKENDS=x11 TESTS/visual/run.sh` con
       (Cinnamon); comprobado por él el mismo día: **allí también pasa**, con
       `AutoScroll = On`. No lo había notado porque nunca deja el puntero sobre
       el panel. No hay diferencia entre su X11 y el contenedor.*
+      *Alexander (2026-09-22), tras más pruebas de Pablo: el panel ya no
+      desplaza el mapa, pero abajo hay que pegar el puntero casi al borde
+      mientras en los otros tres lados el scroll arranca más lejos. Es el
+      fuente DOS original: las franjas son `MouseX<8`, `MouseX>471`,
+      `MouseY<8` y **`MouseY>477`**, 8 píxeles en tres lados y 2 abajo
+      (478..479). En DOS no se notaba porque el driver clavaba el puntero en
+      479 al empujar; aquí el borde de la ventana hace lo mismo, pero al
+      volver el lado derecho a 8 px (`b871678`) la diferencia salta a la
+      vista. En esa franja del mapa no se dibuja nada especial (el
+      `Distance =` de y=472 está en el panel). Arreglo: `MouseY>471`, 8 px
+      en los cuatro lados; ninguna escena aparca el puntero en 472..477, así
+      que las doradas no cambian. Anotado en `CHANGE.TXT`.*
       **Pendiente de confirmar por
-      Pablo el arreglo en KWin.**
+      Pablo el arreglo en KWin y en X11, y de que Alexander pruebe la franja
+      inferior.**
       *Debian 13 (trixie) trae SDL 3.2.10 (`apt policy libsdl3-0` en la
       Raspberry de Pablo), por debajo del mínimo 3.4.4: dicho en HOWTO y BUILD
       (`6b6befc`).*
