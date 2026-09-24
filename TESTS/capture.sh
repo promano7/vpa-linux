@@ -73,7 +73,7 @@ set -u
 RACE=9                      # The Robots, turno 90 (partida de TESTS/fixture)
 PARK_X=240; PARK_Y=240      # puntero aparcado: centro del mapa, lejos del borde
                             # (ver docs/reference-scenes.md, seccion 1: fuera de
-                            #  8..471 x 8..477 VPA entra en auto-scroll y deja de
+                            #  8..471 x 8..471 VPA entra en auto-scroll y deja de
                             #  leer el teclado)
 PAL_BYTES=768               # tamano final del .pal: 256 tripletes RGB
 ADDIR_MAX=65                # addir es string[67] y aun guarda el separador final

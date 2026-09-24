@@ -4074,7 +4074,7 @@ begin
       ch:=0;
       mEv0:=mEvent; mEvent:=0;
       if AutoScroll and
-        ((MouseX<8) or (MouseX>471) or (MouseY<8) or (MouseY>477))
+        ((MouseX<8) or (MouseX>471) or (MouseY<8) or (MouseY>471))   { port: 8 px en los 4 lados (era 477 abajo) }
          and Mouse.PointerInsideWindow and Mouse.PointerInsideRange then
         begin
                 mEv0:=EvRtPress;
