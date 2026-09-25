@@ -2021,9 +2021,25 @@ las doradas sin quejas y `VPA_VISUAL_BACKENDS=x11 TESTS/visual/run.sh` con
       `Distance =` de y=472 está en el panel). Arreglo: `MouseY>471`, 8 px
       en los cuatro lados; ninguna escena aparca el puntero en 472..477, así
       que las doradas no cambian. Anotado en `CHANGE.TXT`.*
+      *Alexander (2026-09-24, capturas del VPA de DOS y de VPA-Linux): en el
+      simulador y en el visor de combate no se ve la carga de los rayos ni
+      de los tubos. No es de Wayland ni del port de la pantalla: es el visor
+      PHost nativo (`CombatPHost`, Fase C, 2026-06-30), que dejó
+      `updateBeam` y `updateLauncher` a `nil` («indicadores de carga
+      diferidos») y nunca se completó; el visor clásico (`Battle`, THost) sí
+      los pinta con `Laser` y `Launcher`, y ese es el que Alexander ve en
+      DOS, donde no existía el visor PHost. Arreglo: los dos callbacks sobre
+      las mismas primitivas (barra roja de 100 px con la carga en verde;
+      círculo rojo/amarillo/verde a 0/500/1000 de carga, repintado solo al
+      cambiar de color) y el dibujo inicial tras `InitBattle`. No toca la
+      matemática ni el RNG. Comprobado en el contenedor con la partida de
+      referencia (`F5`, E21 y `s`) y con un VCR sintético: los rayos se
+      vacían al disparar a los cazas y se recargan tick a tick, los tubos
+      pasan de verde a rojo y amarillo, y al acabar no queda nada. Anotado
+      en `CHANGE.TXT`.*
       **Pendiente de confirmar por
       Pablo el arreglo en KWin y en X11, y de que Alexander pruebe la franja
-      inferior.**
+      inferior y la carga de las armas.**
       *Debian 13 (trixie) trae SDL 3.2.10 (`apt policy libsdl3-0` en la
       Raspberry de Pablo), por debajo del mínimo 3.4.4: dicho en HOWTO y BUILD
       (`6b6befc`).*
