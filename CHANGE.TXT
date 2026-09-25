@@ -1003,6 +1003,11 @@ $Id: change.txt,v 1.155 2013/12/29 06:41:02 sfplanets Exp $
   other three (it was 2, an oversight inherited from the DOS source, where
   the mouse driver pinned the pointer at the edge anyway). Reported by
   Alexander
+! the PHost combat viewer (simulator and VCR) now shows the beam and
+  torpedo-tube charge indicators like the classic viewer does: a red bar
+  per beam that fills green as it recharges, and a red/yellow/green circle
+  per tube. They were never wired when the native PHost viewer was written.
+  Reported by Alexander
 - VPA_FULLSCREEN and VPA_VIDEO are gone: VPA_SCALE=fullscreen is the only
   way to go fullscreen, on both backends
 

@@ -1605,6 +1605,7 @@ procedure TCombatFinish;
   =========================================================================== }
 
 const pvMaxFtr = 50;   { = VCR_MAX_FTRS de PVCRALG }
+      pvMaxWpn = 20;   { = VCR_MAX_BEAMS = VCR_MAX_TORPS de PVCRALG (y tope de bb[]/cc[]) }
 
 var   pvFX : array [TVcrSide, 0..pvMaxFtr-1] of int;  { ultima X en pantalla, -1=ausente }
       pvFH : array [TVcrSide, 0..pvMaxFtr-1] of int;  { h con que se dibujo (para borrar igual y no dejar estela) }
@@ -1731,6 +1732,54 @@ procedure pvKillObject (side:TVcrSide);
     begin
       for i:=1 to 150 do begin Sound(100+Random(500)); Delay(5); end;
       NoSound;
+    end;
+  end;
+
+{ --- carga de rayos y tubos (los mismos indicadores que el Battle clasico) --- }
+
+procedure pvUpdateBeam (side:TVcrSide; id:int);
+  { Barra de carga del rayo id (0-based en PVCRALG, 1-based en Laser/bb[]):
+    rojo = los 100 px, verde = la carga. PVCRALG lleva la carga en 0..~1000
+    (puede pasar de 1000 al recargar), se muestra en 0..100. }
+  var lr:LRtype;
+  begin
+    if (id<0) or (id>=pvMaxWpn) then Exit;
+    lr:=pvLR(side);
+    bb[lr,id+1]:=Min(VcrBeamStatus(side,id) div 10,100);
+    Laser(lr,id+1);
+  end;
+
+procedure pvUpdateLauncher (side:TVcrSide; id:int);
+  { Circulo del tubo id, en los tres colores del Battle clasico: rojo recien
+    disparado (carga 0), amarillo a media carga (500) y verde listo (1000).
+    cc[] guarda el ultimo paso pintado (1, 15 o 30, los valores que Launcher
+    entiende) para repintar solo cuando cambia de color, no en cada tick. }
+  var lr:LRtype; step:int;
+  begin
+    if (id<0) or (id>=pvMaxWpn) then Exit;
+    lr:=pvLR(side);
+    case VcrLauncherStatus(side,id) of
+      0..499   : step:=1;
+      500..999 : step:=15;
+      else       step:=30;
+    end;
+    if cc[lr,id+1]=step then Exit;
+    cc[lr,id+1]:=step;
+    Launcher(lr,id+1);
+  end;
+
+procedure pvDrawWeapons;
+  { Estado inicial de todos los rayos y tubos tras InitBattle (cargados si el
+    escudo estaba al 100 %, descargados si no), como el Battle clasico. }
+  var side:TVcrSide; oi:TVcrObject; i:int;
+  begin
+    FillChar(bb,SizeOf(bb),0);
+    FillChar(cc,SizeOf(cc),0);
+    for side:=vsLeft to vsRight do
+    begin
+      oi:=VcrObjInfo(side);
+      for i:=0 to oi.numBeams-1     do pvUpdateBeam(side,i);
+      for i:=0 to oi.numLaunchers-1 do pvUpdateLauncher(side,i);
     end;
   end;
 
@@ -1911,13 +1960,14 @@ procedure CombatPHost (var vcr:VCRData; Animate:boolean; speed:byte; Sounds,KeyI
     pvDead[Left]:=false; pvDead[Right]:=false;
     vis.startFighter:=pvStartFighter; vis.landFighter:=pvLandFighter; vis.killFighter:=pvKillFighter;
     vis.fireBeam:=pvFireBeam; vis.fireTorpedo:=pvFireTorpedo;
-    vis.updateBeam:=nil; vis.updateLauncher:=nil; vis.killObject:=pvKillObject;
+    vis.updateBeam:=pvUpdateBeam; vis.updateLauncher:=pvUpdateLauncher; vis.killObject:=pvKillObject;
     MapVCR(vcr,lobj,robj,seed,sig,flags,btype);
     SetCapabilities(VcrFileCaps);   { regla PCC2: capabilities del 1er registro del fichero (fijadas en GetVCR),
                                       no las flags por-registro (que valen 0 salvo en el 1o). }
     SetPhost3(True);    { PHost 3.x/4.x usan la rama "true" (intercept de fighters per-player);
                           solo PHost 2.x (obsoleto) usaria false. Ver pvcralgorithm.hpp. }
     InitBattle(lobj,robj,seed,vis);
+    pvDrawWeapons;
 
     while PlayCycle do
       if Show then
