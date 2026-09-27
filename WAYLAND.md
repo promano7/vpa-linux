@@ -71,7 +71,7 @@ más fácil es saltárselas:
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☑ cerrada (2026-09-20): T9.1–T9.8 hechas y probadas (`make wayland-input-test` y pruebas manuales de Pablo en KWin 6.7.5); el teclado numérico sin BloqNum resultó ser el ratón absoluto de la VM (R12), no VPA |
 | 10 | Escalado, HiDPI y pantalla completa | ✅ cerrada (2026-09-20): probada por Pablo en KWin (VM Slackware) a 800×600, 1920×1080 y 2048×1152, con KDE al 100 %, 150 % y 200 % (D-25 a D-29) |
 | 11 | Comparación visual automatizada | ☑ cerrada (2026-09-20): `make visual-test`, 21 escenas × 2 backends = 42 de 42 idénticas a las doradas, umbral cero |
-| 12 | Empaquetado, documentación y release | ◐ en curso (2026-09-20): empaquetado y documentación hechos (`make sdl3`, `make data` con los dos plugins y SDL 3.4.16, D-30 a D-35) y rama fusionada en `main`; **3.67.6 congelada** en la rama `3.67.6` y la etiqueta `v3.67.6` (`0011b7f`, 2026-09-27, D-36); quedan las notas de publicación y subir los tarballs (T12.9, T12.11) |
+| 12 | Empaquetado, documentación y release | ☑ cerrada (2026-09-27): empaquetado y documentación (`make sdl3`, `make data` con los dos plugins y SDL 3.4.16, D-30 a D-35), rama fusionada en `main`, **3.67.6 congelada** en la rama `3.67.6` y la etiqueta `v3.67.6` (`0011b7f`, D-36) y **publicada** en GitHub con sus notas y los tarballs x86_64, aarch64 y de fuentes |
 
 ---
 
@@ -1968,13 +1968,15 @@ las doradas sin quejas y `VPA_VISUAL_BACKENDS=x11 TESTS/visual/run.sh` con
 - [x] **T12.7** — Añadir a `CHANGE.TXT` la entrada correspondiente. — `671c2e1`
 - [x] **T12.8** — ~~Subir la versión en `VPA/VPADATA.PAS`.~~ **No se sube
       (D-34):** sigue siendo la `3.67.6`.
-- [ ] **T12.9** — Notas de publicación bilingües en el formato habitual
+- [x] **T12.9** — Notas de publicación bilingües en el formato habitual
       (inglés, separador, español), con el apartado de limitaciones conocidas
       bien explícito sobre qué está probado en Wayland y qué no, y con la
-      versión de SDL3 que se embarca. *Aplazada por Pablo.*
+      versión de SDL3 que se embarca. — *publicadas con la versión
+      (2026-09-27), <https://github.com/promano7/vpa-linux/releases/tag/v3.67.6>.
+      Fuera del repo, como las de las versiones anteriores.*
 - [x] **T12.10** — Fusionar `feature/wayland` en `main` con
       `git merge --no-ff`, sin perder ningún commit (D-35).
-- [ ] **T12.11** — Crear la rama de versión y la etiqueta según la convención
+- [x] **T12.11** — Crear la rama de versión y la etiqueta según la convención
       del proyecto, y publicar el tarball, montado donde dice T12.3b: con
       `tools/vpa-chroot-bookworm-amd64.sh` y `-arm64.sh` (chroot de Debian 12
       en Arch; nombran el paquete `vpa-linux-<versión>-<arch>.tar.gz`). Medido
@@ -1982,7 +1984,9 @@ las doradas sin quejas y `VPA_VISUAL_BACKENDS=x11 TESTS/visual/run.sh` con
       `GLIBC_2.34`.
       *Rama y etiqueta hechas (2026-09-27, D-36): `3.67.6` y `v3.67.6`
       (anotada, «VPA-Linux 3.67.6») sobre `0011b7f`, como las anteriores.
-      Falta publicar los tarballs con las notas de T12.9.*
+      Publicada por Pablo el mismo día con `vpa-linux-3.67.6-x86_64.tar.gz`,
+      `-aarch64.tar.gz` y `-src.tar.gz`. `main` pasa a 3.67.7 como rama de
+      desarrollo.*
 - [x] **T12.12** — (añadida, 2026-09-21) Pruebas de Pablo con los paquetes.
       Los dos scripts de `tools/` funcionan en `pc-arch` con `systemd-nspawn`
       de verdad, y el de arm64 emulado con QEMU: salen
