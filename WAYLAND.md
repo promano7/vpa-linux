@@ -71,7 +71,7 @@ más fácil es saltárselas:
 | 9 | Eventos: teclado, ratón y cierre de ventana | ☑ cerrada (2026-09-20): T9.1–T9.8 hechas y probadas (`make wayland-input-test` y pruebas manuales de Pablo en KWin 6.7.5); el teclado numérico sin BloqNum resultó ser el ratón absoluto de la VM (R12), no VPA |
 | 10 | Escalado, HiDPI y pantalla completa | ✅ cerrada (2026-09-20): probada por Pablo en KWin (VM Slackware) a 800×600, 1920×1080 y 2048×1152, con KDE al 100 %, 150 % y 200 % (D-25 a D-29) |
 | 11 | Comparación visual automatizada | ☑ cerrada (2026-09-20): `make visual-test`, 21 escenas × 2 backends = 42 de 42 idénticas a las doradas, umbral cero |
-| 12 | Empaquetado, documentación y release | ◐ en curso (2026-09-20): empaquetado y documentación hechos (`make sdl3`, `make data` con los dos plugins y SDL 3.4.16, D-30 a D-35) y rama fusionada en `main`; quedan las notas de publicación y la rama/etiqueta de versión (T12.9, T12.11), aplazadas por Pablo |
+| 12 | Empaquetado, documentación y release | ◐ en curso (2026-09-20): empaquetado y documentación hechos (`make sdl3`, `make data` con los dos plugins y SDL 3.4.16, D-30 a D-35) y rama fusionada en `main`; **3.67.6 congelada** en la rama `3.67.6` y la etiqueta `v3.67.6` (`0011b7f`, 2026-09-27, D-36); quedan las notas de publicación y subir los tarballs (T12.9, T12.11) |
 
 ---
 
@@ -1980,7 +1980,9 @@ las doradas sin quejas y `VPA_VISUAL_BACKENDS=x11 TESTS/visual/run.sh` con
       en Arch; nombran el paquete `vpa-linux-<versión>-<arch>.tar.gz`). Medido
       en ese chroot, amd64: todos los binarios, SDL3 incluida, piden
       `GLIBC_2.34`.
-      *Aplazada por Pablo.*
+      *Rama y etiqueta hechas (2026-09-27, D-36): `3.67.6` y `v3.67.6`
+      (anotada, «VPA-Linux 3.67.6») sobre `0011b7f`, como las anteriores.
+      Falta publicar los tarballs con las notas de T12.9.*
 - [x] **T12.12** — (añadida, 2026-09-21) Pruebas de Pablo con los paquetes.
       Los dos scripts de `tools/` funcionan en `pc-arch` con `systemd-nspawn`
       de verdad, y el de arm64 emulado con QEMU: salen
@@ -2037,9 +2039,8 @@ las doradas sin quejas y `VPA_VISUAL_BACKENDS=x11 TESTS/visual/run.sh` con
       vacían al disparar a los cazas y se recargan tick a tick, los tubos
       pasan de verde a rojo y amarillo, y al acabar no queda nada. Anotado
       en `CHANGE.TXT`.*
-      **Pendiente de confirmar por
-      Pablo el arreglo en KWin y en X11, y de que Alexander pruebe la franja
-      inferior y la carga de las armas.**
+      *Confirmado por Pablo (2026-09-27): pruebas en amd64 y arm64 con los
+      paquetes regenerados, todo bien.*
       *Debian 13 (trixie) trae SDL 3.2.10 (`apt policy libsdl3-0` en la
       Raspberry de Pablo), por debajo del mínimo 3.4.4: dicho en HOWTO y BUILD
       (`6b6befc`).*
@@ -2205,6 +2206,7 @@ Decisiones ya tomadas, para no volver a discutirlas sin motivo nuevo.
 | D-33 | 2026-09-20 | **No hay distribución instalada** (T12.2 descartada): el paquete es la carpeta `vpa-linux_package` comprimida y se lanza con `./VPA` | Decisión de Pablo: como hasta ahora. La regla 2 de T3.2 (`plugins/` junto al ejecutable) basta |
 | D-34 | 2026-09-20 | La versión **sigue en 3.67.6** (T12.8 descartada) | Decisión de Pablo: la 3.67.6 ya se subió para estas novedades. La 3.68 es otra versión del VPA de DOS que este port no usa, así que el port será siempre 3.67.x |
 | D-35 | 2026-09-20 | `feature/wayland` entra en `main` con **`git merge --no-ff`**, no con rebase | `main` tiene un commit propio (`78d8a07`), y un rebase reescribiría los hashes de más de 120 commits que este documento cita tarea a tarea. El merge los conserva todos |
+| D-36 | 2026-09-27 | **3.67.6 congelada** tal como estaba `main` (`0011b7f`): rama `3.67.6` y etiqueta anotada `v3.67.6`; `main` sigue como rama de desarrollo | Decisión de Pablo tras probar los paquetes en amd64 y arm64. Es la convención de las versiones anteriores: rama y etiqueta sobre el mismo commit |
 
 ---
 
