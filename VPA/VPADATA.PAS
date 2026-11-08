@@ -2064,7 +2064,18 @@ function GetShipsOverPlanet (id, myrace:int; move:boolean) : int;
             end; 
             if (showF) and (move) then begin			{Move Ships only if ShowF and move:TRUE}
               if (UnderTow(k)>0) then h:=TTurn^.data^.ship[UnderTow(k)]^; {being towed}
-              CalcMove(h,StdTowPtr(h),No);  
+              { Solo se puede predecir el movimiento de una nave con los datos
+                completos, el mismo criterio que CalcMovement. Una nave ajena
+                vista este turno (GetShipTarget) trae El, fuel, waypoint y mas
+                a -1, y CalcMove indexaria Engines[-1] y Hulls[-1]: el indice
+                se extiende sin signo a 65535 y se sale de la memoria
+                (EAccessViolation). En DOS el desplazamiento daba la vuelta
+                dentro del segmento de 64 KB y solo leia basura. Saltarla no
+                cambia los contadores de abajo: con mission=-1 y fuel=-1 nunca
+                cuenta. }
+              if (h.hull<>-1) and (h.mission<>-1) and (h.fuel<>-1) and
+                 (h.mass<>-1) and (h.warp<>-1) and (h.El<>-1) then
+                CalcMove(h,StdTowPtr(h),No);
             end;
             if (h.x=x) and (h.y=y) and (h.weapons>0) and (h.fuel>0) then begin {after move}
   {Pill}		  if (h.mission in [9, ExtMissionsStartAt+11]) and (Race[RealShipOwner(k)]=4)
