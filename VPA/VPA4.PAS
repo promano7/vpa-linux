@@ -1349,8 +1349,8 @@ procedure BaseInfo;
         number  : word;
         hull_nr : int;
         myrace  : int;
-        ue      : PUtil39QueueEntry;
-        no_c    : boolean;
+        k,total : int;
+        s       : str20;
   begin
     if ltype<>LockP then Exit;
     number:=lock and LockLo;
@@ -1397,23 +1397,33 @@ procedure BaseInfo;
         if fOp=1 then OutTextXY(MX0,BL2+32,'FIXING Ship '+NStr0(fShip));
         if fOp=2 then OutTextXY(MX0,BL2+32,'RECYCLING '+NStr0(fShip));
       end;
-      no_c := false;
-{$IFDEF VPACC}
-      if (turn=today) and (distlock=0) then begin
+      { Posicion en la cola de construccion de PHost (UTIL 39) a la derecha
+        de BUILDING SHIP / CLONING, en las columnas 14-16 (la 13 separa y la
+        17 es la C de clonar): una cifra en la 15, dos en 15-16, tres en
+        14-16. Color segun el porcentaje sobre el total de bases de todos
+        los jugadores (puntuacion del GEN), propuesta de Alexander
+        Bezborodov: >50% rojo, >25% amarillo, >10% verde, resto blanco.
+        Gris si el casco de la orden ya no es el que entro en la cola. }
+      if (turn=today) and (distlock=0) and (bqpos[number]>0) then begin
         if TrueHullByRace then myrace:=Race[owner] else myrace:=owner;
-        if l>0    then hull_nr := TTurn^.data^.ship[l]^.hull else
         if cHl<>0 then hull_nr := RaceHull[myrace, cHl] else
+        if l>0    then hull_nr := TTurn^.data^.ship[l]^.hull else
          hull_nr := 0;
-        ue := GetQueueEntry(number);
-        if (ue<>nil) and (hull_nr<>0) then begin
-          if hull_nr<>ue^.hull then SetColor(Red) else SetColor(Green);
-          SetTextJustify(RightText, TopText);
-          OutTextXY(MX0 + 144, BL2 + 16, '@' + NStr(ue^.qpos));
-          SetTextJustify(LeftText, TopText);
-          no_c := true;
+        if hull_nr<>0 then begin
+          total:=0;
+          for k:=1 to 11 do
+            if TTurn^.score[k][4]>0 then Inc(total, TTurn^.score[k][4]);
+          if hull_nr<>bqhull[number] then SetColor(LightGray)
+          else if total=0 then SetColor(cBInfo)
+          else if LongInt(bqpos[number])*100 > LongInt(total)*50 then SetColor(LightRed)
+          else if LongInt(bqpos[number])*100 > LongInt(total)*25 then SetColor(Yellow)
+          else if LongInt(bqpos[number])*100 > LongInt(total)*10 then SetColor(LightGreen)
+          else SetColor(White);
+          s:=NStr(bqpos[number]);
+          if Length(s)=1 then OutTextXY(MX0+15*8,BL2+16,s)
+                         else OutTextXY(MX0+(17-Length(s))*8,BL2+16,s);
         end;
       end;
-{$ENDIF}
       if RWMode and (turn=today) and (distlock=0) then
       begin
         SetColor(White);
@@ -1430,7 +1440,7 @@ procedure BaseInfo;
           if cHl<>0 then
           begin
             SetColor(White);
-            if not no_c then OutTextXY(632,BL2+16,'C');
+            OutTextXY(632,BL2+16,'C');
           end else
           if l=0 then
           begin

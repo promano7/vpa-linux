@@ -595,6 +595,11 @@ var
         actlist : array [0..NUM_MAX] of int; { actlist[0] is turn number }
 var
         rcflags : array[1..NUM_SHIPS] of byte;
+        { Cola de construccion de PHost (UTIL 39), solo del turno actual:
+          posicion de cada base propia (0 = no esta en la cola) y casco
+          con el que entro en ella. }
+        bqpos   : array[1..NUM_PLANETS] of int;
+        bqhull  : array[1..NUM_PLANETS] of int;
         alliance: array[0..4,1..11,1..11] of byte;
 
 const
@@ -3361,6 +3366,8 @@ Begin
   Randomize;
   FillChar(Changed,SizeOf(Changed),0);
   FillChar(rcflags, Sizeof(rcflags), 0);
+  FillChar(bqpos, Sizeof(bqpos), 0);
+  FillChar(bqhull, Sizeof(bqhull), 0);
   FillChar(alliance, Sizeof(alliance), 0);
   New(MineExplosions);
   MineExplosions^.next:=NIL;
