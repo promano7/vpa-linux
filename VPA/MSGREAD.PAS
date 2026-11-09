@@ -1487,14 +1487,21 @@ PROCEDURE ReadMessages (race:byte; lookmsg:boolean);
                       if (util_rc.sid > 0) and (util_rc.sid <= NUM_SHIPS) then rcflags[util_rc.sid] := util_rc.flag;
                     end;
                   end;
-{$IFDEF VPACC}
           39    : begin
                     while (uh.rsize >= sizeof(util_bq)) do begin
                       BlockRead(f, util_bq, sizeof(util_bq));
                       dec(uh.rsize, sizeof(util_bq));
+                      if (util_bq.bid > 0) and (util_bq.bid <= NUM_PLANETS) then
+                      begin
+                        bqpos[util_bq.bid] := util_bq.qpos;
+                        bqhull[util_bq.bid] := util_bq.hull;
+                      end;
+{$IFDEF VPACC}
                       AddBuildQueueEntry(util_bq);
+{$ENDIF}
                     end;
                   end;
+{$IFDEF VPACC}
           52    : begin
                     { FIXME: quick & dirty }
                     if uh.rsize > sizeof(util_buf) then uh.rsize := sizeof(util_buf);
