@@ -1015,14 +1015,16 @@ T       7       88      +       - fleet report
 T       15      0       +9      Shift-F11
 T       7       88      +       - show common mistakesT       15      0       +18      Alt-A
 T       7       88      +       - next marker filter
-T       15      0       +9      Alt-CT       7       88      +       - Calculator (ESC - to leave)T       15      0       +9      Shift-R
+T       15      0       +9      Alt-CT       7       88      +       - Calculator (ESC - to leave)T       15      0       +9      Alt-O
+T       7       88      +       - ion storm forecast, 1 or 2 turns ahead (I)
+T       15      0       +9      Shift-R
 T       7       88      +       - display 6-turns range of ships
 T       15      0       +9      Ctrl-ET       7       88      +       - draw territory overview on map (experimental)T       15      0       +9      Ctrl-LT       7       88      +       - draw planet connections with given radiusT       15      0       +9      Ctrl-ZT       7       88      +       - reset waypoint of all ships in the local T       7       106     +9        warpwell and warp > 1T       15      0       +9      Ctrl-OT       7       88      +       - edit VPA.INI configT       15      0       +9      Ctrl-U
 T       7       88      +       - edit used VPAADDON.INI config
 T       15      0       +9      Ctrl-WT       7       88      +       - edit Common Mistakes VPACMx.INI configT       15      0       +9      Ctrl-VT       7       88      +       - Teleport-OverviewT       15      0       +9      Ctrl-ST       7       88      +       - reset mouse and video (if any problems)
-T       7       0       402     See also:
+T       7       0       393     See also:
 L       7       0       +9      68      +
-T       7       88      402     General help (Spacebar), Credits screen (press C)
+T       7       88      393     General help (Spacebar), Credits screen (press C)
 T       14      200     +                     Spacebar                         C
 T       7       88      +9      Planet info screen (P), Starbase info screen (B),
 T       14      248     +                           P                         B
@@ -1036,6 +1038,8 @@ T       7       88      +9      Planet economy simulator (F6), Map legend (L)
 T       14      296     +                                 F6               L
 T       7       88      +9      Resource Statistics (Ctrl-F10), Mine Info (M)
 T       14      256     +                            Ctrl-F10              MT       7       88      +9      Common Mistakes (Shift-F11), Quality Assurance(#)T       14      224     +                        Shift-F11                     #
+T       7       88      +9      Ion storms (I)
+T       14      184     +       I
 
 KEY     32      0
 KEY     99      1
@@ -1052,6 +1056,7 @@ KEY     $4000   9
 KEY     $6700   11
 KEY     109     13
 KEY		$8700	14KEY 	35		15
+KEY     105     16
 
 ; *** Resource statistics screen
 
@@ -1199,3 +1204,66 @@ KEY     $3B00   10
 KEY     112     $0800
 KEY     98      $0801
 ; *** Most Common MistakesPAGE    14F       0       0       0       479     479T       11      0       0       MOST COMMON MISTAKESL       11      0       +9      160      +T       9       0       40      finds most of the common mistakes:T       7       0       +18     uses add-on Unity and Starbase+, tries to get infoT       7       0       +18     uses following short-annotations:T       15      0       +18     RMT-NoBase, RMT-LowTec, RMT-Skipd   T       15      0       +9      RMT-GET$, ->NoTransfer, ->Got T       15      0       +9      TM-NoBase, TM-LowTec, TM- Max MM, TM- No_RMTT       15      0       +18      P-DA_MAX, P-Bovis, P-Detect, P-Unhappy, P-LowNTaxT       15      0       +9      P-BldBaseT       15      0       +18      S-Chunnel, ->NoStart, ->No End, ->LowDistT       15      0       +9      S-btm0MC, S-TowWarn, S-InWarp, S-TooSlowT       15      0       +9      S-HYPFuel, S-HYPDist, S-AHPFuel, S-AHPDistT       15      0       +9      S-LowFuel, S-NoSweep, S-NoLayM., T       15      0       +9      S-CloneOK, S-NoCln_: M/$/W/S/-/!/L/P/BT       15      0       +9      S-Glorypop, S-Glorytrg;T       15      0       +9      S-ReDrop, S-ReContrT       15      0       +18     B-No_BldT       15      0       +18     Up/DownT       7       72      +       - move to the next entryT       15      0       +9      EnterT       7       72      +       - view that planet/ship of that entryT       15      0       +9      EscT       7       72      +       - exit from screenT       7       0       463     See also:L       7       0       +9      68      +T       7       88      +-9     General help screen (press Spacebar or F1)T       14      304     +       Spacebar    F1KEY     32      0KEY     $3B00   10; *** Most Common MistakesPAGE    15F       0       0       0       479     479T       11      0       0       QUALITY ASSURANCEL       11      0       +9      160      +T       9       0       +9      Part of Extended Features for VPA by Christian GraefeL       9       0       +9      160      +T       15      0       40      Keys:L       15      0       +9      38     +T       15      0       +9      CTRL-AT       7       88      +       - mark entry as doneT       15      0       +9      CTRL-DT       7       88      +       - mark entry as undoneT       15      0       +9      /T       7       88      +       - toggle entry as done/undoneT       15      0       +18     Shift-PT       7       88      +       - View Data: PlanetT       15      0       +9     Shift-BT       7       88      +       -            BaseT       15      0       +9     Shift-ST       7       88      +       -            ShipsT       15      0       +9     Shift-VT       7       88      +       -            Teleport (if valid addon)T       15      0       +18     Up/DownT       7       88      +       - move to the next entryT       15      0       +9      Page Up/DownT       7       88      +       - move to the next pageT       15      0       +9      Home/EndT       7       88      +       - move to the first/last entryT       15      0       +18     EnterT       7       88      +       - view that planet/base/ship of that entryT       7       88      +9      - goto Teleportmanager (if valid addon)T       15      0       +18     ZT       7       88      +       - center mapT       15      0       +9      EscT       7       88      +       - exit from screenT       7       0       463     See also:L       7       0       +9      68      +T       7       88      +-9     General help screen (press Spacebar or F1)T       14      304     +       Spacebar    F1KEY     32      0KEY     $3B00   10
+; *** Ion storms
+
+PAGE    16
+
+F       0       0       0       479     479
+T       11      0       0       ION STORMS
+L       11      0       +9      78      +
+
+T       15      0       +9      Keys:
+L       15      0       +9      38      +
+T       15      0       +9      Alt-O
+T       7       88      +       - forecast of the ion storms 1 or 2 turns ahead
+T       15      0       +9      + / -
+T       7       88      +       - forecast for 2 turns / for 1 turn ahead
+T       15      0       +9      Enter
+T       7       88      +       - back to the map, keeping the forecast drawn
+T       7       104     +9        (Alt-O again to change it or close it)
+T       15      0       +9      Esc
+T       7       88      +       - close the forecast
+T       15      0       +9      F1
+T       7       88      +       - this page (also with an ion storm selected)
+T       15      0       +9      Alt-I
+T       7       88      +       - drag compensation in class 4 and 5 storms
+T       7       104     +9        (in distance mode)
+
+T       9       0       +18     Forecast:
+L       9       0       +9      70      +
+T       15      0       +9      Dense dots
+T       7       104     +       - the storm will be there for sure
+T       15      0       +9      Sparse dots
+T       7       104     +       - the storm may be there
+T       15      0       +9      White cross
+T       7       104     +       - most likely center of the storm
+T       7       0       +9      Colors as on the map: harmless, moderate and dangerous
+T       7       0       +9      storms (see the map legend).
+T       7       0       +9      The forecast starts from the turn on screen: on an old
+T       7       0       +9      turn you can compare it with what really happened.
+
+T       9       0       +18     How ion storms move (Stefan Reuther):
+L       9       0       +9      294     +
+T       7       0       +9      Each turn a storm moves warp x warp light years:
+T       15      16      +9      more than 250 MeV
+T       7       200     +       warp 8
+T       15      16      +9      radius below 200
+T       7       200     +       warp 6
+T       15      16      +9      any other storm
+T       7       200     +       warp 2, 3 or 4 at random
+T       7       200     +9      (20%, 48% and 32%)
+T       7       0       +9      The first turn it keeps its heading; the second turn
+T       7       0       +9      the heading may change up to 10 degrees to either side.
+T       7       0       +9      The forecast assumes that voltage and radius do not
+T       7       0       +9      change.
+
+T       7       0       463     See also:
+L       7       0       +9      68      +
+T       7       88      +-9     General help screen (press Spacebar or F1),
+T       14      304     +       Spacebar    F1
+T       7       88      +9      Map legend (L)
+T       14      184     +       L
+
+KEY     32      0
+KEY     $3B00   10
+KEY     108     2

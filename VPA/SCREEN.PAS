@@ -1120,7 +1120,8 @@ procedure Help;
     hs:=helpscr;
     if hs=0 then hs:=ltype;
     if (hs=LockP) and (lbase<>nil) then inc(hs);
-    if (hs=LockM) or (hs=LockI) then hs:=0;
+    if (hs=LockM) then hs:=0;
+    if (hs=LockI) then hs:=16;      { ayuda de tormentas de iones (VPA.HHH) }
     ShowHelp(helpfile,hs);
     ch:=2;
     if not md0 then
