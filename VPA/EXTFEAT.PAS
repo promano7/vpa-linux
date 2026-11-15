@@ -4232,6 +4232,212 @@ begin
 end;
 
 {*****************************************************************************}
+{** prevision de tormentas de iones (Alt-O) ** }
+
+{ Donde estaran las tormentas de iones dentro de uno o dos turnos. Reglas de
+  velocidad de Host 3.22.003 y posteriores (filefmt, GREY.HST), la primera que
+  se cumpla:
+    - mas de 250 MeV: warp 8
+    - radio menor de 200: warp 6
+    - el resto: warp 2 (20%), 3 (48%) o 4 (32%), al azar
+  En el primer turno la tormenta sigue su rumbo actual; en el segundo el rumbo
+  puede cambiar hasta 10 grados a cada lado (Stefan Reuther). Se supone que el
+  voltaje y el radio no cambian entre turnos. Solo el juego clasico de Host y
+  PHost: las nubes ionicas de planets.nu no se tratan.
+
+  Para cada tormenta se calculan todos los centros posibles. Un punto del mapa
+  por el que pasa la tormenta sea cual sea su centro se pinta con puntos densos
+  (la tormenta estara ahi seguro); uno por el que solo pasa con algunos centros,
+  con puntos dispersos (puede estar). La cruz blanca marca el centro mas
+  probable: warp 3 si hay azar y sin cambio de rumbo. }
+
+const
+  IonFcHelpPage   = 16;           { pagina de VHLP/VPA.HHH }
+  IonFcMaxCenters = 189;          { 3 velocidades x 3 velocidades x 21 rumbos }
+  IonFcTurns      : int = 0;      { 0: sin prevision; 1 o 2: turnos vista }
+
+type
+  IonFcWarpList = array [1..3] of int;
+  IonFcCenters  = record
+                    n    : int;
+                    x, y : array [1..IonFcMaxCenters] of int;
+                  end;
+
+procedure IonFcGetWarps(ion: iptr; var w: IonFcWarpList; var n: int);
+begin
+  if (ion^.voltage>250) then begin n:=1; w[1]:=8 end
+  else if (ion^.radius<200) then begin n:=1; w[1]:=6 end
+  else begin n:=3; w[1]:=2; w[2]:=3; w[3]:=4 end;
+end;
+
+{ Centro tras moverse desde (x,y) con ese rumbo y ese warp (warp^2 ly). }
+procedure IonFcMove(x,y,heading,warp: int; var nx,ny: int);
+var d: long;
+begin
+  d:=long(warp)*warp;
+  nx:=x+Round(sin(heading*Pi/180.0)*d);
+  ny:=y+Round(cos(heading*Pi/180.0)*d);
+end;
+
+procedure IonFcGetCenters(ion: iptr; turns: int; var c: IonFcCenters);
+var
+  w          : IonFcWarpList;
+  n,i,j,a    : int;
+  x1,y1      : int;
+begin
+  c.n:=0;
+  IonFcGetWarps(ion,w,n);
+  for i:=1 to n do begin
+    IonFcMove(ion^.x,ion^.y,ion^.heading,w[i],x1,y1);
+    if (turns<2) then begin
+      inc(c.n); c.x[c.n]:=x1; c.y[c.n]:=y1;
+    end else
+      for j:=1 to n do
+        for a:=-10 to 10 do begin
+          inc(c.n);
+          IonFcMove(x1,y1,ion^.heading+a,w[j],c.x[c.n],c.y[c.n]);
+        end;
+  end;
+end;
+
+{ Dibuja la prevision sobre el mapa; la llama ExtFeatDrawMapBeginHook, con la
+  ventana grafica ya puesta en el mapa (0,0)-(479,479) y el raton apagado. }
+procedure DrawIonForecast(turns: int);
+var
+  c              : IonFcCenters;
+  w              : IonFcWarpList;
+  k,i,n          : int;
+  sx,sy,ax,ay    : int;
+  x1,y1,x2,y2    : int;
+  rs             : int;
+  r2             : long;
+  col            : byte;
+  inside,outside : boolean;
+begin
+  SetLineStyle(SolidLn,0,NormWidth);
+  with TTurn^.data^ do
+  for k:=1 to 50 do
+    if (ion[k]<>nil) and (ion[k]^.voltage>0) and (ion[k]^.radius>0) then begin
+      IonFcGetCenters(ion[k],turns,c);
+      with ion[k]^ do begin
+        col:=IIF(voltage<50,cmIWeak,IIF(voltage<150,cmIMod,cmIDang));
+        r2:=long(radius)*radius;
+        rs:=long(radius)*ratio2 div ratio1+1;
+      end;
+      x1:=480; y1:=480; x2:=-1; y2:=-1;
+      for i:=1 to c.n do begin
+        Abs2Scr(c.x[i],c.y[i],sx,sy);
+        x1:=Min(x1,sx-rs); x2:=Max(x2,sx+rs);
+        y1:=Min(y1,sy-rs); y2:=Max(y2,sy+rs);
+      end;
+      x1:=Max(x1,0); y1:=Max(y1,0);
+      x2:=Min(x2,479); y2:=Min(y2,479);
+      for sy:=y1 to y2 do
+        for sx:=x1 to x2 do
+          if not odd(sx) and not odd(sy) then begin
+            Scr2Abs(sx,sy,ax,ay);
+            inside:=false; outside:=false; i:=0;
+            while (i<c.n) and not (inside and outside) do begin
+              inc(i);
+              if (Distance2(ax,ay,c.x[i],c.y[i])<=r2) then inside:=true
+                                                     else outside:=true;
+            end;
+            { denso (seguro): 1 de cada 2 pixels en x y en y; disperso
+              (posible): 1 de cada 4, para que el mapa se siga viendo }
+            if inside and (not outside or ((sx mod 4=0) and (sy mod 4=0))) then
+              PutPixel(sx,sy,col);
+          end;
+      { centro mas probable }
+      IonFcGetWarps(ion[k],w,n);
+      with ion[k]^ do begin
+        IonFcMove(x,y,heading,w[(n+1) div 2],ax,ay);
+        if (turns>=2) then IonFcMove(ax,ay,heading,w[(n+1) div 2],ax,ay);
+      end;
+      if Abs2Scr(ax,ay,sx,sy) then begin
+        SetColor(White);
+        Line(sx-3,sy,sx+3,sy);
+        Line(sx,sy-3,sx,sy+3);
+      end;
+    end;
+end;
+
+{ Alt-O: elegir uno o dos turnos con + y -; Enter vuelve al mapa dejando la
+  prevision dibujada (se redibuja con el mapa hasta que se cierre), Esc o
+  Alt-O la quitan, F1 abre su ayuda. }
+procedure IonStormForecast;
+var
+  ch        : word;
+  k,nstorms : int;
+  done      : boolean;
+  img       : pointer;
+  isz       : long;
+const
+  PX1 = MX0-8;  PY1 = 72;  PX2 = 639;  PY2 = 470;   { ficha, sin el 'Press F1' }
+begin
+  nstorms:=0;
+  with TTurn^.data^ do
+    for k:=1 to 50 do
+      if (ion[k]<>nil) and (ion[k]^.voltage>0) then inc(nstorms);
+  if (IonFcTurns<1) then IonFcTurns:=1;
+
+  { sin MouseMove: soltaria el objeto seleccionado y borraria su ficha }
+  MouseOff;
+  isz:=ImageSize(PX1,PY1,PX2,PY2);
+  GetMem(img,isz);
+  GetImage(PX1,PY1,PX2,PY2,img^);
+
+  done:=false;
+  repeat
+    DrawMap(Yes);
+    MouseOff;
+    MouseDisabled:=True;
+    Clear(PX1,PY1,PX2,PY2);
+    SetColor(White);
+    OutTextXY(MX0,72,'Ion storm forecast');
+    SetColor(cIInfo);
+    if (nstorms=0) then
+      OutTextXY(MX0,88,'No ion storms')
+    else
+      OutTextXY(MX0,88,'Turn '+NStr0(turn+IonFcTurns)+' (+'+NStr0(IonFcTurns)+')');
+    SetColor(LightGray);
+    OutTextXY(MX0,104,'Dense dots:');
+    OutTextXY(MX0,112,' storm will be');
+    OutTextXY(MX0,120,'Sparse dots:');
+    OutTextXY(MX0,128,' storm may be');
+    OutTextXY(MX0,136,'Cross: likely');
+    OutTextXY(MX0,144,' center');
+    OutTextXY(MX0,160,'+ -   1/2 turns');
+    OutTextXY(MX0,168,'F1    help');
+    OutTextXY(MX0,176,'Enter keep');
+    OutTextXY(MX0,184,'Esc   close');
+    SetColor(White);
+    OutTextXY(MX0,160,'+ -');
+    OutTextXY(MX0,168,'F1');
+    OutTextXY(MX0,176,'Enter');
+    OutTextXY(MX0,184,'Esc');
+
+    ch:=ReadKey;
+    case ch of
+{+}   ord('+'),ord('='): if (IonFcTurns<2) then inc(IonFcTurns);
+{-}   ord('-'),ord('_'): if (IonFcTurns>1) then dec(IonFcTurns);
+{F1}  $3B00   : begin
+                  helpscr:=IonFcHelpPage;
+                  Help;
+                  helpscr:=0;
+                end;
+{ent} 13      : done:=true;
+{esc} 27,
+{~o}  $1800   : begin IonFcTurns:=0; done:=true; end;
+{~x}  $2D00   : begin done:=true; ForceKey:=ch; end;   { [X] de la ventana: salir de VPA }
+    end;
+  until done;
+
+  PutImage(PX1,PY1,img^,NormalPut);
+  FreeMem(img,isz);
+  DrawMap(Yes);
+end;
+
+{*****************************************************************************}
 {** score value of ships ** }
 
 {Calculate costs of a ship, cloning not considered. Costs will be *added* to t,d,m, and c.}
@@ -5054,6 +5260,7 @@ begin
 {^f11}  $8900   : ShowFleetReport;
 
 {~i}    $1700   : IonStormWayPoint;
+{~o}    $1800   : IonStormForecast;
 
 {^e}    5       : begin
                     DrawTerritory;
@@ -5149,6 +5356,7 @@ end;
 procedure ExtFeatDrawMapBeginHook;
 var   xx,yy     : int;
 begin
+  if (IonFcTurns>0) then DrawIonForecast(IonFcTurns);
   if showL then
   begin
     {DrawTerritory;}
