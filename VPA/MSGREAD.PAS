@@ -1041,7 +1041,8 @@ PROCEDURE ReadMessages (race:byte; lookmsg:boolean);
                     msgobj:=id or LockP;
                     DataChg:=Yes;
                   end;
-        'B'     : begin                       { Store building bases, Quapla }
+        'B'     : if (id>=1) and (id<=500) and (planet[id]<>nil) then
+                  begin                       { Store building bases, Quapla }
                       DataChg:=Yes;
                       CutShipNames(ShipName);                   {ShipName:= Built Ship }                      
                       for i := 1 to 105 do 
