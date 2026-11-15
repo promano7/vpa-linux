@@ -1011,6 +1011,31 @@ $Id: change.txt,v 1.155 2013/12/29 06:41:02 sfplanets Exp $
 - VPA_FULLSCREEN and VPA_VIDEO are gone: VPA_SCALE=fullscreen is the only
   way to go fullscreen, on both backends
 
+2026-11-15  		VPA-Linux 3.67.7 (Pablo Romano) - in development
++ ion storm forecast one or two turns ahead (Alt-O). + and - switch
+  between one and two turns, Enter goes back to the map keeping the
+  forecast drawn (it follows scroll, zoom and turn changes) and Esc or
+  Alt-O again removes it. Dense dots: the storm will be there for sure;
+  sparse dots: it may be there; white cross: most likely centre. Uses the
+  Host 3.22.003+ speed rules (over 250 MeV warp 8, radius below 200 warp
+  6, otherwise warp 2/3/4 at random) and a heading change of up to 10
+  degrees on the second turn; voltage and radius are assumed constant.
+  Requested by Alexander
++ new help page ION STORMS (English and Russian), opened with F1 inside
+  the forecast, with F1 on a selected ion storm, or with I from the second
+  general help page, which now lists Alt-O
++ the starbase window shows the PHost build queue position next to
+  BUILDING SHIP / CLONING (UTIL.DAT record 39), coloured by how many
+  starbases there are in the game. Proposed by Alexander
+! VPA crashed (error 217) on startup or when showing a planet with future
+  positions on (F) and alien ships over it: their incomplete data was used
+  to predict their move. Reported by Alexander
+! VPA crashed reading Space Dock messages when two planets of the map share
+  a name; messages for planets VPA does not hold are now ignored. Reported
+  by Alexander
+! Alt-I (drag compensation in class 4 and 5 ion storms, distance mode) used
+  an uninitialised value for growing storms between 143 and 149 MeV
+
 TODO:
 · Enlarge Data-Field of Common Mistakes, and give better names
 · Read Allies from Messages with VPA.MSG
