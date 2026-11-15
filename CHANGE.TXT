@@ -981,7 +981,116 @@ $Id: change.txt,v 1.155 2013/12/29 06:41:02 sfplanets Exp $
 ! Bugfix in GetshipsOverPlanet, only under XP/DOS
 ! GetShipsOverPlanet improved/recalculated, if ships Mission or Fuel is manipulated
 
-2026-09-20  		VPA-Linux 3.67.6 (Pablo Romano) - native Wayland
+2026-07-25  		VPA-Linux 3.67.1 (Pablo Romano) - first native Linux release
++ VPA 3.67 runs natively on GNU/Linux, rebuilt from the original
+  Turbo/Borland Pascal DOS source with Free Pascal 3.2.2 (no DOSBox, no
+  dosemu). Graphics with ptcgraph on X11 (Wayland through XWayland): same
+  look, same keys as the original. All assembler, BIOS and interrupt code
+  was rewritten in Pascal; the data files keep the DOS layout
++ resizable window and fullscreen with VPA_SCALE
++ native PHost combat viewer and simulator, ported from PCC2ng's
+  pvcralgorithm and validated bit-exact against PVCR.EXE, which is no
+  longer needed; with PHost experience levels. F5 uses the PHost or the
+  THost combat rules depending on the game
++ VPA's own white crosshair as mouse pointer, scoped to its own window
++ game data files are found whatever the case of their names
++ full bilingual documentation (English/Spanish)
+! ship pictures in the starbase, fleet, combat and screensaver views are
+  decoded again (planar VGA sprites)
+! Buy torpedoes/fighters no longer stops with "not enough memory"
+! writing the VPA.DB header read one byte past its buffer
+! buffer overflow expanding tabs in texts (ProcessTabs)
+! VPA.MSG with CR/LF line endings is read correctly
+! no 100% CPU while idle, and the map no longer scrolls by itself when the
+  pointer leaves the window
+- the PCC module (VPACC: remote control, give, hull functions file) is
+  disabled; hull functions use the classic model
+- DOS-only parts removed: DPMI, mixed-mode VPAMM, BGI drivers, Turbo
+  Pascal leftovers and the bundled DOS help viewers
+-> known difference: the combat viewer's first decimal digit can differ
+   by 0.5 from PVCR.EXE (fractional accumulation in the classic host vs
+   PCC2ng); the integer part and the final result always match
+
+2026-07-27  		VPA-Linux 3.67.2 (Pablo Romano) - packaging and case fixes
++ Raspberry Pi / aarch64: a native 64-bit ARM package, verified on a
+  Raspberry Pi 3 Model B with Debian 13 "trixie"
++ 'make data' builds the binary and VPA.HLP together and assembles a
+  ready-to-ship folder (build/vpa-linux_package/) with the binary, the help,
+  EXAMPLES/ and all the support files and docs; the tarballs are made
+  from it
+! RESOURCE.PLN, VPA.HLP and the map font (LITT_VPA.CHR) are looked up
+  without regard to case, like the rest of the data files, so a lowercase
+  copy works
++ HOWTO lists every file not shipped with VPA-Linux that is required to
+  play: the ones from your VGA Planets installation and the ones your host
+  provides
+
+2026-07-30  		VPA-Linux 3.67.3 (Pablo Romano) - paths and Russian help
+! a game directory given as an absolute path (/home/user/PLANETS/mygame)
+  was taken for an option and failed with "Invalid parameter". Options are
+  now matched strictly (/B /K /M /O /P /R /S /PW: /REP: /BGI:), both / and
+  backslash are accepted as separators, and an over-long path (66
+  characters max) is reported instead of silently truncated
++ the Russian help VPA_RUS.HLP from the DOS VPA is built and shipped too:
+  set HelpFile = VPA_RUS.HLP in VPA.INI, or rename it as in DOS
++ documentation: VPA.HLP is required (VPA stops with "Can't read file
+  VPA.HLP" without it), not optional as HOWTO said
+
+2026-08-07  		VPA-Linux 3.67.4 (Pablo Romano) - Russian help, keys and I/O
+! the Russian help was shown as accented Latin letters: the help font now
+  has the CP866 Cyrillic glyphs in #128-#255 (ASCII untouched)
+! Shift-C and Shift-F did nothing (they were inside the VPACC block)
+! the display switches (top right of the map) and the selected object
+  were not kept between sessions: the code assumed that separate global
+  variables sit together in memory, as under 16-bit Turbo Pascal; it now
+  copies them field by field
+! F11, Ctrl-F11, Shift-F11, Ctrl-Tab, Ctrl-Up, Ctrl-Down and
+  Ctrl-keypad-minus never reached VPA
+! crash on startup (error 217) with ShowMaxPop = On: planets with unknown
+  owner (-1) indexed the race table
+! PLANET.NM can live in the game directory. A stale I/O error from
+  ini_save (erasing a .BAK that does not exist yet) silently skipped the
+  next file opens; it also kept VPAHELP.INI from being written, leaving a
+  stray .TMP behind. Upstream VPA code from 2013
++ VPA_SCALE takes a percentage from 21 up (220 = 2.2x); 1-20 keep their
+  "N times" meaning. Fullscreen uses the largest fit as a percentage, so
+  1920x1080 fills the full height (225%)
++ the StickyMouse radius is configurable: StickyMouseRange in VPA.INI,
+  section [Interface]; default 2, 10-20 suits modern mice
+-> nearly every fix in this release was reported and tested by Alexander
+   Bezborodov
+
+2026-08-22  		VPA-Linux 3.67.5 (Pablo Romano) - settings-menu crash
+! opening the settings menus (Ctrl-O, Ctrl-U) corrupted memory: the size
+  of the screen area saved behind a menu was kept in a 16-bit word, and in
+  256 colours the menu needs 104204 bytes, so VPA overran the block by
+  65536 bytes every time. Under DOS's 16-colour BGI it fitted in a word
+! a crash inside a menu no longer costs the turn: the emergency save
+  re-acquires the reserved memory block that menus release
+! Edit file in the settings menus froze VPA trying to run the DOS
+  edit.com; it now opens $VISUAL, $EDITOR, nano or vi (VPA must have been
+  started from a terminal) and reloads the file actually edited (it
+  always reloaded VPAHELP.INI)
+! VPA_SCALE=fullscreen centres the picture instead of leaving it at the
+  top left; mouse coordinates follow it
+! Ctrl-+ and Ctrl-- (jump to last / first turn) work in all four ways of
+  pressing them, from the keypad and the main row, on any keyboard layout
+! the right panel was drawn 32 pixels low after the fleet report
+  (Ctrl-F11)
+! the statistics graph (Ctrl-F10) drew its first series in dark blue on
+  black; it now uses light, distinguishable colours
+! numeric settings step sensibly: StickyMouseRange went up 1000 at a time
+  in the Ctrl-O menu; it now goes up one at a time to 20 (the .INI file
+  accepts up to 100)
+! seven leftover calls tried to restore a DOS 16-colour mode the port can
+  never grant; they now restore the mode in use, and only when graphics
+  mode was really left
++ example launch script in EXAMPLES/game_launch.sh
++ for developers: 'make heaptrc' links Free Pascal's heap checker
+-> nearly every fix in this release was reported and tested by Alexander
+   Bezborodov
+
+2026-09-27  		VPA-Linux 3.67.6 (Pablo Romano) - native Wayland
 + graphics backends are now plugins loaded at run time from plugins/, next
   to the executable: libvpagraph-x11.so and libvpagraph-wayland.so. The VPA
   executable links no graphics library any more (libc only)
