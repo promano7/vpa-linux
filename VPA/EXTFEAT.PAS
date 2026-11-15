@@ -4119,8 +4119,6 @@ var
   sx,sy   : int;
   px,py   : int;
   d       : long;
-  dstr    : int;
-  PrTurn  : tptr;
 
   function InStorm(ion: iptr; sx,sy: int): boolean;
   var
@@ -4221,7 +4219,10 @@ begin
           end;
         end;
         if ((ion[i]^.voltage>=150) or (ion[i]^.voltage+dstr>=150))}
-        if ((ion[i]^.voltage>=150) or ((ion[i]^.voltage+dstr>=143) and ion[i]^.grow))
+        { El calculo de dstr de arriba esta comentado y dstr se quedaba sin
+          valor (basura en FPC). Sin el, la regla es: clase 4-5 (150 MeV o
+          mas) o tormenta creciente a menos de 7 MeV de llegar a 150. }
+        if ((ion[i]^.voltage>=150) or ((ion[i]^.voltage>=143) and ion[i]^.grow))
           and InStorm(ion[i], sx, sy)
         then begin
           HandleStorm(mx, my, ion[i]);
