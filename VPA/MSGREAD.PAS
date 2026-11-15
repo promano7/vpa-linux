@@ -326,6 +326,23 @@ PROCEDURE ReadMessages (race:byte; lookmsg:boolean);
       GetPlanet:=pn;
       msgobj:=pn or LockP;
     end;
+
+  { True si la cabecera del mensaje apunta a una planeta cuyo nombre es el
+    del texto. El nombre solo no basta: puede haber varias planetas con el
+    mismo nombre en el mapa, y GetPlanet se queda con la primera. }
+  function HeaderPlanetMatches : boolean;
+    var pn      : int;
+    begin
+      HeaderPlanetMatches:=No;
+      if (msgobj and LockHi)<>LockP then Exit;
+      pn:=msgobj and LockLo;
+      if (pn<1) or (pn>500) then Exit;
+      s:=Copy(mm.text[k],i,40);
+      Trim(s);
+      s1:=PlanName[pn];
+      Trim(s1);
+      HeaderPlanetMatches:=(s=s1);
+    end;
       
   function GetWeb : byte;
     begin
@@ -1823,7 +1840,10 @@ PROCEDURE ReadMessages (race:byte; lookmsg:boolean);
             mfName      : begin name1:=GetName; name2:=name1 end;
             mfShipName  : ShipName:=GetShipName;
             mfPlanet    : begin
-                            if (mt=mSurrender) or (mt=mSpaceDock) then msgobj:=0; { yes, from text }
+                            if mt=mSurrender then msgobj:=0; { yes, from text }
+                            { Space Dock: la cabecera (-d0XXX) es la planeta de la
+                              base; se usa si su nombre es el del texto }
+                            if (mt=mSpaceDock) and not HeaderPlanetMatches then msgobj:=0;
                             id:=GetPlanet;
                             InitRec;
                           end;
