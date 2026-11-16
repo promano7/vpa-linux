@@ -1223,8 +1223,10 @@ T       7       88      +       - select a storm's likely centre (Shift-Tab: bac
 T       15      0       +9      Enter
 T       7       88      +       - back to the map, keeping the forecast drawn
 T       7       104     +9        (Alt-O again to change it or close it). With a
-T       7       104     +9        storm selected, the pointer goes to its centre:
-T       7       104     +9        press Ins to put a marker there
+T       7       104     +9        storm selected, the pointer goes to its centre
+T       15      0       +9      Ins
+T       7       88      +       - back on the map, put a marker at the pointer,
+T       7       104     +9        e.g. on the centre picked with Tab
 T       15      0       +9      Esc
 T       7       88      +       - close the forecast
 T       15      0       +9      F1
