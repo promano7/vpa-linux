@@ -1215,25 +1215,25 @@ L       11      0       +9      78      +
 T       15      0       +9      Keys:
 L       15      0       +9      38      +
 T       15      0       +9      Alt-O
-T       7       88      +       - forecast of the ion storms 1 or 2 turns ahead
+T       7       72      +       - forecast of the ion storms 1 or 2 turns ahead
 T       15      0       +9      + / -
-T       7       88      +       - forecast for 2 turns / for 1 turn ahead
+T       7       72      +       - forecast for 2 turns / for 1 turn ahead
 T       15      0       +9      Tab
-T       7       88      +       - select a storm's likely centre (Shift-Tab: back)
+T       7       72      +       - select a storm's likely centre (Shift-Tab: back)
 T       15      0       +9      Enter
-T       7       88      +       - back to the map, keeping the forecast drawn
-T       7       104     +9        (Alt-O again to change it or close it). With a
-T       7       104     +9        storm selected, the pointer goes to its centre
+T       7       72      +       - back to the map, keeping the forecast drawn
+T       7       88      +9        (Alt-O again to change it or close it). With a
+T       7       88      +9        storm selected, the pointer goes to its centre
 T       15      0       +9      Ins
-T       7       88      +       - back on the map, put a marker at the pointer,
-T       7       104     +9        e.g. on the centre picked with Tab
+T       7       72      +       - back on the map, put a marker at the pointer,
+T       7       88      +9        e.g. on the centre picked with Tab
 T       15      0       +9      Esc
-T       7       88      +       - close the forecast
+T       7       72      +       - close the forecast
 T       15      0       +9      F1
-T       7       88      +       - this page (also with an ion storm selected)
+T       7       72      +       - this page (also with an ion storm selected)
 T       15      0       +9      Alt-I
-T       7       88      +       - drag compensation in class 4 and 5 storms
-T       7       104     +9        (in distance mode)
+T       7       72      +       - drag compensation in class 4 and 5 storms
+T       7       88      +9        (in distance mode)
 
 T       9       0       +18     Forecast:
 L       9       0       +9      70      +
