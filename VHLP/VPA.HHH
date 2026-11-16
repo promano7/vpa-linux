@@ -709,7 +709,8 @@ T       7       88      +9        simulation (survived combatants only)
 T       15      0       +9      Esc
 T       7       72      +       - exit from combat simulator
 T       15      0       +9      W
-T       7       72      +       - find worst case for ship on the left, calculate statistics
+T       7       72      +       - find worst case for ship on the left,
+T       7       88      +9        calculate statistics
 T       15      0       +9      Shift-W
 T       7       72      +       - find worst case for ship or planet on the right
 
