@@ -4245,11 +4245,10 @@ end;
   voltaje y el radio no cambian entre turnos. Solo el juego clasico de Host y
   PHost: las nubes ionicas de planets.nu no se tratan.
 
-  Para cada tormenta se calculan todos los centros posibles. Un punto del mapa
-  por el que pasa la tormenta sea cual sea su centro se pinta con puntos densos
-  (la tormenta estara ahi seguro); uno por el que solo pasa con algunos centros,
-  con puntos dispersos (puede estar). La cruz blanca marca el centro mas
-  probable: warp 3 si hay azar y sin cambio de rumbo. }
+  Para cada tormenta se calculan todos los centros posibles. Se dibuja, sin
+  relleno, un circulo de puntos en el centro mas probable (warp 3 si hay azar
+  y sin cambio de rumbo, marcado con una cruz blanca) y una linea de puntos
+  mas separados alrededor de toda la zona a la que puede llegar. }
 
 const
   IonFcHelpPage   = 16;           { pagina de VHLP/VPA.HHH }
@@ -4300,85 +4299,120 @@ begin
   end;
 end;
 
+{ Centro mas probable: la velocidad del medio (warp 3 si hay azar) y, en el
+  segundo turno, sin cambio de rumbo. }
+procedure IonFcLikely(ion: iptr; turns: int; var lx,ly: int);
+var
+  w : IonFcWarpList;
+  n : int;
+begin
+  IonFcGetWarps(ion,w,n);
+  IonFcMove(ion^.x,ion^.y,ion^.heading,w[(n+1) div 2],lx,ly);
+  if (turns>=2) then IonFcMove(lx,ly,ion^.heading,w[(n+1) div 2],lx,ly);
+end;
+
 { Dibuja la prevision sobre el mapa; la llama ExtFeatDrawMapBeginHook, con la
-  ventana grafica ya puesta en el mapa (0,0)-(479,479) y el raton apagado. }
+  ventana grafica ya puesta en el mapa (0,0)-(479,479) y el raton apagado.
+  Sin relleno, para que se vean los planetas y las naves: por cada tormenta,
+  un circulo de puntos en el centro mas probable y, si la tormenta puede
+  llegar mas alla, una linea de puntos mas separados que rodea toda la zona
+  por la que puede pasar. Para cada direccion desde el centro mas probable,
+  el borde de esa zona es el punto mas lejano de los circulos de todos los
+  centros posibles en esa direccion. }
 procedure DrawIonForecast(turns: int);
 var
   c              : IonFcCenters;
-  w              : IonFcWarpList;
-  k,i,n          : int;
-  sx,sy,ax,ay    : int;
-  x1,y1,x2,y2    : int;
-  rs             : int;
-  r2             : long;
+  k,i,j,na       : int;
+  fx,fy,sx,sy    : int;
+  rs             : long;
   col            : byte;
-  inside,outside : boolean;
+  r,th,ux,uy     : real;
+  dx,dy,b,q,rho  : real;
 begin
-  SetLineStyle(SolidLn,0,NormWidth);
   with TTurn^.data^ do
   for k:=1 to 50 do
     if (ion[k]<>nil) and (ion[k]^.voltage>0) and (ion[k]^.radius>0) then begin
       IonFcGetCenters(ion[k],turns,c);
+      IonFcLikely(ion[k],turns,fx,fy);
       with ion[k]^ do begin
         col:=IIF(voltage<50,cmIWeak,IIF(voltage<150,cmIMod,cmIDang));
-        r2:=long(radius)*radius;
-        rs:=long(radius)*ratio2 div ratio1+1;
+        r:=radius;
+        rs:=long(radius)*ratio2 div ratio1;
       end;
-      x1:=480; y1:=480; x2:=-1; y2:=-1;
-      for i:=1 to c.n do begin
-        Abs2Scr(c.x[i],c.y[i],sx,sy);
-        x1:=Min(x1,sx-rs); x2:=Max(x2,sx+rs);
-        y1:=Min(y1,sy-rs); y2:=Max(y2,sy+rs);
-      end;
-      x1:=Max(x1,0); y1:=Max(y1,0);
-      x2:=Min(x2,479); y2:=Min(y2,479);
-      for sy:=y1 to y2 do
-        for sx:=x1 to x2 do
-          if not odd(sx) and not odd(sy) then begin
-            Scr2Abs(sx,sy,ax,ay);
-            inside:=false; outside:=false; i:=0;
-            while (i<c.n) and not (inside and outside) do begin
-              inc(i);
-              if (Distance2(ax,ay,c.x[i],c.y[i])<=r2) then inside:=true
-                                                     else outside:=true;
-            end;
-            { denso (seguro): 1 de cada 2 pixels en x y en y; disperso
-              (posible): 1 de cada 4, para que el mapa se siga viendo }
-            if inside and (not outside or ((sx mod 4=0) and (sy mod 4=0))) then
-              PutPixel(sx,sy,col);
+      { un punto cada 4 pixels del circulo, entre 16 y 720 puntos }
+      na:=Round(2*Pi*rs/4);
+      if (na<16) then na:=16;
+      if (na>720) then na:=720;
+      for j:=0 to na-1 do begin
+        th:=2*Pi*j/na;
+        ux:=sin(th); uy:=cos(th);
+        if Abs2Scr(fx+Round(r*ux),fy+Round(r*uy),sx,sy) then
+          PutPixel(sx,sy,col);
+        if not odd(j) then begin
+          rho:=r;
+          for i:=1 to c.n do begin
+            dx:=c.x[i]-fx; dy:=c.y[i]-fy;
+            b:=dx*ux+dy*uy;
+            q:=b*b-dx*dx-dy*dy+r*r;
+            if (q>=0) and (b+Sqrt(q)>rho) then rho:=b+Sqrt(q);
           end;
-      { centro mas probable }
-      IonFcGetWarps(ion[k],w,n);
-      with ion[k]^ do begin
-        IonFcMove(x,y,heading,w[(n+1) div 2],ax,ay);
-        if (turns>=2) then IonFcMove(ax,ay,heading,w[(n+1) div 2],ax,ay);
+          if (rho>r+1.5) and
+             Abs2Scr(fx+Round(rho*ux),fy+Round(rho*uy),sx,sy) then
+            PutPixel(sx,sy,col);
+        end;
       end;
-      if Abs2Scr(ax,ay,sx,sy) then begin
+      if Abs2Scr(fx,fy,sx,sy) then begin
         SetColor(White);
+        SetLineStyle(SolidLn,0,NormWidth);
         Line(sx-3,sy,sx+3,sy);
         Line(sx,sy-3,sx,sy+3);
       end;
     end;
 end;
 
-{ Alt-O: elegir uno o dos turnos con + y -; Enter vuelve al mapa dejando la
-  prevision dibujada (se redibuja con el mapa hasta que se cierre), Esc o
-  Alt-O la quitan, F1 abre su ayuda. }
+{ Alt-O: elegir uno o dos turnos con + y -; Tab y Shift-Tab recorren los
+  centros mas probables de las tormentas; Enter vuelve al mapa dejando la
+  prevision dibujada (se redibuja con el mapa hasta que se cierre) y, si hay
+  una tormenta elegida con Tab, deja el puntero en su centro, para poner ahi
+  una marca con Ins; Esc o Alt-O quitan la prevision; F1 abre su ayuda. }
 procedure IonStormForecast;
 var
   ch        : word;
   k,nstorms : int;
+  sel       : int;          { tormenta elegida con Tab; 0: ninguna }
+  sx,sy     : int;
+  lx0,ly0   : int;          { su centro mas probable }
   done      : boolean;
   img       : pointer;
   isz       : long;
 const
   PX1 = MX0-8;  PY1 = 72;  PX2 = 639;  PY2 = 470;   { ficha, sin el 'Press F1' }
+
+  function Valid(k: int): boolean;
+  begin
+    with TTurn^.data^ do
+      Valid:=(ion[k]<>nil) and (ion[k]^.voltage>0) and (ion[k]^.radius>0);
+  end;
+
+  { siguiente (d=1) o anterior (d=-1) tormenta, dando la vuelta }
+  procedure Step(d: int);
+  var i: int;
+  begin
+    for i:=1 to 50 do begin
+      sel:=sel+d;
+      if (sel>50) then sel:=1;
+      if (sel<1) then sel:=50;
+      if Valid(sel) then Exit;
+    end;
+    sel:=0;
+  end;
+
 begin
   nstorms:=0;
-  with TTurn^.data^ do
-    for k:=1 to 50 do
-      if (ion[k]<>nil) and (ion[k]^.voltage>0) then inc(nstorms);
+  for k:=1 to 50 do
+    if Valid(k) then inc(nstorms);
   if (IonFcTurns<1) then IonFcTurns:=1;
+  sel:=0;
 
   { sin MouseMove: soltaria el objeto seleccionado y borraria su ficha }
   MouseOff;
@@ -4391,6 +4425,16 @@ begin
     DrawMap(Yes);
     MouseOff;
     MouseDisabled:=True;
+    if (sel>0) then begin
+      IonFcLikely(TTurn^.data^.ion[sel],IonFcTurns,lx0,ly0);
+      if Abs2Scr(lx0,ly0,sx,sy) then begin
+        SetViewPort(0,0,479,479,ClipOn);
+        SetColor(White);
+        SetLineStyle(SolidLn,0,NormWidth);
+        Circle(sx,sy,6);
+        SetViewPort(0,0,639,479,ClipOn);
+      end;
+    end;
     Clear(PX1,PY1,PX2,PY2);
     SetColor(White);
     OutTextXY(MX0,72,'Ion storm forecast');
@@ -4400,26 +4444,38 @@ begin
     else
       OutTextXY(MX0,88,'Turn '+NStr0(turn+IonFcTurns)+' (+'+NStr0(IonFcTurns)+')');
     SetColor(LightGray);
-    OutTextXY(MX0,104,'Dense dots:');
-    OutTextXY(MX0,112,' storm will be');
+    OutTextXY(MX0,104,'Dotted circle:');
+    OutTextXY(MX0,112,' likely position');
     OutTextXY(MX0,120,'Sparse dots:');
-    OutTextXY(MX0,128,' storm may be');
-    OutTextXY(MX0,136,'Cross: likely');
-    OutTextXY(MX0,144,' center');
-    OutTextXY(MX0,160,'+ -   1/2 turns');
+    OutTextXY(MX0,128,' it may reach');
+    OutTextXY(MX0,136,'Cross: centre');
+    OutTextXY(MX0,152,'+ -   1/2 turns');
+    OutTextXY(MX0,160,'Tab   storm centre');
     OutTextXY(MX0,168,'F1    help');
     OutTextXY(MX0,176,'Enter keep');
     OutTextXY(MX0,184,'Esc   close');
     SetColor(White);
-    OutTextXY(MX0,160,'+ -');
+    OutTextXY(MX0,152,'+ -');
+    OutTextXY(MX0,160,'Tab');
     OutTextXY(MX0,168,'F1');
     OutTextXY(MX0,176,'Enter');
     OutTextXY(MX0,184,'Esc');
+    if (sel>0) then begin
+      SetColor(cIInfo);
+      OutTextXY(MX0,200,'Storm '+NStr0(sel)+' centre');
+      OutTextXY(MX0,208,NStr0(lx0)+','+NStr0(ly0));
+      SetColor(LightGray);
+      OutTextXY(MX0,224,'Enter puts the');
+      OutTextXY(MX0,232,'pointer there');
+      OutTextXY(MX0,240,'(Ins: marker)');
+    end;
 
     ch:=ReadKey;
     case ch of
 {+}   ord('+'),ord('='): if (IonFcTurns<2) then inc(IonFcTurns);
 {-}   ord('-'),ord('_'): if (IonFcTurns>1) then dec(IonFcTurns);
+{tab} 9       : Step(1);
+{s-t} $0F00   : Step(-1);
 {F1}  $3B00   : begin
                   helpscr:=IonFcHelpPage;
                   Help;
@@ -4427,14 +4483,26 @@ begin
                 end;
 {ent} 13      : done:=true;
 {esc} 27,
-{~o}  $1800   : begin IonFcTurns:=0; done:=true; end;
-{~x}  $2D00   : begin done:=true; ForceKey:=ch; end;   { [X] de la ventana: salir de VPA }
+{~o}  $1800   : begin IonFcTurns:=0; sel:=0; done:=true; end;
+{~x}  $2D00   : begin sel:=0; done:=true; ForceKey:=ch; end;   { [X] de la ventana: salir de VPA }
     end;
   until done;
 
   PutImage(PX1,PY1,img^,NormalPut);
   FreeMem(img,isz);
   DrawMap(Yes);
+  if (sel>0) then begin
+    { como el modo distancia (VPA2): suelta el objeto y deja el puntero en
+      glx,gly, que es donde Ins pone la marca }
+    IonFcLikely(TTurn^.data^.ion[sel],IonFcTurns,lx0,ly0);
+    MouseMove;
+    glx:=lx0; gly:=ly0;
+    if MapWrap then WrapXY(glx,gly);
+    CenterMap(glx,gly,No);
+    Abs2Scr(glx,gly,sx,sy);
+    MoveMouseTo(sx,sy);
+    WriteCoord;
+  end;
 end;
 
 {*****************************************************************************}
