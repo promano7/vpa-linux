@@ -1124,8 +1124,11 @@ $Id: change.txt,v 1.155 2013/12/29 06:41:02 sfplanets Exp $
 + ion storm forecast one or two turns ahead (Alt-O). + and - switch
   between one and two turns, Enter goes back to the map keeping the
   forecast drawn (it follows scroll, zoom and turn changes) and Esc or
-  Alt-O again removes it. Dense dots: the storm will be there for sure;
-  sparse dots: it may be there; white cross: most likely centre. Uses the
+  Alt-O again removes it. Nothing is filled in, so planets and ships stay
+  visible: a dotted circle in the storm's colour marks its most likely
+  position, sparser dots how far it may reach, and a white cross the
+  likely centre. Tab / Shift-Tab select a storm's likely centre, and Enter
+  then leaves the pointer there, so Ins puts a marker on it. Uses the
   Host 3.22.003+ speed rules (over 250 MeV warp 8, radius below 200 warp
   6, otherwise warp 2/3/4 at random) and a heading change of up to 10
   degrees on the second turn; voltage and radius are assumed constant.

@@ -1218,9 +1218,13 @@ T       15      0       +9      Alt-O
 T       7       88      +       - forecast of the ion storms 1 or 2 turns ahead
 T       15      0       +9      + / -
 T       7       88      +       - forecast for 2 turns / for 1 turn ahead
+T       15      0       +9      Tab
+T       7       88      +       - select a storm's likely centre (Shift-Tab: back)
 T       15      0       +9      Enter
 T       7       88      +       - back to the map, keeping the forecast drawn
-T       7       104     +9        (Alt-O again to change it or close it)
+T       7       104     +9        (Alt-O again to change it or close it). With a
+T       7       104     +9        storm selected, the pointer goes to its centre:
+T       7       104     +9        press Ins to put a marker there
 T       15      0       +9      Esc
 T       7       88      +       - close the forecast
 T       15      0       +9      F1
@@ -1231,12 +1235,13 @@ T       7       104     +9        (in distance mode)
 
 T       9       0       +18     Forecast:
 L       9       0       +9      70      +
-T       15      0       +9      Dense dots
-T       7       104     +       - the storm will be there for sure
+T       15      0       +9      Dotted circle
+T       7       120     +       - most likely position of the storm
 T       15      0       +9      Sparse dots
-T       7       104     +       - the storm may be there
+T       7       120     +       - how far the storm may reach
 T       15      0       +9      White cross
-T       7       104     +       - most likely center of the storm
+T       7       120     +       - most likely centre of the storm
+T       7       0       +9      Nothing is filled in, so planets and ships stay visible.
 T       7       0       +9      Colors as on the map: harmless, moderate and dangerous
 T       7       0       +9      storms (see the map legend).
 T       7       0       +9      The forecast starts from the turn on screen: on an old
