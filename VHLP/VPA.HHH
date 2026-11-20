@@ -1260,10 +1260,12 @@ T       7       200     +       warp 6
 T       15      16      +9      any other storm
 T       7       200     +       warp 2, 3 or 4 at random
 T       7       200     +9      (20%, 48% and 32%)
-T       7       0       +9      The first turn it keeps its heading; the second turn
-T       7       0       +9      the heading may change up to 10 degrees to either side.
-T       7       0       +9      The forecast assumes that voltage and radius do not
-T       7       0       +9      change.
+T       7       0       +9      Every turn the heading may change up to 10 degrees to
+T       7       0       +9      either side. PHost picks it before the storm moves, so
+T       7       0       +9      it can already change on the first turn; HOST picks it
+T       7       0       +9      after moving, so on the first turn the storm keeps its
+T       7       0       +9      heading. The forecast assumes that voltage and radius
+T       7       0       +9      do not change; storms that merge cannot be predicted.
 
 T       7       0       463     See also:
 L       7       0       +9      68      +

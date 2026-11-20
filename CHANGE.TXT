@@ -1131,7 +1131,9 @@ $Id: change.txt,v 1.155 2013/12/29 06:41:02 sfplanets Exp $
   then leaves the pointer there, so Ins puts a marker on it. Uses the
   Host 3.22.003+ speed rules (over 250 MeV warp 8, radius below 200 warp
   6, otherwise warp 2/3/4 at random) and a heading change of up to 10
-  degrees on the second turn; voltage and radius are assumed constant.
+  degrees per turn: in PHost already on the first turn, since PHost picks
+  the new heading before the storm moves; in HOST from the second turn.
+  Voltage and radius are assumed constant.
   Requested by Alexander
 + new help page ION STORMS (English and Russian), opened with F1 inside
   the forecast, with F1 on a selected ion storm, or with I from the second
