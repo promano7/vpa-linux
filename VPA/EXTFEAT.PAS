@@ -4240,10 +4240,14 @@ end;
     - mas de 250 MeV: warp 8
     - radio menor de 200: warp 6
     - el resto: warp 2 (20%), 3 (48%) o 4 (32%), al azar
-  En el primer turno la tormenta sigue su rumbo actual; en el segundo el rumbo
-  puede cambiar hasta 10 grados a cada lado (Stefan Reuther). Se supone que el
-  voltaje y el radio no cambian entre turnos. Solo el juego clasico de Host y
-  PHost: las nubes ionicas de planets.nu no se tratan.
+  Cada turno el rumbo puede cambiar hasta 10 grados a cada lado. En HOST se
+  elige despues de moverse (Stefan Reuther, ion.html), asi que el primer turno
+  la tormenta sigue el rumbo que se ve; en PHost se elige antes de moverse
+  (phost4doc, pcontrol.html y formulas.html), asi que ya puede cambiar en el
+  primer turno. El historial de una partida PHost 4.1h lo confirma: el rumbo
+  que se ve es el del ultimo movimiento. Se supone que el voltaje y el radio
+  no cambian entre turnos. Solo el juego clasico de Host y PHost: las nubes
+  ionicas de planets.nu no se tratan.
 
   Para cada tormenta se calculan todos los centros posibles. Se dibuja, sin
   relleno, un circulo de puntos en el centro mas probable (warp 3 si hay azar
@@ -4252,7 +4256,7 @@ end;
 
 const
   IonFcHelpPage   = 16;           { pagina de VHLP/VPA.HHH }
-  IonFcMaxCenters = 189;          { 3 velocidades x 3 velocidades x 21 rumbos }
+  IonFcMaxCenters = 3969;         { (3 velocidades x 21 rumbos) al cuadrado }
   IonFcTurns      : int = 0;      { 0: sin prevision; 1 o 2: turnos vista }
 
 type
@@ -4281,26 +4285,29 @@ end;
 procedure IonFcGetCenters(ion: iptr; turns: int; var c: IonFcCenters);
 var
   w          : IonFcWarpList;
-  n,i,j,a    : int;
+  n,i,j,a,a1 : int;
+  amax       : int;           { cambio de rumbo posible en el primer turno }
   x1,y1      : int;
 begin
   c.n:=0;
   IonFcGetWarps(ion,w,n);
-  for i:=1 to n do begin
-    IonFcMove(ion^.x,ion^.y,ion^.heading,w[i],x1,y1);
-    if (turns<2) then begin
-      inc(c.n); c.x[c.n]:=x1; c.y[c.n]:=y1;
-    end else
-      for j:=1 to n do
-        for a:=-10 to 10 do begin
-          inc(c.n);
-          IonFcMove(x1,y1,ion^.heading+a,w[j],c.x[c.n],c.y[c.n]);
-        end;
-  end;
+  if PHOST then amax:=10 else amax:=0;
+  for i:=1 to n do
+    for a1:=-amax to amax do begin
+      IonFcMove(ion^.x,ion^.y,ion^.heading+a1,w[i],x1,y1);
+      if (turns<2) then begin
+        inc(c.n); c.x[c.n]:=x1; c.y[c.n]:=y1;
+      end else
+        for j:=1 to n do
+          for a:=-10 to 10 do begin
+            inc(c.n);
+            IonFcMove(x1,y1,ion^.heading+a1+a,w[j],c.x[c.n],c.y[c.n]);
+          end;
+    end;
 end;
 
-{ Centro mas probable: la velocidad del medio (warp 3 si hay azar) y, en el
-  segundo turno, sin cambio de rumbo. }
+{ Centro mas probable: la velocidad del medio (warp 3 si hay azar) y sin
+  cambio de rumbo. }
 procedure IonFcLikely(ion: iptr; turns: int; var lx,ly: int);
 var
   w : IonFcWarpList;
